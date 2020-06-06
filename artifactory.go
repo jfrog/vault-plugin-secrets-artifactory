@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) error {
@@ -20,6 +21,7 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 		b.Backend.Logger().Warn("error making request", "response", resp, "err", err.Error())
 		return err
 	}
+	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -41,6 +43,7 @@ func (b *backend) refreshToken(config adminConfiguration, accessToken, refreshTo
 		b.Backend.Logger().Warn("error making request", "response", resp, "err", err.Error())
 		return nil, err
 	}
+	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -57,7 +60,7 @@ func (b *backend) refreshToken(config adminConfiguration, accessToken, refreshTo
 	return &createdToken, nil
 }
 
-func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
+func (b *backend) createToken(config adminConfiguration, role artifactoryRole, TTL, maxTTL time.Duration) (*createTokenResponse, error) {
 	values := url.Values{}
 	if role.GrantType != "" {
 		values.Set("grant_type", role.GrantType)
@@ -66,7 +69,11 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 	values.Set("username", role.Username)
 	values.Set("scope", role.Scope)
 
-	//FIXME expires_in ??
+	if TTL > 0 {
+		values.Set("expires_in", fmt.Sprintf("%d", int64(TTL.Seconds())))
+	} else if maxTTL > 0 {
+		values.Set("expires_in", fmt.Sprintf("%d", int64(maxTTL.Seconds())))
+	}
 
 	if role.Refreshable {
 		values.Set("refreshable", "true")
@@ -81,6 +88,7 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 		b.Backend.Logger().Warn("error making request", "response", resp, "err", err.Error())
 		return nil, err
 	}
+	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -110,5 +118,5 @@ func (b *backend) performArtifactoryRequest(config adminConfiguration, path stri
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	return http.DefaultClient.Do(req)
+	return b.httpClient.Do(req)
 }

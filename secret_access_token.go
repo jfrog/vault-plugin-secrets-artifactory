@@ -34,6 +34,9 @@ func (b *backend) secretAccessTokenRenew(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
+	b.Backend.Logger().Warn("renewing is complicated", "lease options", req.Secret.LeaseOptions,
+		"Max TTL", req.Secret.MaxTTL,
+		"TTL", req.Secret.TTL)
 	accessToken := req.Secret.InternalData["access_token"].(string)
 	refreshToken := req.Secret.InternalData["refresh_token"].(string)
 	if refreshToken == "" {

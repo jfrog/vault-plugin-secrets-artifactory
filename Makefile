@@ -18,7 +18,7 @@ build:
 	GOOS=$(OS) GOARCH="$(GOARCH)" go build -o vault/plugins/artifactory cmd/artifactory/main.go
 
 start:
-	vault server -dev -dev-root-token-id=root -dev-plugin-dir=./vault/plugins
+	vault server -dev -dev-root-token-id=root -dev-plugin-dir=./vault/plugins -log-level=DEBUG
 
 enable:
 	vault secrets enable artifactory

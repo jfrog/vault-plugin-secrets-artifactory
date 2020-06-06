@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"time"
 )
 
 func (b *backend) pathListRoles() *framework.Path {
@@ -52,6 +53,14 @@ func (b *backend) pathRoles() *framework.Path {
 				Type:        framework.TypeString,
 				Description: `FIXME`,
 			},
+			"default_ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: `Default TTL for issued access tokens. If unset, uses the backend's default_ttl. Cannot exceed max_ttl.`,
+			},
+			"max_ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: `Maximum TTL that an access token can be renewed for. If unset, uses the backend's max_ttl. Cannot exceed backend's max_ttl.`,
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -73,11 +82,13 @@ func (b *backend) pathRoles() *framework.Path {
 }
 
 type artifactoryRole struct {
-	GrantType   string `json:"grant_type"`
-	Username    string `json:"username,omitempty"`
-	Scope       string `json:"scope"`
-	Refreshable bool   `json:"refreshable"`
-	Audience    string `json:"audience,omitempty"`
+	GrantType   string        `json:"grant_type"`
+	Username    string        `json:"username,omitempty"`
+	Scope       string        `json:"scope"`
+	Refreshable bool          `json:"refreshable"`
+	Audience    string        `json:"audience,omitempty"`
+	DefaultTTL  time.Duration `json:"default_ttl,omitempty"`
+	MaxTTL      time.Duration `json:"max_ttl,omitempty"`
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
@@ -98,7 +109,19 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, _ *fra
 
 func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.rolesMutex.Lock()
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
 	defer b.rolesMutex.Unlock()
+
+	config, err := b.fetchAdminConfiguration(ctx, req.Storage)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if config == nil {
+		return logical.ErrorResponse("backend not configured"), nil
+	}
 
 	roleName := data.Get("role").(string)
 
@@ -112,6 +135,20 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data 
 		Scope:       data.Get("scope").(string),
 		Refreshable: data.Get("refreshable").(bool),
 		Audience:    data.Get("audience").(string),
+		DefaultTTL:  time.Second * time.Duration(data.Get("default_ttl").(int)),
+		MaxTTL:      time.Second * time.Duration(data.Get("max_ttl").(int)),
+	}
+
+	if newRole.MaxTTL > 0 && newRole.DefaultTTL > newRole.MaxTTL {
+		return logical.ErrorResponse("default_ttl cannot be longer than max_ttl"), nil
+	}
+
+	if config.MaxTTL > 0 && newRole.MaxTTL > config.MaxTTL {
+		return logical.ErrorResponse("role max_ttl cannot be longer than backend max_ttl"), nil
+	}
+
+	if config.MaxTTL > 0 && newRole.DefaultTTL > config.MaxTTL {
+		return logical.ErrorResponse("role default_ttl cannot be longer than backend max_ttl"), nil
 	}
 
 	if newRole.Scope == "" {
@@ -172,6 +209,8 @@ func (b *backend) roleToMap(roleName string, role artifactoryRole) map[string]in
 		"scope":       role.Scope,
 		"refreshable": role.Refreshable,
 		"audience":    role.Audience,
+		"default_ttl": role.DefaultTTL.Seconds(),
+		"max_ttl":     role.MaxTTL.Seconds(),
 	}
 }
 

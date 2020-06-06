@@ -3,6 +3,7 @@ package artifactory
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 
@@ -14,6 +15,7 @@ type backend struct {
 	*framework.Backend
 	configMutex sync.RWMutex
 	rolesMutex  sync.RWMutex
+	httpClient  *http.Client
 }
 
 // Factory configures and returns Artifactory secrets backends
@@ -34,7 +36,9 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	return b, nil
 }
 func Backend(_ *logical.BackendConfig) (*backend, error) {
-	b := &backend{}
+	b := &backend{
+		httpClient: http.DefaultClient,
+	}
 
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(artifactoryHelp),

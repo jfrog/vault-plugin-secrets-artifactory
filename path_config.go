@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"time"
 )
 
 func (b *backend) pathConfig() *framework.Path {
@@ -19,6 +20,16 @@ func (b *backend) pathConfig() *framework.Path {
 				Type:        framework.TypeString,
 				Required:    true,
 				Description: "Address of the Artifactory instance",
+			},
+			"max_ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: "Maximum duration any lease issued by this backend can be.",
+				Default:     time.Duration(1 * time.Hour),
+			},
+			"default_ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: "Default TTL when no other TTL is specified",
+				Default:     time.Duration(1 * time.Hour),
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -41,8 +52,10 @@ func (b *backend) pathConfig() *framework.Path {
 }
 
 type adminConfiguration struct {
-	AccessToken    string `json:"access_token"`
-	ArtifactoryURL string `json:"artifactory_url"`
+	AccessToken    string        `json:"access_token"`
+	ArtifactoryURL string        `json:"artifactory_url"`
+	MaxTTL         time.Duration `json:"max_ttl"`
+	DefaultTTL     time.Duration `json:"default_ttl"`
 }
 
 func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -53,6 +66,29 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 	config := &adminConfiguration{}
 	config.AccessToken = data.Get("access_token").(string)
 	config.ArtifactoryURL = data.Get("url").(string)
+	config.MaxTTL = time.Second * time.Duration(data.Get("max_ttl").(int))
+	config.DefaultTTL = time.Second * time.Duration(data.Get("default_ttl").(int))
+
+	if config.AccessToken == "" {
+		return logical.ErrorResponse("access_token is required"), nil
+	}
+
+	if config.ArtifactoryURL == "" {
+		return logical.ErrorResponse("url is required"), nil
+	}
+
+	if config.MaxTTL > 0 && config.DefaultTTL > config.MaxTTL {
+		return logical.ErrorResponse("default_ttl cannot be longer than max_ttl"), nil
+	}
+
+	if b.Backend.System().MaxLeaseTTL() > 0 {
+		if config.MaxTTL > b.Backend.System().MaxLeaseTTL() {
+			return logical.ErrorResponse("max_ttl exceeds system max_ttl"), nil
+		}
+		if config.DefaultTTL > b.Backend.System().MaxLeaseTTL() {
+			return logical.ErrorResponse("default_ttl exceeds system max_ttl"), nil
+		}
+	}
 
 	entry, err := logical.StorageEntryJSON("config/admin", config)
 	if err != nil {
@@ -95,6 +131,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		// FIXME should I return the access_token? should I hash it?
 		"access_token": config.AccessToken,
 		"url":          config.ArtifactoryURL,
+		"default_ttl":  config.DefaultTTL.Seconds(),
+		"max_ttl":      config.MaxTTL.Seconds(),
 	}
 
 	return &logical.Response{
