@@ -3,11 +3,12 @@ package artifactory
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/logical"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) error {
@@ -48,7 +49,7 @@ func (b *backend) refreshToken(config adminConfiguration, accessToken, refreshTo
 
 	if resp.StatusCode != http.StatusOK {
 		b.Backend.Logger().Warn("got status code", "statusCode", resp.StatusCode, "response", resp)
-		return nil, fmt.Errorf("could not create access token: HTTP response %v", resp.StatusCode)
+		return nil, fmt.Errorf("could not refresh access token: HTTP response %v", resp.StatusCode)
 	}
 
 	var createdToken createTokenResponse
@@ -60,8 +61,9 @@ func (b *backend) refreshToken(config adminConfiguration, accessToken, refreshTo
 	return &createdToken, nil
 }
 
-func (b *backend) createToken(config adminConfiguration, role artifactoryRole, TTL, maxTTL time.Duration) (*createTokenResponse, error) {
+func (b *backend) createToken(config adminConfiguration, role artifactoryRole, ttl, maxTTL time.Duration) (*createTokenResponse, error) {
 	values := url.Values{}
+
 	if role.GrantType != "" {
 		values.Set("grant_type", role.GrantType)
 	}
@@ -69,8 +71,8 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole, T
 	values.Set("username", role.Username)
 	values.Set("scope", role.Scope)
 
-	if TTL > 0 {
-		values.Set("expires_in", fmt.Sprintf("%d", int64(TTL.Seconds())))
+	if ttl > 0 {
+		values.Set("expires_in", fmt.Sprintf("%d", int64(ttl.Seconds())))
 	} else if maxTTL > 0 {
 		values.Set("expires_in", fmt.Sprintf("%d", int64(maxTTL.Seconds())))
 	}
@@ -115,6 +117,7 @@ func (b *backend) performArtifactoryRequest(config adminConfiguration, path stri
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 

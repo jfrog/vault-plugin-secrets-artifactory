@@ -2,9 +2,10 @@ package artifactory
 
 import (
 	"context"
+	"time"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"time"
 )
 
 func (b *backend) pathTokenCreate() *framework.Path {
@@ -13,15 +14,15 @@ func (b *backend) pathTokenCreate() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type:        framework.TypeString,
-				Description: "FIXME",
+				Description: `Use the configuration of the specified role.`,
 			},
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
-				Description: `FIXME`,
+				Description: `Override the default TTL when issuing this access token. Cannot exceed smallest (system, backend, role, this request) maximum TTL.`,
 			},
 			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
-				Description: `FIXME`,
+				Description: `Override the maximum TTL for this access token. Cannot exceed smallest (system, backend) maximum TTL.`,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -29,8 +30,7 @@ func (b *backend) pathTokenCreate() *framework.Path {
 				Callback: b.pathTokenCreatePerform,
 			},
 		},
-		HelpSynopsis:    `FIXME`,
-		HelpDescription: `FIXME`,
+		HelpSynopsis: `Create an Artifactory access token for the specified role.`,
 	}
 }
 
@@ -43,7 +43,6 @@ type createTokenResponse struct {
 }
 
 func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
 	b.rolesMutex.RLock()
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
@@ -55,6 +54,7 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return nil, err
 	}
+
 	if config == nil {
 		return logical.ErrorResponse("backend not configured"), nil
 	}
@@ -62,6 +62,7 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	// Read in the requested role
 	roleName := data.Get("role").(string)
 	entry, err := req.Storage.Get(ctx, "roles/"+roleName)
+
 	if err != nil {
 		return nil, err
 	}
@@ -75,13 +76,13 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	}
 
 	maxTTL := time.Second * time.Duration(data.Get("max_ttl").(int))
-	TTL := time.Second * time.Duration(data.Get("ttl").(int))
+	ttl := time.Second * time.Duration(data.Get("ttl").(int))
 
-	if TTL == 0 {
+	if ttl == 0 {
 		if role.DefaultTTL > 0 {
-			TTL = role.DefaultTTL
+			ttl = role.DefaultTTL
 		} else if config.DefaultTTL > 0 {
-			TTL = config.DefaultTTL
+			ttl = config.DefaultTTL
 		}
 	}
 
@@ -107,11 +108,11 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	if maxTTL > 0 && TTL > maxTTL {
+	if maxTTL > 0 && ttl > maxTTL {
 		return logical.ErrorResponse("ttl cannot exceed max_ttl"), nil
 	}
 
-	resp, err := b.createToken(*config, role, TTL, maxTTL)
+	resp, err := b.createToken(*config, role, ttl, maxTTL)
 	if err != nil {
 		return nil, err
 	}
@@ -127,13 +128,13 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		"refresh_token": resp.RefreshToken,
 	})
 
-	response.Secret.TTL = TTL
+	response.Secret.TTL = ttl
 	response.Secret.MaxTTL = maxTTL
 
 	// TODO do I need to fill all this in myself?
 	response.Secret.LeaseOptions.Renewable = (resp.RefreshToken != "")
 	response.Secret.LeaseOptions.MaxTTL = maxTTL
-	response.Secret.LeaseOptions.TTL = TTL
+	response.Secret.LeaseOptions.TTL = ttl
 	response.Secret.LeaseOptions.IssueTime = time.Now()
 
 	return response, nil

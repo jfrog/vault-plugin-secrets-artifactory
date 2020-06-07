@@ -2,10 +2,11 @@ package artifactory
 
 import (
 	"context"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 )
 
 // When there are no roles, an error must be returned.

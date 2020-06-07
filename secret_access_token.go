@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -14,7 +15,7 @@ func (b *backend) secretAccessToken() *framework.Secret {
 		Fields: map[string]*framework.FieldSchema{
 			"access_token": {
 				Type:        framework.TypeString,
-				Description: `FIXME`,
+				Description: `Artifactory Access Token`,
 			},
 		},
 
@@ -30,6 +31,7 @@ func (b *backend) secretAccessTokenRenew(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return nil, err
 	}
+
 	if config == nil {
 		return logical.ErrorResponse("backend not configured"), nil
 	}
@@ -37,8 +39,10 @@ func (b *backend) secretAccessTokenRenew(ctx context.Context, req *logical.Reque
 	b.Backend.Logger().Warn("renewing is complicated", "lease options", req.Secret.LeaseOptions,
 		"Max TTL", req.Secret.MaxTTL,
 		"TTL", req.Secret.TTL)
+
 	accessToken := req.Secret.InternalData["access_token"].(string)
 	refreshToken := req.Secret.InternalData["refresh_token"].(string)
+
 	if refreshToken == "" {
 		return logical.ErrorResponse("token can not be refreshed"), nil
 	}
@@ -53,11 +57,12 @@ func (b *backend) secretAccessTokenRenew(ctx context.Context, req *logical.Reque
 }
 
 func (b *backend) secretAccessTokenRevoke(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-
 	config, err := b.fetchAdminConfiguration(ctx, req.Storage)
+
 	if err != nil {
 		return nil, err
 	}
+
 	if config == nil {
 		return logical.ErrorResponse("backend not configured"), nil
 	}

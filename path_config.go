@@ -3,9 +3,10 @@ package artifactory
 import (
 	"context"
 	"crypto/sha256"
+	"time"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"time"
 )
 
 func (b *backend) pathConfig() *framework.Path {
@@ -25,30 +26,47 @@ func (b *backend) pathConfig() *framework.Path {
 			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Maximum duration any lease issued by this backend can be.",
-				Default:     time.Duration(1 * time.Hour),
+				Default:     1 * time.Hour,
 			},
 			"default_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Default TTL when no other TTL is specified",
-				Default:     time.Duration(1 * time.Hour),
+				Default:     1 * time.Hour,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigUpdate,
-				Summary:  "FIXME",
+				Summary:  "Configure the Artifactory secrets backend.",
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigDelete,
-				Summary:  "FIXME",
+				Summary:  "Delete the Artifactory secrets configuration.",
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigRead,
-				Summary:  "FIXME",
+				Summary:  "Examine the Artifactory secrets configuration.",
 			},
 		},
-		HelpSynopsis:    `FIXME`,
-		HelpDescription: `FIXME`,
+		HelpSynopsis: `Interact with the Artifactory secrets configuration.`,
+		HelpDescription: `
+Configure the parameters used to connect to the Artifactory server integrated with this backend. The two main
+parameters are "url" which is the absolute URL to the Artifactory server. Note that "/api" is prepended by the
+individual calls, so do not include it in the URL here.
+
+The second is "access_token" which must be an access token powerful enough to generate the other access tokens you'll
+be using. This value is stored seal wrapped when available. Once set, the access token cannot be retrieved, but the backend
+will send a sha256 hash of the token so you can compare it to your notes. 
+
+There are two TTL related parameters. The ultimate maximum lifetime that a token can live is controlled by "max_ttl", the
+backend will refuse to renew/refresh tokens beyond max_ttl. The second is "default_ttl" which is used when a role does
+not also specify a TTL. Default TTL must not be greater than Max TTL, and Max TTL must not be greater than the system-wide
+Max TTL defined in Vault's configuration. 
+
+Note that ultimately the maximum TTL is calculated as the time of issuing the access token.
+
+No renewals or new tokens will be issued if the backend configuration (config/admin) is deleted.
+`,
 	}
 }
 
@@ -60,7 +78,6 @@ type adminConfiguration struct {
 }
 
 func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
@@ -86,6 +103,7 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		if config.MaxTTL > b.Backend.System().MaxLeaseTTL() {
 			return logical.ErrorResponse("max_ttl exceeds system max_ttl"), nil
 		}
+
 		if config.DefaultTTL > b.Backend.System().MaxLeaseTTL() {
 			return logical.ErrorResponse("default_ttl exceeds system max_ttl"), nil
 		}
@@ -112,7 +130,7 @@ func (b *backend) pathConfigDelete(ctx context.Context, req *logical.Request, _ 
 		return nil, err
 	}
 
-	return logical.ErrorResponse("FIXME"), nil
+	return nil, nil
 }
 
 func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {

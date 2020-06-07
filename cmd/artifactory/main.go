@@ -1,8 +1,9 @@
 package main
 
 import (
-	artifactory "github.com/idcmp/artifactory-secrets-plugin"
 	"os"
+
+	artifactory "github.com/idcmp/artifactory-secrets-plugin"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -12,10 +13,9 @@ import (
 func main() {
 	logger := hclog.New(&hclog.LoggerOptions{})
 
-	//TODO
-	logger.Error("Hello")
 	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
+
 	if err := flags.Parse(os.Args[1:]); err != nil {
 		logger.Error("could not parse flags", "error", err)
 		os.Exit(1)

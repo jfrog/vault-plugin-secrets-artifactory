@@ -2,10 +2,11 @@ package artifactory
 
 import (
 	"context"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 )
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)
@@ -16,7 +17,7 @@ func (rt roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 
 func newTestClient(fn roundTripperFunc) *http.Client {
 	return &http.Client{
-		Transport: roundTripperFunc(fn),
+		Transport: fn,
 	}
 }
 

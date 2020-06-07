@@ -3,19 +3,19 @@ package artifactory
 import (
 	"bytes"
 	"context"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 )
 
 // Test that the HTTP request sent to Artifactory matches what the docs say, and that
 // handling the response translates into a proper response.
 func TestBackend_CreateTokenSuccess(t *testing.T) {
-
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
 		"url":          "https://127.0.0.1",
@@ -88,7 +88,6 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 
 // Test that an error is returned if Artifactory is unavailable.
 func TestBackend_CreateTokenArtifactoryUnavailable(t *testing.T) {
-
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
 		"url":          "https://127.0.0.1",
@@ -130,7 +129,6 @@ func TestBackend_CreateTokenArtifactoryUnavailable(t *testing.T) {
 
 // Test that an error is returned if the access token is invalid for the operation being performed.
 func TestBackend_CreateTokenUnauthorized(t *testing.T) {
-
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
 		"url":          "https://127.0.0.1",
@@ -177,7 +175,6 @@ func TestBackend_CreateTokenUnauthorized(t *testing.T) {
 // Test that an error is returned when the nginx in front of Artifactory can't reach Artifactory.
 // It happens.
 func TestBackend_CreateTokenArtifactoryMisconfigured(t *testing.T) {
-
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
 		"url":          "https://127.0.0.1",

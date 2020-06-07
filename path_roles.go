@@ -2,9 +2,10 @@ package artifactory
 
 import (
 	"context"
+	"time"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"time"
 )
 
 func (b *backend) pathListRoles() *framework.Path {
@@ -15,8 +16,7 @@ func (b *backend) pathListRoles() *framework.Path {
 				Callback: b.pathRoleList,
 			},
 		},
-		HelpSynopsis:    `FIXME`,
-		HelpDescription: `FIXME`,
+		HelpSynopsis: `List configured roles with this backend.`,
 	}
 }
 
@@ -27,31 +27,31 @@ func (b *backend) pathRoles() *framework.Path {
 			"role": {
 				Type:        framework.TypeString,
 				Required:    true,
-				Description: `FIXME`,
+				Description: `The name of the role, must be conform to alphanumeric plus at, dash, and period.`,
 			},
 			"grant_type": {
 				Type:        framework.TypeString,
-				Description: `FIXME`,
+				Description: `Optional. Defaults to 'client_credentials' when creating the access token. You likely don't need to change this.'`,
 			},
 			"username": {
 				Type:        framework.TypeString,
 				Required:    true,
-				Description: `FIXME`,
+				Description: `Required. The username for which the access token is created. If the user does not exist, Artifactory will create a transient user. Note that non-admininstrative access tokens can only create tokens for themselves.`,
 			},
 			"scope": {
 				Type:        framework.TypeString,
 				Required:    true,
-				Description: `FIXME`,
+				Description: `Required. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
 			},
 			"refreshable": {
 				Type:        framework.TypeBool,
 				Required:    false,
 				Default:     false,
-				Description: `FIXME`,
+				Description: `Optional; defaults to false. Will tell Artifactory that the token should be refreshable.`,
 			},
 			"audience": {
 				Type:        framework.TypeString,
-				Description: `FIXME`,
+				Description: `Optional. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
 			},
 			"default_ttl": {
 				Type:        framework.TypeDurationSecond,
@@ -65,19 +65,18 @@ func (b *backend) pathRoles() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathRoleRead,
-				Summary:  `FIXME`,
+				Summary:  `Read information about the specified role.`,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathRoleWrite,
-				Summary:  `FIXME`,
+				Summary:  `Write or overwrite information about the specified role.`,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathRoleDelete,
-				Summary:  `FIXME`,
+				Summary:  `Delete the specified role.`,
 			},
 		},
-		HelpSynopsis:    `FIXME`,
-		HelpDescription: `FIXME`,
+		HelpSynopsis: `Manage data related to roles used to issue Artifactory access tokens.`,
 	}
 }
 

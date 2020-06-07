@@ -18,7 +18,7 @@ type backend struct {
 	httpClient  *http.Client
 }
 
-// Factory configures and returns Artifactory secrets backends
+// Factory configures and returns Artifactory secrets backends.
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	if conf == nil {
 		return nil, fmt.Errorf("configuration passed into backend is nil")
@@ -56,6 +56,7 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 		b.pathRoles(),
 		b.pathTokenCreate(),
 		b.pathConfig())
+
 	return b, nil
 }
 
