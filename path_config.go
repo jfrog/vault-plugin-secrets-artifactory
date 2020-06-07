@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"crypto/sha256"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"time"
@@ -127,12 +128,14 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
+	// I'm not sure if I should be returning the access token, so I'll hash it.
+	accessTokenHash := sha256.Sum224([]byte(config.AccessToken))
+
 	configMap := map[string]interface{}{
-		// FIXME should I return the access_token? should I hash it?
-		"access_token": config.AccessToken,
-		"url":          config.ArtifactoryURL,
-		"default_ttl":  config.DefaultTTL.Seconds(),
-		"max_ttl":      config.MaxTTL.Seconds(),
+		"access_token_sha256": accessTokenHash,
+		"url":                 config.ArtifactoryURL,
+		"default_ttl":         config.DefaultTTL.Seconds(),
+		"max_ttl":             config.MaxTTL.Seconds(),
 	}
 
 	return &logical.Response{

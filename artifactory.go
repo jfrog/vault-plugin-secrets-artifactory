@@ -18,7 +18,7 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 
 	resp, err := b.performArtifactoryRequest(config, "/api/security/token/revoke", values)
 	if err != nil {
-		b.Backend.Logger().Warn("error making request", "response", resp, "err", err.Error())
+		b.Backend.Logger().Warn("error making request", "response", resp, "err", err)
 		return err
 	}
 	//noinspection GoUnhandledErrorResult
@@ -40,7 +40,7 @@ func (b *backend) refreshToken(config adminConfiguration, accessToken, refreshTo
 
 	resp, err := b.performArtifactoryRequest(config, "/api/security/token", values)
 	if err != nil {
-		b.Backend.Logger().Warn("error making request", "response", resp, "err", err.Error())
+		b.Backend.Logger().Warn("error making request", "response", resp, "err", err)
 		return nil, err
 	}
 	//noinspection GoUnhandledErrorResult
@@ -85,7 +85,7 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole, T
 
 	resp, err := b.performArtifactoryRequest(config, "/api/security/token", values)
 	if err != nil {
-		b.Backend.Logger().Warn("error making request", "response", resp, "err", err.Error())
+		b.Backend.Logger().Warn("error making request", "response", resp, "err", err)
 		return nil, err
 	}
 	//noinspection GoUnhandledErrorResult

@@ -2,7 +2,6 @@ package artifactory
 
 import (
 	"context"
-	"fmt"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"time"
@@ -111,8 +110,6 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	if maxTTL > 0 && TTL > maxTTL {
 		return logical.ErrorResponse("ttl cannot exceed max_ttl"), nil
 	}
-
-	fmt.Printf("maxttl: %v ttl: %v\n", maxTTL, TTL)
 
 	resp, err := b.createToken(*config, role, TTL, maxTTL)
 	if err != nil {
