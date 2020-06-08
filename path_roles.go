@@ -139,15 +139,15 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data 
 	}
 
 	if newRole.MaxTTL > 0 && newRole.DefaultTTL > newRole.MaxTTL {
-		return logical.ErrorResponse("default_ttl cannot be longer than max_ttl"), nil
+		return logical.ErrorResponse("default_ttl (%v) cannot be longer than max_ttl (%v) ", newRole.DefaultTTL, newRole.MaxTTL), nil
 	}
 
 	if config.MaxTTL > 0 && newRole.MaxTTL > config.MaxTTL {
-		return logical.ErrorResponse("role max_ttl cannot be longer than backend max_ttl"), nil
+		return logical.ErrorResponse("role max_ttl (%v) cannot be longer than backend max_ttl (%v)", newRole.MaxTTL, config.MaxTTL), nil
 	}
 
 	if config.MaxTTL > 0 && newRole.DefaultTTL > config.MaxTTL {
-		return logical.ErrorResponse("role default_ttl cannot be longer than backend max_ttl"), nil
+		return logical.ErrorResponse("role default_ttl (%v) cannot be longer than backend max_ttl (%v)", newRole.DefaultTTL, config.MaxTTL), nil
 	}
 
 	if newRole.Scope == "" {

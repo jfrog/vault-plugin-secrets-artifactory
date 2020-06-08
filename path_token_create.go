@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -49,6 +50,7 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	defer b.rolesMutex.RUnlock()
 
 	var role artifactoryRole
+	var warning string
 
 	config, err := b.fetchAdminConfiguration(ctx, req.Storage)
 	if err != nil {
@@ -109,7 +111,8 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	}
 
 	if maxTTL > 0 && ttl > maxTTL {
-		return logical.ErrorResponse("ttl cannot exceed max_ttl"), nil
+		warning = fmt.Sprintf("ttl (%v) lowered to max_ttl (%v)", ttl, maxTTL)
+		ttl = maxTTL
 	}
 
 	resp, err := b.createToken(*config, role, ttl, maxTTL)
@@ -127,6 +130,10 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		"access_token":  resp.AccessToken,
 		"refresh_token": resp.RefreshToken,
 	})
+
+	if warning != "" {
+		response.AddWarning(warning)
+	}
 
 	response.Secret.TTL = ttl
 	response.Secret.MaxTTL = maxTTL

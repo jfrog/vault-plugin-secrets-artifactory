@@ -21,7 +21,7 @@ func newTestClient(fn roundTripperFunc) *http.Client {
 	}
 }
 
-func configuredBackend(t *testing.T, adminConfig map[string]interface{}) (*backend, *logical.BackendConfig) {
+func makeBackend(t *testing.T) (*backend, *logical.BackendConfig) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -34,13 +34,19 @@ func configuredBackend(t *testing.T, adminConfig map[string]interface{}) (*backe
 		t.Fatal(err)
 	}
 
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+	return b, config
+}
+
+func configuredBackend(t *testing.T, adminConfig map[string]interface{}) (*backend, *logical.BackendConfig) {
+
+	b, config := makeBackend(t)
+
+	_, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/admin",
 		Storage:   config.StorageView,
 		Data:      adminConfig,
 	})
-	assert.Nil(t, resp)
 	assert.NoError(t, err)
 
 	return b, config

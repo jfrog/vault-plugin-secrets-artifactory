@@ -3,6 +3,7 @@ package artifactory
 import (
 	"context"
 	"crypto/sha256"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -26,12 +27,10 @@ func (b *backend) pathConfig() *framework.Path {
 			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Maximum duration any lease issued by this backend can be.",
-				Default:     1 * time.Hour,
 			},
 			"default_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Default TTL when no other TTL is specified",
-				Default:     1 * time.Hour,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -81,6 +80,8 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
+	var warning string
+
 	config := &adminConfiguration{}
 	config.AccessToken = data.Get("access_token").(string)
 	config.ArtifactoryURL = data.Get("url").(string)
@@ -96,7 +97,8 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 	}
 
 	if config.MaxTTL > 0 && config.DefaultTTL > config.MaxTTL {
-		return logical.ErrorResponse("default_ttl cannot be longer than max_ttl"), nil
+		warning = fmt.Sprintf("default_ttl (%v) lowered to max_ttl (%v)", config.DefaultTTL, config.MaxTTL)
+		config.DefaultTTL = config.MaxTTL
 	}
 
 	if b.Backend.System().MaxLeaseTTL() > 0 {
@@ -105,7 +107,8 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		}
 
 		if config.DefaultTTL > b.Backend.System().MaxLeaseTTL() {
-			return logical.ErrorResponse("default_ttl exceeds system max_ttl"), nil
+			warning = fmt.Sprintf("default_ttl (%v) lowered to system max_ttl (%v)", config.DefaultTTL, b.Backend.System().MaxLeaseTTL())
+			config.DefaultTTL = b.Backend.System().MaxLeaseTTL()
 		}
 	}
 
@@ -119,7 +122,13 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 
-	return nil, nil
+	if warning != "" {
+		resp := &logical.Response{}
+		resp.AddWarning(warning)
+		return resp, nil
+	} else {
+		return nil, nil
+	}
 }
 
 func (b *backend) pathConfigDelete(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
@@ -147,13 +156,19 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 	}
 
 	// I'm not sure if I should be returning the access token, so I'll hash it.
-	accessTokenHash := sha256.Sum224([]byte(config.AccessToken))
+	accessTokenHash := sha256.Sum256([]byte(config.AccessToken))
 
 	configMap := map[string]interface{}{
-		"access_token_sha256": accessTokenHash,
+		"access_token_sha256": fmt.Sprintf("%x", accessTokenHash[:]),
 		"url":                 config.ArtifactoryURL,
-		"default_ttl":         config.DefaultTTL.Seconds(),
-		"max_ttl":             config.MaxTTL.Seconds(),
+	}
+
+	if config.MaxTTL != 0 {
+		configMap["max_ttl"] = config.MaxTTL.Seconds()
+	}
+
+	if config.DefaultTTL != 0 {
+		configMap["default_ttl"] = config.DefaultTTL.Seconds()
 	}
 
 	return &logical.Response{

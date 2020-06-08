@@ -11,13 +11,7 @@ import (
 
 // When there are no roles, an error must be returned.
 func TestBackend_PathRoleList_Empty(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-
-	b, _ := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
-		t.Fatal(err)
-	}
+	b, config := makeBackend(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
@@ -33,13 +27,7 @@ func TestBackend_PathRoleList_Empty(t *testing.T) {
 
 // The backend must be configured before it will accept roles
 func TestBackend_PathRoleList_CannotAddRoleWhenNotConfigured(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-
-	b, _ := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
-		t.Fatal(err)
-	}
+	b, config := makeBackend(t)
 
 	roleData := map[string]interface{}{
 		"role":     "test-role",

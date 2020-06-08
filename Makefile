@@ -29,4 +29,10 @@ clean:
 fmt:
 	go fmt $$(go list ./...)
 
-.PHONY: build clean fmt start enable
+setup:	enable
+	vault write artifactory/config/admin  url=http://localhost:8080 access_token=access_token max_ttl=5m default_ttl=2m
+	vault read artifactory/config/admin
+	vault write artifactory/roles/test scope="scope goes here" username="unsure" max_ttl=5m default_ttl=2m refreshable=true
+	vault read artifactory/roles/test
+
+.PHONY: build clean fmt start enable setup
