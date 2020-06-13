@@ -2,7 +2,6 @@ package artifactory
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -50,7 +49,6 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	defer b.rolesMutex.RUnlock()
 
 	var role artifactoryRole
-	var warning string
 
 	config, err := b.fetchAdminConfiguration(ctx, req.Storage)
 	if err != nil {
@@ -80,40 +78,7 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	maxTTL := time.Second * time.Duration(data.Get("max_ttl").(int))
 	ttl := time.Second * time.Duration(data.Get("ttl").(int))
 
-	if ttl == 0 {
-		if role.DefaultTTL > 0 {
-			ttl = role.DefaultTTL
-		} else if config.DefaultTTL > 0 {
-			ttl = config.DefaultTTL
-		}
-	}
-
-	// Check that the max_ttl is not greater than the backend configuration, role, or system-wide max_ttl. This is
-	// done at create time since I'm guessing that's the most secure time to do it (ie, if the max_ttl for a backend
-	// changes such that it's lower than the max_ttl for the role, we still enforce that here).
-	if config.MaxTTL > 0 && maxTTL > config.MaxTTL {
-		return logical.ErrorResponse("max_ttl cannot exceed max_ttl for backend"), nil
-	}
-
-	if role.MaxTTL > 0 && maxTTL > role.MaxTTL {
-		return logical.ErrorResponse("max_ttl cannot exceed max_ttl for role"), nil
-	}
-
-	if b.Backend.System().MaxLeaseTTL() > 0 {
-		if role.MaxTTL > 0 {
-			if b.Backend.System().MaxLeaseTTL() > role.MaxTTL {
-				return logical.ErrorResponse("max_ttl cannot exceed system max_ttl"), nil
-			}
-		} else {
-			// If there's a system-max TTL and one wasn't specified, we set maxTTL to that system maximum here.
-			maxTTL = b.Backend.System().MaxLeaseTTL()
-		}
-	}
-
-	if maxTTL > 0 && ttl > maxTTL {
-		warning = fmt.Sprintf("ttl (%v) lowered to max_ttl (%v)", ttl, maxTTL)
-		ttl = maxTTL
-	}
+	maxTTL, ttl, warnings := b.calculateTTLs(config, role, maxTTL, ttl)
 
 	resp, err := b.createToken(*config, role, ttl, maxTTL)
 	if err != nil {
@@ -131,12 +96,12 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		"refresh_token": resp.RefreshToken,
 	})
 
-	if warning != "" {
-		response.AddWarning(warning)
+	if len(warnings) > 0 {
+		response.Warnings = warnings
 	}
 
 	response.Secret.TTL = ttl
-	response.Secret.MaxTTL = maxTTL
+	response.Secret.MaxTTL = 555 * time.Second
 
 	// TODO do I need to fill all this in myself?
 	response.Secret.LeaseOptions.Renewable = (resp.RefreshToken != "")
@@ -145,4 +110,68 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	response.Secret.LeaseOptions.IssueTime = time.Now()
 
 	return response, nil
+}
+
+func (b *backend) calculateTTLs(backend *adminConfiguration, role artifactoryRole, requestMaxTTL, requestTTL time.Duration) (time.Duration, time.Duration, []string) {
+
+	var maxTTL, ttl time.Duration
+	var warnings []string
+
+	var maxTTLWarning string
+
+	// Figure out the most desirable max_ttl
+	if requestMaxTTL > 0 {
+		maxTTL = requestMaxTTL
+	} else if role.MaxTTL > 0 {
+		maxTTL = role.MaxTTL
+	} else if backend.MaxTTL > 0 {
+		maxTTL = backend.MaxTTL
+	} else if b.Backend.System().MaxLeaseTTL() > 0 {
+		maxTTL = b.Backend.System().MaxLeaseTTL()
+	}
+
+	// Lower it to the lowest reasonable value, I could do some loop here, but I want a nice
+	// warning message.
+	if b.Backend.System().MaxLeaseTTL() > 0 && maxTTL > b.Backend.System().MaxLeaseTTL() {
+		maxTTLWarning = "max_ttl lowered to system max_ttl"
+		maxTTL = b.Backend.System().MaxLeaseTTL()
+	}
+
+	if backend.MaxTTL > 0 && maxTTL > backend.MaxTTL {
+		maxTTLWarning = "max_ttl lowered to backend max_ttl"
+		maxTTL = backend.MaxTTL
+	}
+
+	if role.MaxTTL > 0 && maxTTL > role.MaxTTL {
+		maxTTLWarning = "max_ttl lowered to role max_ttl"
+		maxTTL = role.MaxTTL
+	}
+
+	// I don't think this is actually possible.
+	if requestMaxTTL > 0 && maxTTL > requestMaxTTL {
+		maxTTL = requestMaxTTL
+	}
+
+	if maxTTLWarning != "" {
+		warnings = append(warnings, maxTTLWarning)
+	}
+
+	// Figure out the most desirable default_ttl
+	if requestTTL > 0 {
+		ttl = requestTTL
+	} else if role.DefaultTTL > 0 {
+		ttl = role.DefaultTTL
+	} else if backend.DefaultTTL > 0 {
+		ttl = backend.DefaultTTL
+	} else if b.Backend.System().DefaultLeaseTTL() > 0 {
+		ttl = b.Backend.System().DefaultLeaseTTL()
+	}
+
+	if ttl > maxTTL {
+		warnings = append(warnings, "ttl lowered to max_ttl")
+		ttl = maxTTL
+
+	}
+
+	return maxTTL, ttl, warnings
 }

@@ -1,7 +1,9 @@
 package artifactory
 
 import (
+	"bytes"
 	"context"
+	"io/ioutil"
 	"net/http"
 	"testing"
 
@@ -18,6 +20,24 @@ func (rt roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 func newTestClient(fn roundTripperFunc) *http.Client {
 	return &http.Client{
 		Transport: fn,
+	}
+}
+
+// Literally https://www.jfrog.com/confluence/display/JFROG/Artifactory+REST+API#ArtifactoryRESTAPI-CreateToken
+const canonicalAccessToken = `{
+   "access_token":   "adsdgbtybbeeyh...",
+   "expires_in":    3600,
+   "scope":         "api:* member-of-groups:readers",
+   "token_type":    "Bearer",
+   "refresh_token": "fgsfgsdugh8dgu9s8gy9hsg..."
+}`
+
+func tokenCreatedResponse(token string) roundTripperFunc {
+	return func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       ioutil.NopCloser(bytes.NewBufferString(token)),
+		}, nil
 	}
 }
 

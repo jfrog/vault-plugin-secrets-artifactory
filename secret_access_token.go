@@ -2,9 +2,10 @@ package artifactory
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"time"
 )
 
 const SecretArtifactoryAccessTokenType = "artifactory_access_token"
@@ -36,9 +37,19 @@ func (b *backend) secretAccessTokenRenew(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	b.Backend.Logger().Warn("renewing is complicated", "lease options", req.Secret.LeaseOptions,
-		"Max TTL", req.Secret.MaxTTL,
-		"TTL", req.Secret.TTL)
+	if !req.Secret.Renewable {
+		return nil, fmt.Errorf("lease cannot be renewed")
+	}
+
+	refreshDuration := req.Secret.LeaseOptions.ExpirationTime().Sub(time.Now())
+
+	if req.Secret.LeaseOptions.Increment > 0 {
+		if req.Secret.LeaseOptions.Increment < refreshDuration {
+			refreshDuration = req.Secret.LeaseOptions.Increment
+		}
+	} else if req.Secret.TTL > 0 && refreshDuration > req.Secret.TTL {
+		refreshDuration = req.Secret.TTL
+	}
 
 	accessToken := req.Secret.InternalData["access_token"].(string)
 	refreshToken := req.Secret.InternalData["refresh_token"].(string)
@@ -47,11 +58,9 @@ func (b *backend) secretAccessTokenRenew(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("token can not be refreshed"), nil
 	}
 
-	if _, err := b.refreshToken(*config, accessToken, refreshToken); err != nil {
+	if _, err := b.refreshToken(*config, accessToken, refreshToken, refreshDuration); err != nil {
 		return nil, err
 	}
-
-	// FIXME how do I handle TTLs here?
 
 	return resp, nil
 }

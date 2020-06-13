@@ -33,7 +33,7 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 	return nil
 }
 
-func (b *backend) refreshToken(config adminConfiguration, accessToken, refreshToken string) (*createTokenResponse, error) {
+func (b *backend) refreshToken(config adminConfiguration, accessToken, refreshToken string, refreshDuration time.Duration) (*createTokenResponse, error) {
 	values := url.Values{}
 	values.Set("grant_type", "refresh_token")
 	values.Set("refresh_token", refreshToken)

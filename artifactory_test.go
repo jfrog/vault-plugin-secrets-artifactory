@@ -55,17 +55,8 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 
 		return &http.Response{
 			StatusCode: 200,
-			// Literally https://www.jfrog.com/confluence/display/JFROG/Artifactory+REST+API#ArtifactoryRESTAPI-CreateToken
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
-{
-   "access_token":   "adsdgbtybbeeyh...",
-   "expires_in":    3600,
-   "scope":         "api:* member-of-groups:readers",
-   "token_type":    "Bearer",
-   "refresh_token": "fgsfgsdugh8dgu9s8gy9hsg..."
-}
-`)),
-			Header: make(http.Header),
+			Body:       ioutil.NopCloser(bytes.NewBufferString(canonicalAccessToken)),
+			Header:     make(http.Header),
 		}, nil
 	})
 
@@ -199,14 +190,7 @@ func TestBackend_CreateTokenArtifactoryMisconfigured(t *testing.T) {
 	assert.Nil(t, resp)
 
 	// Fake http client that returns some HTML..
-	b.httpClient = newTestClient(func(req *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body: ioutil.NopCloser(strings.NewReader(`
-<html><body><h1>Bad Gateway</h1><hr/></body></html>
-`)),
-		}, nil
-	})
+	b.httpClient = newTestClient(tokenCreatedResponse(`<html><body><h1>Bad Gateway</h1><hr/></body></html>`))
 
 	// Send Request
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
