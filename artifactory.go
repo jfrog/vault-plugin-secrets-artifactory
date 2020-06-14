@@ -39,6 +39,10 @@ func (b *backend) refreshToken(config adminConfiguration, accessToken, refreshTo
 	values.Set("refresh_token", refreshToken)
 	values.Set("access_token", accessToken)
 
+	if refreshDuration > 0 {
+		values.Set("expires_in", fmt.Sprintf("%d", int64(refreshDuration.Seconds())))
+	}
+
 	resp, err := b.performArtifactoryRequest(config, "/api/security/token", values)
 	if err != nil {
 		b.Backend.Logger().Warn("error making request", "response", resp, "err", err)
@@ -52,13 +56,13 @@ func (b *backend) refreshToken(config adminConfiguration, accessToken, refreshTo
 		return nil, fmt.Errorf("could not refresh access token: HTTP response %v", resp.StatusCode)
 	}
 
-	var createdToken createTokenResponse
-	if err := json.NewDecoder(resp.Body).Decode(&createdToken); err != nil {
+	var refreshedToken createTokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&refreshedToken); err != nil {
 		b.Backend.Logger().Warn("could not parse response", "response", resp, "err", err)
 		return nil, err
 	}
 
-	return &createdToken, nil
+	return &refreshedToken, nil
 }
 
 func (b *backend) createToken(config adminConfiguration, role artifactoryRole, ttl, maxTTL time.Duration) (*createTokenResponse, error) {
@@ -75,6 +79,8 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole, t
 		values.Set("expires_in", fmt.Sprintf("%d", int64(ttl.Seconds())))
 	} else if maxTTL > 0 {
 		values.Set("expires_in", fmt.Sprintf("%d", int64(maxTTL.Seconds())))
+	} else {
+		values.Set("expires_in", "0") // never expires
 	}
 
 	if role.Refreshable {

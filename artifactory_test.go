@@ -62,7 +62,7 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 
 	// Send Request
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
+		Operation: logical.ReadOperation,
 		Path:      "token/test-role",
 		Storage:   config.StorageView,
 	})
@@ -109,7 +109,7 @@ func TestBackend_CreateTokenArtifactoryUnavailable(t *testing.T) {
 
 	// Send Request
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
+		Operation: logical.ReadOperation,
 		Path:      "token/test-role",
 		Storage:   config.StorageView,
 	})
@@ -153,7 +153,7 @@ func TestBackend_CreateTokenUnauthorized(t *testing.T) {
 
 	// Send Request
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
+		Operation: logical.ReadOperation,
 		Path:      "token/test-role",
 		Storage:   config.StorageView,
 	})
@@ -194,7 +194,7 @@ func TestBackend_CreateTokenArtifactoryMisconfigured(t *testing.T) {
 
 	// Send Request
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
+		Operation: logical.ReadOperation,
 		Path:      "token/test-role",
 		Storage:   config.StorageView,
 	})

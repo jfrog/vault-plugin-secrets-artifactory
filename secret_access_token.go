@@ -41,14 +41,23 @@ func (b *backend) secretAccessTokenRenew(ctx context.Context, req *logical.Reque
 		return nil, fmt.Errorf("lease cannot be renewed")
 	}
 
-	refreshDuration := req.Secret.LeaseOptions.ExpirationTime().Sub(time.Now())
+	role, err := b.Role(ctx, req.Storage, req.Secret.InternalData["role"].(string))
+	if err != nil {
+		return nil, fmt.Errorf("error during renew: could not get role: %q", req.Secret.InternalData["role"])
+	}
+	if role == nil {
+		return nil, fmt.Errorf("error during renew: could not find role with name: %q", req.Secret.InternalData["role"])
+	}
 
-	if req.Secret.LeaseOptions.Increment > 0 {
-		if req.Secret.LeaseOptions.Increment < refreshDuration {
-			refreshDuration = req.Secret.LeaseOptions.Increment
+	ttl, warnings, err :=
+		framework.CalculateTTL(b.System(), req.Secret.Increment, role.DefaultTTL, 0, role.MaxTTL, 0, req.Secret.IssueTime)
+	if err != nil {
+		return nil, err
+	}
+	if len(warnings) > 0 {
+		for _, warning := range warnings {
+			resp.AddWarning(warning)
 		}
-	} else if req.Secret.TTL > 0 && refreshDuration > req.Secret.TTL {
-		refreshDuration = req.Secret.TTL
 	}
 
 	accessToken := req.Secret.InternalData["access_token"].(string)
@@ -58,9 +67,13 @@ func (b *backend) secretAccessTokenRenew(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("token can not be refreshed"), nil
 	}
 
-	if _, err := b.refreshToken(*config, accessToken, refreshToken, refreshDuration); err != nil {
+	refreshedToken, err := b.refreshToken(*config, accessToken, refreshToken, ttl)
+	if err != nil {
 		return nil, err
 	}
+
+	resp.Secret.TTL = time.Duration(refreshedToken.ExpiresIn) * time.Second
+	// TODO do I return a MaxTTL ?
 
 	return resp, nil
 }

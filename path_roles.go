@@ -67,9 +67,13 @@ func (b *backend) pathRoles() *framework.Path {
 				Callback: b.pathRoleRead,
 				Summary:  `Read information about the specified role.`,
 			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathRoleWrite,
+				Summary:  `Write information about the specified role.`,
+			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathRoleWrite,
-				Summary:  `Write or overwrite information about the specified role.`,
+				Summary:  `Overwrite information about the specified role.`,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathRoleDelete,
@@ -128,37 +132,58 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data 
 		return logical.ErrorResponse("missing role"), nil
 	}
 
-	newRole := artifactoryRole{
-		GrantType:   data.Get("grant_type").(string),
-		Username:    data.Get("username").(string),
-		Scope:       data.Get("scope").(string),
-		Refreshable: data.Get("refreshable").(bool),
-		Audience:    data.Get("audience").(string),
-		DefaultTTL:  time.Second * time.Duration(data.Get("default_ttl").(int)),
-		MaxTTL:      time.Second * time.Duration(data.Get("max_ttl").(int)),
+	createOperation := (req.Operation == logical.CreateOperation)
+
+	role := &artifactoryRole{}
+
+	if !createOperation {
+		existingRole, err := b.Role(ctx, req.Storage, roleName)
+		if err != nil {
+			return nil, err
+		}
+		if existingRole != nil {
+			role = existingRole
+		}
 	}
 
-	if newRole.MaxTTL > 0 && newRole.DefaultTTL > newRole.MaxTTL {
-		return logical.ErrorResponse("default_ttl (%v) cannot be longer than max_ttl (%v) ", newRole.DefaultTTL, newRole.MaxTTL), nil
+	if value, ok := data.GetOk("grant_type"); ok {
+		role.GrantType = value.(string)
+	}
+	if value, ok := data.GetOk("username"); ok {
+		role.Username = value.(string)
 	}
 
-	if config.MaxTTL > 0 && newRole.MaxTTL > config.MaxTTL {
-		return logical.ErrorResponse("role max_ttl (%v) cannot be longer than backend max_ttl (%v)", newRole.MaxTTL, config.MaxTTL), nil
+	if value, ok := data.GetOk("scope"); ok {
+		role.Scope = value.(string)
 	}
 
-	if config.MaxTTL > 0 && newRole.DefaultTTL > config.MaxTTL {
-		return logical.ErrorResponse("role default_ttl (%v) cannot be longer than backend max_ttl (%v)", newRole.DefaultTTL, config.MaxTTL), nil
+	if value, ok := data.GetOk("refreshable"); ok {
+		role.Refreshable = value.(bool)
 	}
 
-	if newRole.Scope == "" {
+	if value, ok := data.GetOk("audience"); ok {
+		role.Audience = value.(string)
+	}
+
+	// Looking at database/path_roles.go, it doesn't do any validation on these values during role
+	// creation.
+	if value, ok := data.GetOk("default_ttl"); ok {
+		role.DefaultTTL = time.Duration(value.(int)) * time.Second
+	}
+
+	if value, ok := data.GetOk("max_ttl"); ok {
+		role.MaxTTL = time.Duration(value.(int)) * time.Second
+	}
+
+	if role.Scope == "" {
 		return logical.ErrorResponse("missing scope"), nil
 	}
 
-	if newRole.Username == "" {
+	if role.Username == "" {
 		return logical.ErrorResponse("missing username"), nil
 	}
 
-	entry, err := logical.StorageEntryJSON("roles/"+roleName, newRole)
+	entry, err := logical.StorageEntryJSON("roles/"+roleName, role)
 	if err != nil {
 		return nil, err
 	}
@@ -180,13 +205,29 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		return logical.ErrorResponse("missing role"), nil
 	}
 
-	entry, err := req.Storage.Get(ctx, "roles/"+roleName)
+	role, err := b.Role(ctx, req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
+
+	if role == nil {
+		return logical.ErrorResponse("no such role"), nil
+	}
+
+	return &logical.Response{
+		Data: b.roleToMap(roleName, *role),
+	}, nil
+}
+
+func (b *backend) Role(ctx context.Context, storage logical.Storage, roleName string) (*artifactoryRole, error) {
+
+	entry, err := storage.Get(ctx, "roles/"+roleName)
 	if err != nil {
 		return nil, err
 	}
 
 	if entry == nil {
-		return logical.ErrorResponse("no such role"), nil
+		return nil, nil
 	}
 
 	var role artifactoryRole
@@ -194,10 +235,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 	if err := entry.DecodeJSON(&role); err != nil {
 		return nil, err
 	}
-
-	return &logical.Response{
-		Data: b.roleToMap(roleName, role),
-	}, nil
+	return &role, nil
 }
 
 func (b *backend) roleToMap(roleName string, role artifactoryRole) map[string]interface{} {

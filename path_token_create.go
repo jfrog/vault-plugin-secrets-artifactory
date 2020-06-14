@@ -26,7 +26,7 @@ func (b *backend) pathTokenCreate() *framework.Path {
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.UpdateOperation: &framework.PathOperation{
+			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathTokenCreatePerform,
 			},
 		},
@@ -48,8 +48,6 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	defer b.configMutex.RUnlock()
 	defer b.rolesMutex.RUnlock()
 
-	var role artifactoryRole
-
 	config, err := b.fetchAdminConfiguration(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -61,26 +59,40 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 
 	// Read in the requested role
 	roleName := data.Get("role").(string)
-	entry, err := req.Storage.Get(ctx, "roles/"+roleName)
+
+	role, err := b.Role(ctx, req.Storage, roleName)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if entry == nil {
+	if role == nil {
 		return logical.ErrorResponse("no such role"), nil
 	}
 
-	if err := entry.DecodeJSON(&role); err != nil {
-		return nil, err
+	var ttl time.Duration
+	if value, ok := data.GetOk("ttl"); ok {
+		ttl = time.Second * time.Duration(value.(int))
+	} else {
+		ttl = role.DefaultTTL
 	}
 
-	maxTTL := time.Second * time.Duration(data.Get("max_ttl").(int))
-	ttl := time.Second * time.Duration(data.Get("ttl").(int))
+	maxTTL := role.MaxTTL
+	if maxTTL == 0 {
+		maxTTL = b.Backend.System().MaxLeaseTTL()
+	} else if maxTTL > b.Backend.System().MaxLeaseTTL() {
+		maxTTL = b.Backend.System().MaxLeaseTTL()
+	}
 
-	maxTTL, ttl, warnings := b.calculateTTLs(config, role, maxTTL, ttl)
+	if maxTTL > 0 && ttl > maxTTL {
+		ttl = maxTTL
+	}
 
-	resp, err := b.createToken(*config, role, ttl, maxTTL)
+	if !role.Refreshable && ttl > 0 {
+		maxTTL = ttl
+	}
+
+	resp, err := b.createToken(*config, *role, ttl, maxTTL)
 	if err != nil {
 		return nil, err
 	}
@@ -92,86 +104,21 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		"refreshable":  (resp.RefreshToken != ""),
 		"expires_in":   resp.ExpiresIn,
 	}, map[string]interface{}{
+		"role":          roleName,
 		"access_token":  resp.AccessToken,
 		"refresh_token": resp.RefreshToken,
 	})
 
-	if len(warnings) > 0 {
-		response.Warnings = warnings
+	if resp.ExpiresIn > 0 && resp.ExpiresIn < int(ttl.Seconds()) {
+		ttl = time.Duration(resp.ExpiresIn) * time.Second
+		if !role.Refreshable {
+			maxTTL = ttl
+		}
 	}
 
+	b.Backend.Logger().Warn("token created", "ttl", ttl.Seconds(), "max_ttl", maxTTL.Seconds())
 	response.Secret.TTL = ttl
-	response.Secret.MaxTTL = 555 * time.Second
-
-	// TODO do I need to fill all this in myself?
-	response.Secret.LeaseOptions.Renewable = (resp.RefreshToken != "")
-	response.Secret.LeaseOptions.MaxTTL = maxTTL
-	response.Secret.LeaseOptions.TTL = ttl
-	response.Secret.LeaseOptions.IssueTime = time.Now()
+	response.Secret.MaxTTL = maxTTL
 
 	return response, nil
-}
-
-func (b *backend) calculateTTLs(backend *adminConfiguration, role artifactoryRole, requestMaxTTL, requestTTL time.Duration) (time.Duration, time.Duration, []string) {
-
-	var maxTTL, ttl time.Duration
-	var warnings []string
-
-	var maxTTLWarning string
-
-	// Figure out the most desirable max_ttl
-	if requestMaxTTL > 0 {
-		maxTTL = requestMaxTTL
-	} else if role.MaxTTL > 0 {
-		maxTTL = role.MaxTTL
-	} else if backend.MaxTTL > 0 {
-		maxTTL = backend.MaxTTL
-	} else if b.Backend.System().MaxLeaseTTL() > 0 {
-		maxTTL = b.Backend.System().MaxLeaseTTL()
-	}
-
-	// Lower it to the lowest reasonable value, I could do some loop here, but I want a nice
-	// warning message.
-	if b.Backend.System().MaxLeaseTTL() > 0 && maxTTL > b.Backend.System().MaxLeaseTTL() {
-		maxTTLWarning = "max_ttl lowered to system max_ttl"
-		maxTTL = b.Backend.System().MaxLeaseTTL()
-	}
-
-	if backend.MaxTTL > 0 && maxTTL > backend.MaxTTL {
-		maxTTLWarning = "max_ttl lowered to backend max_ttl"
-		maxTTL = backend.MaxTTL
-	}
-
-	if role.MaxTTL > 0 && maxTTL > role.MaxTTL {
-		maxTTLWarning = "max_ttl lowered to role max_ttl"
-		maxTTL = role.MaxTTL
-	}
-
-	// I don't think this is actually possible.
-	if requestMaxTTL > 0 && maxTTL > requestMaxTTL {
-		maxTTL = requestMaxTTL
-	}
-
-	if maxTTLWarning != "" {
-		warnings = append(warnings, maxTTLWarning)
-	}
-
-	// Figure out the most desirable default_ttl
-	if requestTTL > 0 {
-		ttl = requestTTL
-	} else if role.DefaultTTL > 0 {
-		ttl = role.DefaultTTL
-	} else if backend.DefaultTTL > 0 {
-		ttl = backend.DefaultTTL
-	} else if b.Backend.System().DefaultLeaseTTL() > 0 {
-		ttl = b.Backend.System().DefaultLeaseTTL()
-	}
-
-	if ttl > maxTTL {
-		warnings = append(warnings, "ttl lowered to max_ttl")
-		ttl = maxTTL
-
-	}
-
-	return maxTTL, ttl, warnings
 }

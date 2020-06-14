@@ -4,8 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"time"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -23,14 +21,6 @@ func (b *backend) pathConfig() *framework.Path {
 				Type:        framework.TypeString,
 				Required:    true,
 				Description: "Address of the Artifactory instance",
-			},
-			"max_ttl": {
-				Type:        framework.TypeDurationSecond,
-				Description: "Maximum duration any lease issued by this backend can be.",
-			},
-			"default_ttl": {
-				Type:        framework.TypeDurationSecond,
-				Description: "Default TTL when no other TTL is specified",
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -57,23 +47,14 @@ The second is "access_token" which must be an access token powerful enough to ge
 be using. This value is stored seal wrapped when available. Once set, the access token cannot be retrieved, but the backend
 will send a sha256 hash of the token so you can compare it to your notes. 
 
-There are two TTL related parameters. The ultimate maximum lifetime that a token can live is controlled by "max_ttl", the
-backend will refuse to renew/refresh tokens beyond max_ttl. The second is "default_ttl" which is used when a role does
-not also specify a TTL. Default TTL must not be greater than Max TTL, and Max TTL must not be greater than the system-wide
-Max TTL defined in Vault's configuration. 
-
-Note that ultimately the maximum TTL is calculated as the time of issuing the access token.
-
 No renewals or new tokens will be issued if the backend configuration (config/admin) is deleted.
 `,
 	}
 }
 
 type adminConfiguration struct {
-	AccessToken    string        `json:"access_token"`
-	ArtifactoryURL string        `json:"artifactory_url"`
-	MaxTTL         time.Duration `json:"max_ttl"`
-	DefaultTTL     time.Duration `json:"default_ttl"`
+	AccessToken    string `json:"access_token"`
+	ArtifactoryURL string `json:"artifactory_url"`
 }
 
 func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -85,8 +66,6 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 	config := &adminConfiguration{}
 	config.AccessToken = data.Get("access_token").(string)
 	config.ArtifactoryURL = data.Get("url").(string)
-	config.MaxTTL = time.Second * time.Duration(data.Get("max_ttl").(int))
-	config.DefaultTTL = time.Second * time.Duration(data.Get("default_ttl").(int))
 
 	if config.AccessToken == "" {
 		return logical.ErrorResponse("access_token is required"), nil
@@ -94,22 +73,6 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 
 	if config.ArtifactoryURL == "" {
 		return logical.ErrorResponse("url is required"), nil
-	}
-
-	if config.MaxTTL > 0 && config.DefaultTTL > config.MaxTTL {
-		warning = fmt.Sprintf("default_ttl (%v) lowered to max_ttl (%v)", config.DefaultTTL, config.MaxTTL)
-		config.DefaultTTL = config.MaxTTL
-	}
-
-	if b.Backend.System().MaxLeaseTTL() > 0 {
-		if config.MaxTTL > b.Backend.System().MaxLeaseTTL() {
-			return logical.ErrorResponse("max_ttl exceeds system max_ttl"), nil
-		}
-
-		if config.DefaultTTL > b.Backend.System().MaxLeaseTTL() {
-			warning = fmt.Sprintf("default_ttl (%v) lowered to system max_ttl (%v)", config.DefaultTTL, b.Backend.System().MaxLeaseTTL())
-			config.DefaultTTL = b.Backend.System().MaxLeaseTTL()
-		}
 	}
 
 	entry, err := logical.StorageEntryJSON("config/admin", config)
@@ -161,14 +124,6 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 	configMap := map[string]interface{}{
 		"access_token_sha256": fmt.Sprintf("%x", accessTokenHash[:]),
 		"url":                 config.ArtifactoryURL,
-	}
-
-	if config.MaxTTL != 0 {
-		configMap["max_ttl"] = config.MaxTTL.Seconds()
-	}
-
-	if config.DefaultTTL != 0 {
-		configMap["default_ttl"] = config.DefaultTTL.Seconds()
 	}
 
 	return &logical.Response{
