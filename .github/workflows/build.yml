@@ -5,15 +5,15 @@ jobs:
     strategy:
       matrix:
         include:
-	  - os: ubuntu-latest
-	    artifact_name: vault/plugins/artifactory
-	    asset_name: artifactory-secrets-plugin-linux-amd64
-	  - os: windows-latest
-	    artifact_name: vault/plugins/artifactory.exe
-	    asset_name: artifactory-secrets-plugin-windows-amd64.exe
-	  - os: macos-latest
-	    artifact_name: vault/plugins/artifactory
-	    asset_name: artifactory-secrets-plugin-darwin-amd64
+          - os: ubuntu-latest
+            artifact_name: vault/plugins/artifactory
+            asset_name: artifactory-secrets-plugin-linux-amd64
+          - os: windows-latest
+            artifact_name: vault/plugins/artifactory.exe
+            asset_name: artifactory-secrets-plugin-windows-amd64.exe
+          - os: macos-latest
+            artifact_name: vault/plugins/artifactory
+            asset_name: artifactory-secrets-plugin-darwin-amd64
     runs-on: ${{ matrix.os }}
     steps:
     - name: Install Go
@@ -28,4 +28,4 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
         name: ${{ matrix.asset_name }}
-	path: ${{ matrix.artifact_name }}
+        path: ${{ matrix.artifact_name }}
