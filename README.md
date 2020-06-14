@@ -1,3 +1,5 @@
+![Build](https://github.com/idcmp/artifactory-secrets-plugin/workflows/Build/badge.svg)
+
 # Vault Artifactory Secrets Plugin
 
 This is a [HashiCorp Vault](https://www.vaultproject.io/) plugin which talks to JFrog Artifactory server (5.0.0 or later) and will
