@@ -26,8 +26,8 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 		"role":        "test-role",
 		"username":    "test-username",
 		"scope":       "test-scope",
-		"refreshable": true,
 		"default_ttl": 5 * time.Minute,
+		"max_ttl":     10 * time.Minute,
 	}
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -50,8 +50,7 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 
 		assert.Contains(t, body, "username=test-username")
 		assert.Contains(t, body, "scope=test-scope")
-		assert.Contains(t, body, "expires_in=300")
-		assert.Contains(t, body, "refreshable=true")
+		assert.Contains(t, body, "expires_in=600")
 
 		return &http.Response{
 			StatusCode: 200,
@@ -70,9 +69,10 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify response
-	assert.EqualValues(t, 3600, resp.Data["expires_in"])
+	assert.EqualValues(t, 10*time.Minute, resp.Secret.MaxTTL)
+	assert.EqualValues(t, 5*time.Minute, resp.Secret.TTL)
+
 	assert.EqualValues(t, "adsdgbtybbeeyh...", resp.Data["access_token"])
-	assert.EqualValues(t, true, resp.Data["refreshable"])
 	assert.EqualValues(t, "test-role", resp.Data["role"])
 	assert.EqualValues(t, "api:* member-of-groups:readers", resp.Data["scope"])
 }
@@ -89,7 +89,6 @@ func TestBackend_CreateTokenArtifactoryUnavailable(t *testing.T) {
 		"role":        "test-role",
 		"username":    "test-username",
 		"scope":       "test-scope",
-		"refreshable": true,
 		"default_ttl": 5 * time.Minute,
 	}
 
@@ -130,7 +129,6 @@ func TestBackend_CreateTokenUnauthorized(t *testing.T) {
 		"role":        "test-role",
 		"username":    "test-username",
 		"scope":       "test-scope",
-		"refreshable": true,
 		"default_ttl": 5 * time.Minute,
 	}
 
@@ -176,7 +174,6 @@ func TestBackend_CreateTokenArtifactoryMisconfigured(t *testing.T) {
 		"role":        "test-role",
 		"username":    "test-username",
 		"scope":       "test-scope",
-		"refreshable": true,
 		"default_ttl": 5 * time.Minute,
 	}
 

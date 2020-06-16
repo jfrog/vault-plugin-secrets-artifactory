@@ -75,11 +75,10 @@ func TestBackend_WorkingWithBothMaxTTLs(t *testing.T) {
 
 	// Role with no maximum TTL
 	roleData := map[string]interface{}{
-		"role":        "test-role",
-		"username":    "test-username",
-		"scope":       "test-scope",
-		"refreshable": true,
-		"max_ttl":     9 * time.Minute,
+		"role":     "test-role",
+		"username": "test-username",
+		"scope":    "test-scope",
+		"max_ttl":  9 * time.Minute,
 	}
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{

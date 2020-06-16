@@ -119,7 +119,6 @@ func TestBackend_PathRoleWriteThenRead(t *testing.T) {
 		"role":        "test-role",
 		"username":    "test-username",
 		"scope":       "test-scope",
-		"refreshable": true,
 		"audience":    "test-audience",
 		"default_ttl": 30 * time.Minute,
 		"max_ttl":     45 * time.Minute,
@@ -143,7 +142,6 @@ func TestBackend_PathRoleWriteThenRead(t *testing.T) {
 
 	assert.EqualValues(t, "test-username", resp.Data["username"])
 	assert.EqualValues(t, "test-scope", resp.Data["scope"])
-	assert.True(t, resp.Data["refreshable"].(bool))
 	assert.EqualValues(t, "test-audience", resp.Data["audience"])
 	assert.EqualValues(t, 30*time.Minute.Seconds(), resp.Data["default_ttl"])
 	assert.EqualValues(t, 45*time.Minute.Seconds(), resp.Data["max_ttl"])

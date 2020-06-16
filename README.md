@@ -1,3 +1,5 @@
+This is not yet ready for production use. Please file issues though as you find them.
+
 ![Build](https://github.com/idcmp/artifactory-secrets-plugin/workflows/Build/badge.svg)
 
 # Vault Artifactory Secrets Plugin
@@ -16,14 +18,13 @@ $ vault secrets enable artifactory
 
 # Also supports max_ttl= and default_ttl=
 $ vault write artifactory/config/admin \
-               url=https://artifactory.example.org \
+               url=https://artifactory.example.org/artifactory \
                access_token=0ab31978246345871028973fbcdeabcfadecbadef
 
 # Also supports grant_type=, and audience= (see JFrog documentation)
 $ vault write artifactory/roles/jenkins \
                username="example-service-jenkins" \
                scope="api:* member-of-groups:ci-server" \
-               refreshable=true \
                default_ttl=1h max_ttl=3h 
 
 $ vault list artifactory/roles
@@ -31,12 +32,11 @@ Keys
 ----
 jenkins
 
-$ vault write -force artifactory/token/jenkins 
+$ vault read artifactory/token/jenkins 
 Key                Value
 ---                -----
 lease_id           artifactory/token/jenkins/25jYH8DjUU548323zPWiSakh
 access_token       adsdgbtybbeeyh...
-refreshable        true
 role               jenkins
 scope              api:* member-of-groups:ci-server
 ```

@@ -35,11 +35,10 @@ func (b *backend) pathTokenCreate() *framework.Path {
 }
 
 type createTokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	ExpiresIn    int    `json:"expires_in"`
-	Scope        string `json:"scope"`
-	TokenType    string `json:"token_type"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int    `json:"expires_in"`
+	Scope       string `json:"scope"`
+	TokenType   string `json:"token_type"`
 }
 
 func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -77,22 +76,20 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		ttl = role.DefaultTTL
 	}
 
+	maxLeaseTTL := b.Backend.System().MaxLeaseTTL()
 	maxTTL := role.MaxTTL
+
 	if maxTTL == 0 {
-		maxTTL = b.Backend.System().MaxLeaseTTL()
-	} else if maxTTL > b.Backend.System().MaxLeaseTTL() {
-		maxTTL = b.Backend.System().MaxLeaseTTL()
+		maxTTL = maxLeaseTTL
+	} else if maxTTL > maxLeaseTTL {
+		maxTTL = maxLeaseTTL
 	}
 
 	if maxTTL > 0 && ttl > maxTTL {
 		ttl = maxTTL
 	}
 
-	if !role.Refreshable && ttl > 0 {
-		maxTTL = ttl
-	}
-
-	resp, err := b.createToken(*config, *role, ttl, maxTTL)
+	resp, err := b.createToken(*config, *role, maxTTL)
 	if err != nil {
 		return nil, err
 	}
@@ -101,22 +98,18 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		"access_token": resp.AccessToken,
 		"role":         roleName,
 		"scope":        resp.Scope,
-		"refreshable":  (resp.RefreshToken != ""),
-		"expires_in":   resp.ExpiresIn,
 	}, map[string]interface{}{
-		"role":          roleName,
-		"access_token":  resp.AccessToken,
-		"refresh_token": resp.RefreshToken,
+		"role":         roleName,
+		"access_token": resp.AccessToken,
 	})
 
 	if resp.ExpiresIn > 0 && resp.ExpiresIn < int(ttl.Seconds()) {
 		ttl = time.Duration(resp.ExpiresIn) * time.Second
-		if !role.Refreshable {
-			maxTTL = ttl
-		}
+		maxTTL = ttl
 	}
 
-	b.Backend.Logger().Warn("token created", "ttl", ttl.Seconds(), "max_ttl", maxTTL.Seconds())
+	b.Backend.Logger().Warn("token created", "ttl", ttl.Seconds(), "max_ttl", maxTTL.Seconds(),
+		"expires_in", resp.ExpiresIn)
 	response.Secret.TTL = ttl
 	response.Secret.MaxTTL = maxTTL
 

@@ -43,12 +43,6 @@ func (b *backend) pathRoles() *framework.Path {
 				Required:    true,
 				Description: `Required. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
 			},
-			"refreshable": {
-				Type:        framework.TypeBool,
-				Required:    false,
-				Default:     false,
-				Description: `Optional; defaults to false. Will tell Artifactory that the token should be refreshable.`,
-			},
 			"audience": {
 				Type:        framework.TypeString,
 				Description: `Optional. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
@@ -85,13 +79,12 @@ func (b *backend) pathRoles() *framework.Path {
 }
 
 type artifactoryRole struct {
-	GrantType   string        `json:"grant_type"`
-	Username    string        `json:"username,omitempty"`
-	Scope       string        `json:"scope"`
-	Refreshable bool          `json:"refreshable"`
-	Audience    string        `json:"audience,omitempty"`
-	DefaultTTL  time.Duration `json:"default_ttl,omitempty"`
-	MaxTTL      time.Duration `json:"max_ttl,omitempty"`
+	GrantType  string        `json:"grant_type"`
+	Username   string        `json:"username,omitempty"`
+	Scope      string        `json:"scope"`
+	Audience   string        `json:"audience,omitempty"`
+	DefaultTTL time.Duration `json:"default_ttl,omitempty"`
+	MaxTTL     time.Duration `json:"max_ttl,omitempty"`
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
@@ -157,16 +150,11 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data 
 		role.Scope = value.(string)
 	}
 
-	if value, ok := data.GetOk("refreshable"); ok {
-		role.Refreshable = value.(bool)
-	}
-
 	if value, ok := data.GetOk("audience"); ok {
 		role.Audience = value.(string)
 	}
 
-	// Looking at database/path_roles.go, it doesn't do any validation on these values during role
-	// creation.
+	// Looking at database/path_roles.go, it doesn't do any validation on these values during role creation.
 	if value, ok := data.GetOk("default_ttl"); ok {
 		role.DefaultTTL = time.Duration(value.(int)) * time.Second
 	}
@@ -244,7 +232,6 @@ func (b *backend) roleToMap(roleName string, role artifactoryRole) map[string]in
 		"grant_type":  role.GrantType,
 		"username":    role.Username,
 		"scope":       role.Scope,
-		"refreshable": role.Refreshable,
 		"audience":    role.Audience,
 		"default_ttl": role.DefaultTTL.Seconds(),
 		"max_ttl":     role.MaxTTL.Seconds(),

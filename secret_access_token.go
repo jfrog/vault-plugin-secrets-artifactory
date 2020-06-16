@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"time"
 )
 
 const SecretArtifactoryAccessTokenType = "artifactory_access_token"
@@ -50,7 +49,7 @@ func (b *backend) secretAccessTokenRenew(ctx context.Context, req *logical.Reque
 	}
 
 	ttl, warnings, err :=
-		framework.CalculateTTL(b.System(), req.Secret.Increment, role.DefaultTTL, 0, role.MaxTTL, 0, req.Secret.IssueTime)
+		framework.CalculateTTL(b.System(), req.Secret.Increment, role.DefaultTTL, 0, role.MaxTTL, req.Secret.MaxTTL, req.Secret.IssueTime)
 	if err != nil {
 		return nil, err
 	}
@@ -60,20 +59,7 @@ func (b *backend) secretAccessTokenRenew(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	accessToken := req.Secret.InternalData["access_token"].(string)
-	refreshToken := req.Secret.InternalData["refresh_token"].(string)
-
-	if refreshToken == "" {
-		return logical.ErrorResponse("token can not be refreshed"), nil
-	}
-
-	refreshedToken, err := b.refreshToken(*config, accessToken, refreshToken, ttl)
-	if err != nil {
-		return nil, err
-	}
-
-	resp.Secret.TTL = time.Duration(refreshedToken.ExpiresIn) * time.Second
-	// TODO do I return a MaxTTL ?
+	resp.Secret.TTL = ttl
 
 	return resp, nil
 }

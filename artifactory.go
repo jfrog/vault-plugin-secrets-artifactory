@@ -26,46 +26,14 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b.Backend.Logger().Warn("got status code", "statusCode", resp.StatusCode, "response", resp)
+		b.Backend.Logger().Warn("got nonn-200 status code", "statusCode", resp.StatusCode)
 		return fmt.Errorf("could not revoke token: HTTP response %v", resp.StatusCode)
 	}
 
 	return nil
 }
 
-func (b *backend) refreshToken(config adminConfiguration, accessToken, refreshToken string, refreshDuration time.Duration) (*createTokenResponse, error) {
-	values := url.Values{}
-	values.Set("grant_type", "refresh_token")
-	values.Set("refresh_token", refreshToken)
-	values.Set("access_token", accessToken)
-
-	if refreshDuration > 0 {
-		values.Set("expires_in", fmt.Sprintf("%d", int64(refreshDuration.Seconds())))
-	}
-
-	resp, err := b.performArtifactoryRequest(config, "/api/security/token", values)
-	if err != nil {
-		b.Backend.Logger().Warn("error making request", "response", resp, "err", err)
-		return nil, err
-	}
-	//noinspection GoUnhandledErrorResult
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		b.Backend.Logger().Warn("got status code", "statusCode", resp.StatusCode, "response", resp)
-		return nil, fmt.Errorf("could not refresh access token: HTTP response %v", resp.StatusCode)
-	}
-
-	var refreshedToken createTokenResponse
-	if err := json.NewDecoder(resp.Body).Decode(&refreshedToken); err != nil {
-		b.Backend.Logger().Warn("could not parse response", "response", resp, "err", err)
-		return nil, err
-	}
-
-	return &refreshedToken, nil
-}
-
-func (b *backend) createToken(config adminConfiguration, role artifactoryRole, ttl, maxTTL time.Duration) (*createTokenResponse, error) {
+func (b *backend) createToken(config adminConfiguration, role artifactoryRole, accessTokenTTL time.Duration) (*createTokenResponse, error) {
 	values := url.Values{}
 
 	if role.GrantType != "" {
@@ -75,16 +43,15 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole, t
 	values.Set("username", role.Username)
 	values.Set("scope", role.Scope)
 
-	if ttl > 0 {
-		values.Set("expires_in", fmt.Sprintf("%d", int64(ttl.Seconds())))
-	} else if maxTTL > 0 {
-		values.Set("expires_in", fmt.Sprintf("%d", int64(maxTTL.Seconds())))
+	// A refreshable access token gets replaced by a new access token, which is not
+	// what a consumer of tokens from this backend would be expecting; instead they'd
+	// likely just request a new token periodically.
+	values.Set("refreshable", "false")
+
+	if accessTokenTTL > 0 {
+		values.Set("expires_in", fmt.Sprintf("%d", int64(accessTokenTTL.Seconds())))
 	} else {
 		values.Set("expires_in", "0") // never expires
-	}
-
-	if role.Refreshable {
-		values.Set("refreshable", "true")
 	}
 
 	if role.Audience != "" {
@@ -100,7 +67,7 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole, t
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b.Backend.Logger().Warn("got status code", "statusCode", resp.StatusCode, "response", resp)
+		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
 		return nil, fmt.Errorf("could not create access token: HTTP response %v", resp.StatusCode)
 	}
 
