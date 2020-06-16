@@ -37,7 +37,7 @@ To actually integrate it into Vault:
 ```bash
 $ vault secrets enable artifactory
 
-# Also supports max_ttl= and default_ttl=
+# Should be able to use "tune" ( https://www.vaultproject.io/docs/commands/secrets/tune )
 $ vault write artifactory/config/admin \
                url=https://artifactory.example.org/artifactory \
                access_token=0ab31978246345871028973fbcdeabcfadecbadef
