@@ -200,6 +200,3 @@ func TestBackend_CreateTokenArtifactoryMisconfigured(t *testing.T) {
 	assert.Nil(t, resp)
 	assert.Error(t, err)
 }
-
-// TODO verify URL and payload for renew
-// TODO verify URL and payload for revoke

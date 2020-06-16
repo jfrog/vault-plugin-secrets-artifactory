@@ -1,0 +1,3 @@
+HTTP/1.1 200 OK
+
+{ "access_token": "token-here", "expires_in": 6900, "scope": "mouthwash", "toke_tn_type": "Bearer", "refresh_token": "refresh-token" }

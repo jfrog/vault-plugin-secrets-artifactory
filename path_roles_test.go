@@ -146,6 +146,3 @@ func TestBackend_PathRoleWriteThenRead(t *testing.T) {
 	assert.EqualValues(t, 30*time.Minute.Seconds(), resp.Data["default_ttl"])
 	assert.EqualValues(t, 45*time.Minute.Seconds(), resp.Data["max_ttl"])
 }
-
-// TODO test required fields
-// TODO test deleting a role removes it

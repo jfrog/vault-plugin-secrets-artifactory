@@ -1,0 +1,14 @@
+- renew
+- revoke
+- delete config/admin
+- read config before writing
+- writing a role should update fields not delete existing ones
+- create role without scope must fail
+- create role without username must fail
+- read non-existent role
+- delete role
+- create token when backend not configured
+- create token to missing role
+- create token specifying ttl=
+- create token when role ttl > system ttl
+

@@ -61,8 +61,6 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	var warning string
-
 	config := &adminConfiguration{}
 	config.AccessToken = data.Get("access_token").(string)
 	config.ArtifactoryURL = data.Get("url").(string)
@@ -85,13 +83,7 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 
-	if warning != "" {
-		resp := &logical.Response{}
-		resp.AddWarning(warning)
-		return resp, nil
-	} else {
-		return nil, nil
-	}
+	return nil, nil
 }
 
 func (b *backend) pathConfigDelete(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {

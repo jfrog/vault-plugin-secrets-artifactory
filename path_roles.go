@@ -142,6 +142,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data 
 	if value, ok := data.GetOk("grant_type"); ok {
 		role.GrantType = value.(string)
 	}
+
 	if value, ok := data.GetOk("username"); ok {
 		role.Username = value.(string)
 	}
