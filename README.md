@@ -72,4 +72,4 @@ If the "max_ttl" is 0, then the access token will be created without an expiry, 
 will revoke it when the owning token expires.
 
 Do you wish the access tokens could be scoped to a specific network block (like only your
-CI network)? Vote on [RTFACT-22477](https://www.jfrog.com/jira/browse/RTFACT-22477) on JFrog's Jira.
+CI network)? Vote for [RTFACT-22477](https://www.jfrog.com/jira/browse/RTFACT-22477) on JFrog's Jira.
