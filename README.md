@@ -29,8 +29,30 @@ terminal-2$ make artifactory &  # Runs netcat returning a static JSON response
 terminal-2$ vault read artifactory/token/test
 ```
 
-
 ## Usage
+
+### Artifactory
+
+This has been tested with Artifactory 6.18.1. If you have a newer/older version, please report (positive/negative) outcomes in Issues.
+
+You will need the "admin" user's password (not an admin, but admin specifically).
+
+1. Log into the Artifactory UI as "admin".
+1. Under "Welcome, admin" (top right) go to "Edit Profile".
+1. Unlock your user profile and get your API Key. Save your API Key as an environment variable `KEY`.
+
+You will now create the Access Token that Vault will use to interact with Artifactory. In Artifactory 7.4+ this can be done in the UI (Service: Artifactory, Expiry: Never Expires), otherwise use the REST API:
+
+```
+curl -XPOST -u admin:$KEY "https://artifactory.example.org/artifactory/api/security/token" \
+    -dusername=admin \
+    -dexpires_in=0 \
+    "-dscope=member-of-groups:*"
+```
+
+Note that "username" must be "admin" otherwise you will not be able to specify different usernames for roles. Save the "access_token" from the JSON response as the environment variable `TOKEN`.
+
+### Vault
 
 To actually integrate it into Vault:
 
@@ -40,7 +62,7 @@ $ vault secrets enable artifactory
 # Should be able to use "tune" ( https://www.vaultproject.io/docs/commands/secrets/tune )
 $ vault write artifactory/config/admin \
                url=https://artifactory.example.org/artifactory \
-               access_token=0ab31978246345871028973fbcdeabcfadecbadef
+               access_token=$TOKEN
 
 # Also supports grant_type=, and audience= (see JFrog documentation)
 $ vault write artifactory/roles/jenkins \
@@ -57,10 +79,13 @@ $ vault read artifactory/token/jenkins
 Key                Value
 ---                -----
 lease_id           artifactory/token/jenkins/25jYH8DjUU548323zPWiSakh
+lease_duration     1h
+lease_renewable    true
 access_token       adsdgbtybbeeyh...
 role               jenkins
 scope              api:* member-of-groups:ci-server
 ```
+
 
 ## Access Token Creation
 
