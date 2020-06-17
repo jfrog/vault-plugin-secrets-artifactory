@@ -50,7 +50,6 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 
 		assert.Contains(t, body, "username=test-username")
 		assert.Contains(t, body, "scope=test-scope")
-		assert.Contains(t, body, "expires_in=600")
 
 		return &http.Response{
 			StatusCode: 200,
@@ -72,9 +71,9 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 	assert.EqualValues(t, 10*time.Minute, resp.Secret.MaxTTL)
 	assert.EqualValues(t, 5*time.Minute, resp.Secret.TTL)
 
-	assert.EqualValues(t, "adsdgbtybbeeyh...", resp.Data["access_token"])
+	assert.EqualValues(t, "eyXsdgbtybbeeyh...", resp.Data["access_token"])
 	assert.EqualValues(t, "test-role", resp.Data["role"])
-	assert.EqualValues(t, "api:* member-of-groups:readers", resp.Data["scope"])
+	assert.EqualValues(t, "api:* member-of-groups:example", resp.Data["scope"])
 }
 
 // Test that an error is returned if Artifactory is unavailable.

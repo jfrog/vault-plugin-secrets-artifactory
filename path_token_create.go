@@ -89,9 +89,15 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		ttl = maxTTL
 	}
 
-	resp, err := b.createToken(*config, *role, maxTTL)
+	resp, err := b.createToken(*config, *role)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.ExpiresIn > 0 {
+		b.Backend.Logger().Warn("Artifactory access token created, but cannot be revoked as it has an expiry. See RTFACT-15293.",
+			"role", roleName,
+			"expires_in", resp.ExpiresIn)
 	}
 
 	response := b.Secret(SecretArtifactoryAccessTokenType).Response(map[string]interface{}{
@@ -103,13 +109,6 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		"access_token": resp.AccessToken,
 	})
 
-	if resp.ExpiresIn > 0 && resp.ExpiresIn < int(ttl.Seconds()) {
-		ttl = time.Duration(resp.ExpiresIn) * time.Second
-		maxTTL = ttl
-	}
-
-	b.Backend.Logger().Warn("token created", "ttl", ttl.Seconds(), "max_ttl", maxTTL.Seconds(),
-		"expires_in", resp.ExpiresIn)
 	response.Secret.TTL = ttl
 	response.Secret.MaxTTL = maxTTL
 

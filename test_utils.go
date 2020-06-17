@@ -25,9 +25,9 @@ func newTestClient(fn roundTripperFunc) *http.Client {
 
 // Literally https://www.jfrog.com/confluence/display/JFROG/Artifactory+REST+API#ArtifactoryRESTAPI-CreateToken
 const canonicalAccessToken = `{
-   "access_token":   "adsdgbtybbeeyh...",
-   "expires_in":    3600,
-   "scope":         "api:* member-of-groups:readers",
+   "access_token":   "eyXsdgbtybbeeyh...",
+   "expires_in":    0,
+   "scope":         "api:* member-of-groups:example",
    "token_type":    "Bearer",
    "refresh_token": "fgsfgsdugh8dgu9s8gy9hsg..."
 }`

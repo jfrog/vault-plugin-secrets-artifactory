@@ -3,12 +3,10 @@ package artifactory
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/logical"
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
-
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) error {
@@ -26,14 +24,14 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b.Backend.Logger().Warn("got nonn-200 status code", "statusCode", resp.StatusCode)
+		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
 		return fmt.Errorf("could not revoke token: HTTP response %v", resp.StatusCode)
 	}
 
 	return nil
 }
 
-func (b *backend) createToken(config adminConfiguration, role artifactoryRole, accessTokenTTL time.Duration) (*createTokenResponse, error) {
+func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
 	values := url.Values{}
 
 	if role.GrantType != "" {
@@ -48,11 +46,11 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole, a
 	// likely just request a new token periodically.
 	values.Set("refreshable", "false")
 
-	if accessTokenTTL > 0 {
-		values.Set("expires_in", fmt.Sprintf("%d", int64(accessTokenTTL.Seconds())))
-	} else {
-		values.Set("expires_in", "0") // never expires
-	}
+	// Artifactory will not let you revoke a token that has an expiry unless it also meets
+	// criteria that can only be set in its configuration file. The version of Artifactory
+	// I'm testing against will actually delete a token when you ask it to revoke by token_id,
+	// but the token is still usable even after it's deleted. See RTFACT-15293.
+	values.Set("expires_in", "0") // never expires
 
 	if role.Audience != "" {
 		values.Set("audience", role.Audience)
