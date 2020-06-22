@@ -52,7 +52,7 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 		assert.Contains(t, body, "scope=test-scope")
 
 		return &http.Response{
-			StatusCode: 200,
+			StatusCode: http.StatusOK,
 			Body:       ioutil.NopCloser(bytes.NewBufferString(canonicalAccessToken)),
 			Header:     make(http.Header),
 		}, nil
@@ -198,4 +198,71 @@ func TestBackend_CreateTokenArtifactoryMisconfigured(t *testing.T) {
 	// Make sure we get the error.
 	assert.Nil(t, resp)
 	assert.Error(t, err)
+}
+
+func TestBackend_RevokeToken(t *testing.T) {
+	b, config := configuredBackend(t, map[string]interface{}{
+		"access_token": "test-access-token",
+		"url":          "https://127.0.0.1",
+	})
+
+	// Setup a role
+	roleData := map[string]interface{}{
+		"role":        "test-role",
+		"username":    "test-username",
+		"scope":       "test-scope",
+		"default_ttl": 5 * time.Minute,
+		"max_ttl":     10 * time.Minute,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test-role",
+		Storage:   config.StorageView,
+		Data:      roleData,
+	})
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+
+	// Fake http Client, returns a textbook response.
+	b.httpClient = newTestClient(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       ioutil.NopCloser(bytes.NewBufferString(canonicalAccessToken)),
+			Header:     make(http.Header),
+		}, nil
+	})
+
+	// Send Request
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "token/test-role",
+		Storage:   config.StorageView,
+	})
+	assert.NotNil(t, resp)
+	assert.NoError(t, err)
+
+	secret := resp.Secret
+
+	// Expect that the token will be revoked.
+	b.httpClient = newTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.EqualValues(t, http.MethodPost, req.Method)
+		assert.EqualValues(t, "https://127.0.0.1/api/security/token/revoke", req.URL.String())
+		assert.EqualValues(t, resp.Data["access_token"], req.FormValue("token"))
+
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       ioutil.NopCloser(strings.NewReader("")),
+			Header:     make(http.Header),
+		}, nil
+	})
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.RevokeOperation,
+		Secret:    secret,
+		Storage:   config.StorageView,
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
 }

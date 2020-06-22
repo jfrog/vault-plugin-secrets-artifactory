@@ -1,5 +1,4 @@
 - renew
-- revoke
 - delete config/admin
 - read config before writing
 - writing a role should update fields not delete existing ones
