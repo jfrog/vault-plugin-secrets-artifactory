@@ -1,4 +1,8 @@
-on: [push]
+on:
+  push:
+    - 'v*'
+    - master
+
 name: Build
 jobs:
   build:
@@ -24,22 +28,8 @@ jobs:
       uses: actions/checkout@v2
     - name: Build
       run: go build -o ${{ matrix.artifact_name }} cmd/artifactory/main.go
-    - name: Upload
-      uses: actions/upload-artifact@v1
-      with:
-        name: ${{ matrix.asset_name }}
-        path: ${{ matrix.artifact_name }}
   release:
-    needs: [build]
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
-      - uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: true
-          files: |
-            artifactory-secrets-plugin-linux-amd64
-            artifactory-secrets-plugin-darwin-amd64
-            artifactory-secrets-plugin-windows-amd64.exe
-
+      - name: print tag
+        run: echo ${{ github.event.release.tag_name }}
