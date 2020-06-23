@@ -33,6 +33,7 @@ jobs:
     needs: [build]
     steps:
       - uses: "marvinpinto/action-automatic-release@latest"
+        runs-on: "ubuntu-latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest"
