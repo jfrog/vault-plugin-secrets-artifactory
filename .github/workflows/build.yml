@@ -3,7 +3,7 @@ on:
     - 'v*'
     - master
 
-name: Build
+name: Build Binaries
 jobs:
   build:
     strategy:
@@ -29,6 +29,7 @@ jobs:
     - name: Build
       run: go build -o ${{ matrix.artifact_name }} cmd/artifactory/main.go
   release:
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - name: print tag
