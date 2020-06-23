@@ -8,8 +8,27 @@ This is a [HashiCorp Vault](https://www.vaultproject.io/) plugin which talks to 
 dynamically provision access tokens with specified scopes. This backend can be mounted multiple times
 to provide access to multiple Artifactory servers.
 
-Using this plugin, you limit the accidental exposure window of Artifactory tokens; useful for continuous
-integration servers.
+Using this plugin, you can limit the accidental exposure window of Artifactory tokens; useful for continuous integration servers.
+
+## Access Token Creation and Revoking
+
+This backend creates access tokens in Artifactory using the admin credentials provided. Note that if you
+provide non-admin credentials, then the "username" must match the username of the credential owner.
+
+Ideally this plugin would create "expiring access tokens" in Artifactory, however expiring access tokens
+cannot be revoked early (see RTFACT-15293).
+
+When the lease on the Artifactory access token ends, this plugin will ask Artifactory to revoke the token. Note
+that as reported in RTFACT-22519, Artifactory will continue to honour the revoked access token for a few minutes.
+
+I've also filed RTFACT-22477, proposing CIDR restrictions on the created access tokens.
+
+## What's Missing
+
+* I'm still spelunking through the Vault code base to determine who is responsible for enforcing TTLs. I _think_ I have
+it correct, but I can't stay 100% yet.
+
+* I'd like to rotate the admin/config access_token when it's configured (if it's refreshable).
 
 ## Testing Locally
 
@@ -86,15 +105,3 @@ role               jenkins
 scope              api:* member-of-groups:ci-server
 ```
 
-
-## Access Token Creation
-
-This backed creates access tokens in Artifactory whose expiry is the "max_ttl" of
-either the role or the backend. If the lease is revoked before "max_ttl", then Vault asks
-Artifactory to revoke the token in question. 
-
-If the "max_ttl" is 0, then the access token will be created without an expiry, and Vault
-will revoke it when the owning token expires.
-
-Do you wish the access tokens could be scoped to a specific network block (like only your
-CI network)? Vote for [RTFACT-22477](https://www.jfrog.com/jira/browse/RTFACT-22477) on JFrog's Jira.
