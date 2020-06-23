@@ -1,9 +1,5 @@
-on:
-  push:
-    - 'v*'
-    - master
+on: [push]
 
-name: Build Binaries
 jobs:
   build:
     strategy:
