@@ -1,3 +1,8 @@
+----------------------------------------------------------------
+This plugin is now being actively maintained by JFrog Inc. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and create github issues to ask for support.
+-----------------------------------------------------------------
+
+
 This is not yet ready for production use. Please file issues though as you find them.
 
 ![Build](https://github.com/idcmp/artifactory-secrets-plugin/workflows/Build/badge.svg)
