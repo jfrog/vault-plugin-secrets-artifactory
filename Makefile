@@ -12,13 +12,16 @@ endif
 
 .DEFAULT_GOAL := all
 
-all: fmt build start
+all: fmt  build  test start 
 
 build:
 	GOOS=$(OS) GOARCH="$(GOARCH)" go build -o vault/plugins/artifactory cmd/artifactory/main.go
 
 start:
 	vault server -dev -dev-root-token-id=root -dev-plugin-dir=./vault/plugins -log-level=DEBUG
+
+test:
+	go test -v ./...
 
 enable:
 	vault secrets enable artifactory
@@ -38,5 +41,5 @@ setup:	enable
 artifactory:
 	cat test/http-create-response.txt | nc -l 8080
 
-.PHONY: build clean fmt start enable setup artifactory
+.PHONY: build clean fmt start  enable test setup artifactory
 

@@ -34,7 +34,13 @@ func (b *backend) pathTokenCreate() *framework.Path {
 	}
 }
 
+type systemVersionResponse struct {
+	Version  string `json:"version"`
+	Revision string `json:"revision"`
+}
+
 type createTokenResponse struct {
+	TokenId     string `json:"token_id"`
 	AccessToken string `json:"access_token"`
 	ExpiresIn   int    `json:"expires_in"`
 	Scope       string `json:"scope"`
@@ -104,9 +110,11 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		"access_token": resp.AccessToken,
 		"role":         roleName,
 		"scope":        resp.Scope,
+		"token_id":     resp.TokenId,
 	}, map[string]interface{}{
 		"role":         roleName,
 		"access_token": resp.AccessToken,
+		"token_id":     resp.TokenId,
 	})
 
 	response.Secret.TTL = ttl

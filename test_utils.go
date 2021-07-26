@@ -32,6 +32,12 @@ const canonicalAccessToken = `{
    "refresh_token": "fgsfgsdugh8dgu9s8gy9hsg..."
 }`
 
+const artVersion = `{
+    "version": "7.19.10",
+    "revision": "71910900",
+    "license": "05179b957028fa9aa1ceb88da6519a245e55b9fc5"
+}`
+
 func tokenCreatedResponse(token string) roundTripperFunc {
 	return func(req *http.Request) (*http.Response, error) {
 		return &http.Response{

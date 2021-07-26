@@ -1,24 +1,36 @@
 package artifactory
 
 import (
-	"bytes"
 	"context"
-	"io/ioutil"
-	"net/http"
-	"strings"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 )
 
 // Test that the HTTP request sent to Artifactory matches what the docs say, and that
 // handling the response translates into a proper response.
 func TestBackend_CreateTokenSuccess(t *testing.T) {
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"GET",
+		"http://myserver.com/artifactory/api/system/version",
+		httpmock.NewStringResponder(200, artVersion))
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com/artifactory/api/security/token",
+		httpmock.NewStringResponder(200, canonicalAccessToken))
+
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "https://127.0.0.1",
+		"url":          "http://myserver.com/artifactory",
 	})
 
 	// Setup a role
@@ -38,25 +50,39 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
+	/*
+		b.httpClient = newTestClient(func(req *http.Request) (*http.Response, error) {
+			assert.EqualValues(t, http.MethodGet, req.Method)
+			assert.EqualValues(t, "https://127.0.0.1/artifactory/api/system/version", req.URL.String())
+			assert.EqualValues(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
 
-	// Fake http Client, verifies the request and returns a textbook response
-	b.httpClient = newTestClient(func(req *http.Request) (*http.Response, error) {
-		assert.EqualValues(t, http.MethodPost, req.Method)
-		assert.EqualValues(t, "https://127.0.0.1/api/security/token", req.URL.String())
-		assert.EqualValues(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       ioutil.NopCloser(bytes.NewBufferString(artVersion)),
+				Header:     make(http.Header),
+			}, nil
+		})
 
-		bodyBytes, _ := ioutil.ReadAll(req.Body)
-		body := string(bodyBytes)
 
-		assert.Contains(t, body, "username=test-username")
-		assert.Contains(t, body, "scope=test-scope")
 
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewBufferString(canonicalAccessToken)),
-			Header:     make(http.Header),
-		}, nil
-	})
+		/* Fake http Client, verifies the request and returns a textbook response
+		b.httpClient = newTestClientSystem(func(req *http.Request) (*http.Response, error) {
+			assert.EqualValues(t, http.MethodPost, req.Method)
+			assert.EqualValues(t, "https://127.0.0.1/api/security/token", req.URL.String())
+			assert.EqualValues(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
+
+			bodyBytes, _ := ioutil.ReadAll(req.Body)
+			body := string(bodyBytes)
+
+			assert.Contains(t, body, "username=test-username")
+			assert.Contains(t, body, "scope=test-scope")
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       ioutil.NopCloser(bytes.NewBufferString(canonicalAccessToken)),
+				Header:     make(http.Header),
+			}, nil
+		})*/
 
 	// Send Request
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -65,6 +91,7 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 		Storage:   config.StorageView,
 	})
 	assert.NotNil(t, resp)
+	fmt.Printf("resp :%v", resp)
 	assert.NoError(t, err)
 
 	// Verify response
@@ -78,9 +105,23 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 
 // Test that an error is returned if Artifactory is unavailable.
 func TestBackend_CreateTokenArtifactoryUnavailable(t *testing.T) {
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"GET",
+		"http://myserver.com/artifactory/api/system/version",
+		httpmock.NewStringResponder(200, artVersion))
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com/artifactory/api/security/token",
+		httpmock.NewStringResponder(400, ""))
+
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "https://127.0.0.1",
+		"url":          "http://myserver.com/artifactory",
 	})
 
 	// Setup a role
@@ -99,11 +140,6 @@ func TestBackend_CreateTokenArtifactoryUnavailable(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
-
-	// Fake http client that just returns an error.
-	b.httpClient = newTestClient(func(req *http.Request) (*http.Response, error) {
-		return nil, http.ErrHandlerTimeout
-	})
 
 	// Send Request
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -118,9 +154,23 @@ func TestBackend_CreateTokenArtifactoryUnavailable(t *testing.T) {
 
 // Test that an error is returned if the access token is invalid for the operation being performed.
 func TestBackend_CreateTokenUnauthorized(t *testing.T) {
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"GET",
+		"http://myserver.com/artifactory/api/system/version",
+		httpmock.NewStringResponder(200, artVersion))
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com/artifactory/api/security/token",
+		httpmock.NewStringResponder(401, ""))
+
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "https://127.0.0.1",
+		"url":          "http://myserver.com/artifactory",
 	})
 
 	// Setup a role
@@ -139,14 +189,6 @@ func TestBackend_CreateTokenUnauthorized(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
-
-	// Fake http client that just returns an error.
-	b.httpClient = newTestClient(func(req *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: http.StatusUnauthorized,
-			Body:       ioutil.NopCloser(strings.NewReader("")),
-		}, nil
-	})
 
 	// Send Request
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -163,9 +205,23 @@ func TestBackend_CreateTokenUnauthorized(t *testing.T) {
 // Test that an error is returned when the nginx in front of Artifactory can't reach Artifactory.
 // It happens.
 func TestBackend_CreateTokenArtifactoryMisconfigured(t *testing.T) {
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"GET",
+		"http://myserver.com/artifactory/api/system/version",
+		httpmock.NewStringResponder(200, artVersion))
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com/artifactory/api/security/token",
+		httpmock.NewStringResponder(401, `<html><body><h1>Bad Gateway</h1><hr/></body></html>`))
+
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "https://127.0.0.1",
+		"url":          "http://myserver.com/artifactory",
 	})
 
 	// Setup a role
@@ -185,9 +241,6 @@ func TestBackend_CreateTokenArtifactoryMisconfigured(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
 
-	// Fake http client that returns some HTML..
-	b.httpClient = newTestClient(tokenCreatedResponse(`<html><body><h1>Bad Gateway</h1><hr/></body></html>`))
-
 	// Send Request
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -201,9 +254,28 @@ func TestBackend_CreateTokenArtifactoryMisconfigured(t *testing.T) {
 }
 
 func TestBackend_RevokeToken(t *testing.T) {
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"GET",
+		"http://myserver.com/artifactory/api/system/version",
+		httpmock.NewStringResponder(200, artVersion))
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com/artifactory/api/security/token",
+		httpmock.NewStringResponder(200, canonicalAccessToken))
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com/artifactory/api/security/token/revoke",
+		httpmock.NewStringResponder(200, ""))
+
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "https://127.0.0.1",
+		"url":          "http://myserver.com/artifactory",
 	})
 
 	// Setup a role
@@ -224,15 +296,6 @@ func TestBackend_RevokeToken(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
 
-	// Fake http Client, returns a textbook response.
-	b.httpClient = newTestClient(func(req *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewBufferString(canonicalAccessToken)),
-			Header:     make(http.Header),
-		}, nil
-	})
-
 	// Send Request
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -243,19 +306,6 @@ func TestBackend_RevokeToken(t *testing.T) {
 	assert.NoError(t, err)
 
 	secret := resp.Secret
-
-	// Expect that the token will be revoked.
-	b.httpClient = newTestClient(func(req *http.Request) (*http.Response, error) {
-		assert.EqualValues(t, http.MethodPost, req.Method)
-		assert.EqualValues(t, "https://127.0.0.1/api/security/token/revoke", req.URL.String())
-		assert.EqualValues(t, resp.Data["access_token"], req.FormValue("token"))
-
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(strings.NewReader("")),
-			Header:     make(http.Header),
-		}, nil
-	})
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.RevokeOperation,
