@@ -33,8 +33,6 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 
 	var resp *http.Response
 
-	b.Backend.Logger().Debug("$$$$$$ newAccessReq ###########", "newAccessReq", newAccessReq)
-
 	if newAccessReq == true {
 		resp, err = b.performArtifactoryDelRequest(config, u.Scheme+"://"+u.Host+"/access/api/v1/tokens/"+tokenId)
 		if err != nil {
@@ -63,7 +61,6 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 
 func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
 	values := url.Values{}
-	b.Backend.Logger().Debug("Inside Creating Token ###########")
 	if role.GrantType != "" {
 		values.Set("grant_type", role.GrantType)
 	}
@@ -132,8 +129,6 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 func (b *backend) getSystemStatus(config adminConfiguration) (bool, error) {
 
 	newAccessReq := false
-
-	b.Backend.Logger().Debug("$$$$$$ getting system status")
 
 	resp, err := b.performArtifactorySystemRequest(config, "/api/system/version")
 	if err != nil {
