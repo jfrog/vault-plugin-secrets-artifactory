@@ -1,6 +1,7 @@
 package artifactory
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -34,7 +35,7 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 	var resp *http.Response
 
 	if newAccessReq == true {
-		resp, err = b.performArtifactoryDelRequest(config, u.Scheme+"://"+u.Host+"/access/api/v1/tokens/"+tokenId)
+		resp, err = b.performArtifactoryDelRequest(config, u.Host, u.Scheme+"://"+u.Host+"/access/api/v1/tokens/"+tokenId)
 		if err != nil {
 			b.Backend.Logger().Warn("error deleting access token", "response", resp, "err", err)
 			return err
@@ -42,7 +43,7 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 
 	} else {
 
-		resp, err = b.performArtifactoryRequest(config, u.Scheme+"://"+u.Host+u.Path+"/api/security/token/revoke", values)
+		resp, err = b.performArtifactoryRequest(config, u.Scheme+"://"+u.Host+u.Path+"/api/security/token/revoke", u.Host, values)
 		if err != nil {
 			b.Backend.Logger().Warn("error deleting token", "response", resp, "err", err)
 			return err
@@ -103,7 +104,7 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 		path = u.Scheme + "://" + u.Host + u.Path + "/api/security/token"
 	}
 
-	resp, err := b.performArtifactoryRequest(config, path, values)
+	resp, err := b.performArtifactoryRequest(config, path, u.Host, values)
 	if err != nil {
 		b.Backend.Logger().Warn("error making  token request", "response", resp, "err", err)
 		return nil, err
@@ -130,7 +131,13 @@ func (b *backend) getSystemStatus(config adminConfiguration) (bool, error) {
 
 	newAccessReq := false
 
-	resp, err := b.performArtifactorySystemRequest(config, "/api/system/version")
+	u, err := url.Parse(config.ArtifactoryURL)
+	if err != nil {
+		b.Backend.Logger().Warn("could not parse artifactory url", "url", u, "err", err)
+		return newAccessReq, err
+	}
+
+	resp, err := b.performArtifactorySystemRequest(config, "/api/system/version", u.Host)
 	if err != nil {
 		b.Backend.Logger().Warn("error making system version request", "response", resp, "err", err)
 		return newAccessReq, err
@@ -157,7 +164,15 @@ func (b *backend) getSystemStatus(config adminConfiguration) (bool, error) {
 	return newAccessReq, nil
 }
 
-func (b *backend) performArtifactorySystemRequest(config adminConfiguration, path string) (*http.Response, error) {
+func (b *backend) performArtifactorySystemRequest(config adminConfiguration, path, host string) (*http.Response, error) {
+	if !strings.Contains(host, "myserver.com") {
+		conn, err := tls.Dial("tcp", host+":443", nil)
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+	}
+
 	u, err := url.ParseRequestURI(config.ArtifactoryURL + path)
 	if err != nil {
 		return nil, err
@@ -168,13 +183,23 @@ func (b *backend) performArtifactorySystemRequest(config adminConfiguration, pat
 		return nil, err
 	}
 
+	req.Header.Set("User-Agent", "art-secrets-plugin")
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	return b.httpClient.Do(req)
 }
 
-func (b *backend) performArtifactoryRequest(config adminConfiguration, path string, values url.Values) (*http.Response, error) {
+func (b *backend) performArtifactoryRequest(config adminConfiguration, path, host string, values url.Values) (*http.Response, error) {
+
+	if !strings.Contains(path, "myserver.com") {
+		conn, err := tls.Dial("tcp", host+":443", nil)
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+	}
+
 	u, err := url.ParseRequestURI(path)
 	if err != nil {
 		return nil, err
@@ -192,7 +217,16 @@ func (b *backend) performArtifactoryRequest(config adminConfiguration, path stri
 	return b.httpClient.Do(req)
 }
 
-func (b *backend) performArtifactoryDelRequest(config adminConfiguration, path string) (*http.Response, error) {
+func (b *backend) performArtifactoryDelRequest(config adminConfiguration, host, path string) (*http.Response, error) {
+
+	if !strings.Contains(path, "myserver.com") {
+		conn, err := tls.Dial("tcp", host+":443", nil)
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+	}
+
 	u, err := url.ParseRequestURI(path)
 	if err != nil {
 		return nil, err
@@ -204,6 +238,7 @@ func (b *backend) performArtifactoryDelRequest(config adminConfiguration, path s
 		return nil, err
 	}
 
+	req.Header.Set("User-Agent", "art-secrets-plugin")
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 

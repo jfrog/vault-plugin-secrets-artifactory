@@ -14,23 +14,22 @@ import (
 // Test that the HTTP request sent to Artifactory matches what the docs say, and that
 // handling the response translates into a proper response.
 func TestBackend_CreateTokenSuccess(t *testing.T) {
-
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
 	httpmock.RegisterResponder(
 		"GET",
-		"http://myserver.com/artifactory/api/system/version",
+		"https://myserver.com/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, artVersion))
 
 	httpmock.RegisterResponder(
 		"POST",
-		"http://myserver.com/artifactory/api/security/token",
+		"https://myserver.com/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com/artifactory",
+		"url":          "https://myserver.com/artifactory",
 	})
 
 	// Setup a role
@@ -50,41 +49,7 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
-	/*
-		b.httpClient = newTestClient(func(req *http.Request) (*http.Response, error) {
-			assert.EqualValues(t, http.MethodGet, req.Method)
-			assert.EqualValues(t, "https://127.0.0.1/artifactory/api/system/version", req.URL.String())
-			assert.EqualValues(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
 
-			return &http.Response{
-				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBufferString(artVersion)),
-				Header:     make(http.Header),
-			}, nil
-		})
-
-
-
-		/* Fake http Client, verifies the request and returns a textbook response
-		b.httpClient = newTestClientSystem(func(req *http.Request) (*http.Response, error) {
-			assert.EqualValues(t, http.MethodPost, req.Method)
-			assert.EqualValues(t, "https://127.0.0.1/api/security/token", req.URL.String())
-			assert.EqualValues(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-
-			bodyBytes, _ := ioutil.ReadAll(req.Body)
-			body := string(bodyBytes)
-
-			assert.Contains(t, body, "username=test-username")
-			assert.Contains(t, body, "scope=test-scope")
-
-			return &http.Response{
-				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBufferString(canonicalAccessToken)),
-				Header:     make(http.Header),
-			}, nil
-		})*/
-
-	// Send Request
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "token/test-role",
@@ -101,6 +66,7 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 	assert.EqualValues(t, "eyXsdgbtybbeeyh...", resp.Data["access_token"])
 	assert.EqualValues(t, "test-role", resp.Data["role"])
 	assert.EqualValues(t, "api:* member-of-groups:example", resp.Data["scope"])
+
 }
 
 // Test that an error is returned if Artifactory is unavailable.
