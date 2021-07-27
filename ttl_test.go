@@ -1,23 +1,44 @@
 package artifactory
 
 import (
-	"bytes"
 	"context"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"net/http"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
 )
 
 // I've centralized all the tests involving the interplay of TTLs.
 
 // Role with no Max TTL must use the system max TTL when creating tokens.
 func TestBackend_NoRoleMaxTTLUsesSystemMaxTTL(t *testing.T) {
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"GET",
+		"http://myserver.com/artifactory/api/system/version",
+		httpmock.NewStringResponder(200, artVersion))
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com/artifactory/api/security/token",
+		httpmock.NewStringResponder(200, `
+		{
+		   "access_token":   "adsdgbtybbeeyh...",
+		   "expires_in":    0,
+		   "scope":         "api:* member-of-groups:readers",
+		   "token_type":    "Bearer",
+		   "refresh_token": "fgsfgsdugh8dgu9s8gy9hsg..."
+		}
+		`))
+
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "https://127.0.0.1",
+		"url":          "http://myserver.com/artifactory",
 	})
 
 	// Role with no maximum TTL
@@ -36,23 +57,6 @@ func TestBackend_NoRoleMaxTTLUsesSystemMaxTTL(t *testing.T) {
 	assert.Nil(t, resp)
 	assert.NoError(t, err)
 
-	// Fake the Artifactory response
-	b.httpClient = newTestClient(func(req *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: 200,
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
-{
-   "access_token":   "adsdgbtybbeeyh...",
-   "expires_in":    0,
-   "scope":         "api:* member-of-groups:readers",
-   "token_type":    "Bearer",
-   "refresh_token": "fgsfgsdugh8dgu9s8gy9hsg..."
-}
-`)),
-			Header: make(http.Header),
-		}, nil
-	})
-
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "token/test-role",
@@ -67,9 +71,23 @@ func TestBackend_NoRoleMaxTTLUsesSystemMaxTTL(t *testing.T) {
 // With a role max_ttl not greater than the system max_ttl, the max_ttl for a token must
 // be the role max_ttl.
 func TestBackend_WorkingWithBothMaxTTLs(t *testing.T) {
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"GET",
+		"http://myserver.com/artifactory/api/system/version",
+		httpmock.NewStringResponder(200, artVersion))
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com/artifactory/api/security/token",
+		httpmock.NewStringResponder(200, canonicalAccessToken))
+
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "https://127.0.0.1",
+		"url":          "http://myserver.com/artifactory",
 		"max_ttl":      10 * time.Minute,
 	})
 
@@ -89,8 +107,6 @@ func TestBackend_WorkingWithBothMaxTTLs(t *testing.T) {
 	})
 	assert.Nil(t, resp)
 	assert.NoError(t, err)
-
-	b.httpClient = newTestClient(tokenCreatedResponse(canonicalAccessToken))
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,

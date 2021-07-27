@@ -49,7 +49,6 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 
 		BackendType: logical.TypeLogical,
 	}
-
 	b.Backend.Secrets = append(b.Backend.Secrets, b.secretAccessToken())
 	b.Backend.Paths = append(b.Backend.Paths,
 		b.pathListRoles(),

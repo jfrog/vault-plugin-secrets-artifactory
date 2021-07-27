@@ -3,6 +3,7 @@ package artifactory
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -16,6 +17,10 @@ func (b *backend) secretAccessToken() *framework.Secret {
 			"access_token": {
 				Type:        framework.TypeString,
 				Description: `Artifactory Access Token`,
+			},
+			"token_id": {
+				Type:        framework.TypeString,
+				Description: `Artifactory Access Token Id`,
 			},
 		},
 
