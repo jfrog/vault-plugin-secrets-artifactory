@@ -1,5 +1,5 @@
 ----------------------------------------------------------------
-This plugin is now being actively maintained by JFrog Inc. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and create github issues to ask for support.
+This plugin is now being actively maintained by JFrog Inc. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions.
 -----------------------------------------------------------------
 
 
