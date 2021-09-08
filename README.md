@@ -43,11 +43,11 @@ terminal-2$ vault read artifactory/token/test
 
 ### Using pre-built releases (recommended)
 
-You can find pre-built releases of the plugin [here][artreleases]. Once you have downloaded the latest archive corresponding to your target OS, uncompress it to retrieve the `artifactory` plugin binary file.
+You can find pre-built releases of the plugin [here][artreleases]. Once you have downloaded the latest archive corresponding to your target OS, uncompress it to retrieve the `artifactory-secrets-plugin`  binary file.
 
 ### From Sources
 
-If you prefer to build the plugin from sources, clone the GitHub repository locally and run the command `make build` from the root of the sources directory. Upon successful compilation, the resulting `artiafctory` binary is stored in the `vault/plugins` directory.
+If you prefer to build the plugin from sources, clone the GitHub repository locally and run the command `make build` from the root of the sources directory. Upon successful compilation, the resulting `artiafctory-secrets-plugin` binary is stored in the `vault/plugins` directory.
 
 ## Configuration
 
