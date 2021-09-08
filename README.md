@@ -2,9 +2,6 @@
 This plugin is now being actively maintained by JFrog Inc. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and create github issues to ask for support.
 -----------------------------------------------------------------
 
-
-This is not yet ready for production use. Please file issues though as you find them.
-
 ![Build](https://github.com/idcmp/artifactory-secrets-plugin/workflows/Build/badge.svg)
 
 # Vault Artifactory Secrets Plugin
@@ -20,20 +17,9 @@ Using this plugin, you can limit the accidental exposure window of Artifactory t
 This backend creates access tokens in Artifactory using the admin credentials provided. Note that if you
 provide non-admin credentials, then the "username" must match the username of the credential owner.
 
-Ideally this plugin would create "expiring access tokens" in Artifactory, however expiring access tokens
-cannot be revoked early (see RTFACT-15293).
-
-When the lease on the Artifactory access token ends, this plugin will ask Artifactory to revoke the token. Note
-that as reported in RTFACT-22519, Artifactory will continue to honour the revoked access token for a few minutes.
-
-I've also filed RTFACT-22477, proposing CIDR restrictions on the created access tokens.
-
 ## What's Missing
 
-* I'm still spelunking through the Vault code base to determine who is responsible for enforcing TTLs. I _think_ I have
-it correct, but I can't stay 100% yet.
-
-* I'd like to rotate the admin/config access_token when it's configured (if it's refreshable).
+* rotate the admin/config access_token when it's configured (if it's refreshable).
 
 ## Testing Locally
 
@@ -57,7 +43,7 @@ terminal-2$ vault read artifactory/token/test
 
 ### Artifactory
 
-This has been tested with Artifactory 6.18.1. If you have a newer/older version, please report (positive/negative) outcomes in Issues.
+This has been tested with Artifactory 7.21.1. If you have a newer/older version, please report (positive/negative) outcomes in Issues.
 
 You will need the "admin" user's password (not an admin, but admin specifically).
 
@@ -76,14 +62,46 @@ curl -XPOST -u admin:$KEY "https://artifactory.example.org/artifactory/api/secur
 
 Note that "username" must be "admin" otherwise you will not be able to specify different usernames for roles. Save the "access_token" from the JSON response as the environment variable `TOKEN`.
 
-### Vault
+## Installation
 
-To actually integrate it into Vault:
+### Using pre-built releases (recommended)
 
-```bash
+You can find pre-built releases of the plugin [here][artreleases]. Once you have downloaded the latest archive corresponding to your target OS, uncompress it to retrieve the `artifactory` plugin binary file.
+
+### From Sources
+
+If you prefer to build the plugin from sources, clone the GitHub repository locally and run the command `make build` from the root of the sources directory. Upon successful compilation, the resulting `artiafctory` binary is stored in the `vault/plugins` directory.
+
+## Configuration
+
+Copy the plugin binary into a location of your choice; this directory must be specified as the [`plugin_directory`][vaultdocplugindir] in the Vault configuration file:
+
+```hcl
+plugin_directory = "path/to/plugin/directory"
+```
+
+Start a Vault server with this configuration file:
+
+```sh
+$ vault server -config=path/to/vault/config.hcl
+```
+
+Once the server is started, register the plugin in the Vault server's [plugin catalog][vaultdocplugincatalog]:
+
+```sh
+$ vault write sys/plugins/catalog/secret/exoscale \
+    sha_256="$(sha256sum path/to/plugin/directory/artifactory | cut -d " " -f 1)" \
+    command="artifactory"
+```
+
+You can now enable the Artifactory secrets plugin:
+
+```sh
 $ vault secrets enable artifactory
 
-# Should be able to use "tune" ( https://www.vaultproject.io/docs/commands/secrets/tune )
+
+### Usage
+
 $ vault write artifactory/config/admin \
                url=https://artifactory.example.org/artifactory \
                access_token=$TOKEN
@@ -109,4 +127,19 @@ access_token       adsdgbtybbeeyh...
 role               jenkins
 scope              api:* member-of-groups:ci-server
 ```
+
+### Issues
+
+Ideally this plugin would create "expiring access tokens" in Artifactory, however expiring access tokens
+cannot be revoked early (see RTFACT-15293).
+
+When the lease on the Artifactory access token ends, this plugin will ask Artifactory to revoke the token. Note
+that as reported in RTFACT-22519, Artifactory will continue to honour the revoked access token for a few minutes.
+
+RTFACT-22477, proposing CIDR restrictions on the created access tokens.
+
+[artreleases]: https://github.com/jfrog/artifactory-secrets-plugin/releases
+[vaultdocplugindir]: https://www.vaultproject.io/docs/configuration/index.html#plugin_directory
+[vaultdocplugincatalog]: https://www.vaultproject.io/docs/internals/plugins.html#plugin-catalog
+
 
