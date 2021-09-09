@@ -41,7 +41,7 @@ terminal-2$ vault read artifactory/token/test
 
 ## Installation
 
-### Using pre-built releases (recommended)
+### Using pre-built releases
 
 You can find pre-built releases of the plugin [here][artreleases]. Once you have downloaded the latest archive corresponding to your target OS, uncompress it to retrieve the `artifactory-secrets-plugin`  binary file.
 
