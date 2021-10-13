@@ -35,7 +35,7 @@ fmt:
 setup:	enable
 	vault write artifactory/config/admin  url=http://localhost:8080 access_token=access_token
 	vault read artifactory/config/admin
-	vault write artifactory/roles/test scope="scope goes here" username="unsure" max_ttl=3h default_ttl=2h
+	vault write artifactory/roles/test scope="test" username="test-user" max_ttl=3h default_ttl=2h
 	vault read artifactory/roles/test
 
 artifactory:
