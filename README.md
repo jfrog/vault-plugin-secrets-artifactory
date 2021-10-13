@@ -66,7 +66,7 @@ $ vault server -config=path/to/vault/config.hcl
 Once the server is started, register the plugin in the Vault server's [plugin catalog][vaultdocplugincatalog]:
 
 ```sh
-$ vault write sys/plugins/catalog/secret/exoscale \
+$ vault write sys/plugins/catalog/secret/artifactory \
     sha_256="$(sha256sum path/to/plugin/directory/artifactory | cut -d " " -f 1)" \
     command="artifactory"
 ```
