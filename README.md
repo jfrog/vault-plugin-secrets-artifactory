@@ -128,12 +128,6 @@ scope              api:* member-of-groups:ci-server
 
 ### Issues
 
-Ideally this plugin would create "expiring access tokens" in Artifactory, however expiring access tokens
-cannot be revoked early (see RTFACT-15293).
-
-When the lease on the Artifactory access token ends, this plugin will ask Artifactory to revoke the token. Note
-that as reported in RTFACT-22519, Artifactory will continue to honour the revoked access token for a few minutes.
-
 RTFACT-22477, proposing CIDR restrictions on the created access tokens.
 
 [artreleases]: https://github.com/jfrog/artifactory-secrets-plugin/releases
