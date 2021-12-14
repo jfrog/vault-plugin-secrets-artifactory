@@ -6,14 +6,25 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            GOARCH: amd64
             artifact_name: vault/plugins/artifactory
             asset_name: artifactory-secrets-plugin-linux-amd64
           - os: windows-latest
+            GOARCH: amd64
             artifact_name: vault/plugins/artifactory.exe
             asset_name: artifactory-secrets-plugin-windows-amd64.exe
           - os: macos-latest
+            GOARCH: amd64
             artifact_name: vault/plugins/artifactory
             asset_name: artifactory-secrets-plugin-darwin-amd64
+          - os: macos-latest
+            GOARCH: arm64
+            artifact_name: vault/plugins/artifactory
+            asset_name: artifactory-secrets-plugin-darwin-arm64
+          - os: ubuntu-latest
+            GOARCH: arm64
+            artifact_name: vault/plugins/artifactory
+            asset_name: artifactory-secrets-plugin-linux-arm64
     runs-on: ${{ matrix.os }}
     steps:
     - name: Install Go
@@ -24,3 +35,6 @@ jobs:
       uses: actions/checkout@v2
     - name: Build
       run: go build -o ${{ matrix.artifact_name }} cmd/artifactory/main.go
+      env:
+        GOARCH: ${{ matrix.GOARCH }}
+        CGO_ENABLED: "0"
