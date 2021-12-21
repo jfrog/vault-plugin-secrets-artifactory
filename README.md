@@ -47,7 +47,7 @@ You can find pre-built releases of the plugin [here][artreleases]. Once you have
 
 ### From Sources
 
-If you prefer to build the plugin from sources, clone the GitHub repository locally and run the command `make build` from the root of the sources directory. Upon successful compilation, the resulting `artiafctory` binary is stored in the `vault/plugins` directory.
+If you prefer to build the plugin from sources, clone the GitHub repository locally and run the command `make build` from the root of the sources directory. Upon successful compilation, the resulting `artifactory` binary is stored in the `vault/plugins` directory.
 
 ## Configuration
 
