@@ -88,7 +88,7 @@ You will need the "admin" user's password (not an admin, but admin specifically)
 1. Under "Welcome, admin" (top right) go to "Edit Profile".
 1. Unlock your user profile and get your API Key. Save your API Key as an environment variable `KEY`.
 
-You will now create the Access Token that Vault will use to interact with Artifactory. In Artifactory 7.4+ this can be done in the UI (Service: Artifactory, Expiry: Never Expires), otherwise use the REST API:
+You will now create the Access Token that Vault will use to interact with Artifactory. In Artifactory 7.4+ this can be done in the UI Administration --> Identity and Access --> Access Tokens(Service: Artifactory, Expiry: Never Expires), otherwise use the REST API:
 
 ```
 curl -XPOST -u admin:$KEY "https://artifactory.example.org/artifactory/api/security/token" \
@@ -104,10 +104,11 @@ $ vault write artifactory/config/admin \
                url=https://artifactory.example.org/artifactory \
                access_token=$TOKEN
 
-# Also supports grant_type=, and audience= (see JFrog documentation)
+# Also supports grant_type=[Optional, default: "client_credentials"], and audience=[Optional, default: *@*]
+# see [JFrog documentation][artifactory-create-token]
 $ vault write artifactory/roles/jenkins \
                username="example-service-jenkins" \
-               scope="api:* member-of-groups:ci-server" \
+               scope="applied-permissions/user " \  // for this scope user must exist in artifactory
                default_ttl=1h max_ttl=3h 
 
 $ vault list artifactory/roles
@@ -133,5 +134,6 @@ RTFACT-22477, proposing CIDR restrictions on the created access tokens.
 [artreleases]: https://github.com/jfrog/artifactory-secrets-plugin/releases
 [vaultdocplugindir]: https://www.vaultproject.io/docs/configuration/index.html#plugin_directory
 [vaultdocplugincatalog]: https://www.vaultproject.io/docs/internals/plugins.html#plugin-catalog
+[artifactory-create-token]: https://www.jfrog.com/confluence/display/JFROG/Artifactory+REST+API#ArtifactoryRESTAPI-CreateToken.1
 
 
