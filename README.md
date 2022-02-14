@@ -103,19 +103,25 @@ Note that "username" must be "admin" otherwise you will not be able to specify d
 $ vault write artifactory/config/admin \
                url=https://artifactory.example.org/artifactory \
                access_token=$TOKEN
+```
 
-# Also supports grant_type=[Optional, default: "client_credentials"], and audience=[Optional, default: *@*]
-# see [JFrog documentation][artifactory-create-token]
+```
 $ vault write artifactory/roles/jenkins \
                username="example-service-jenkins" \
                scope="applied-permissions/user " \  // for this scope user must exist in artifactory
                default_ttl=1h max_ttl=3h 
+```
+# Also supports grant_type=[Optional, default: "client_credentials"], and audience=[Optional, default: *@*]
+# see [JFrog documentation][artifactory-create-token]
 
+```
 $ vault list artifactory/roles
 Keys
 ----
 jenkins
+```
 
+```
 $ vault read artifactory/token/jenkins 
 Key                Value
 ---                -----
