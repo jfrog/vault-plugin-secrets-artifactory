@@ -111,8 +111,8 @@ $ vault write artifactory/roles/jenkins \
                scope="applied-permissions/user " \  // for this scope user must exist in artifactory
                default_ttl=1h max_ttl=3h 
 ```
-# Also supports grant_type=[Optional, default: "client_credentials"], and audience=[Optional, default: *@*]
-# see [JFrog documentation][artifactory-create-token]
+Also supports grant_type=[Optional, default: "client_credentials"], and audience=[Optional, default: *@*]
+see [JFrog documentation][artifactory-create-token]
 
 ```
 $ vault list artifactory/roles
