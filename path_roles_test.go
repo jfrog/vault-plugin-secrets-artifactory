@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// When there are no roles, an error must be returned.
+// When there are no roles, no error should be returned.
 func TestBackend_PathRoleList_Empty(t *testing.T) {
 	b, config := makeBackend(t)
 
@@ -22,7 +22,7 @@ func TestBackend_PathRoleList_Empty(t *testing.T) {
 	assert.NotNil(t, resp)
 	assert.NoError(t, err)
 	assert.Empty(t, resp.Warnings)
-	assert.True(t, resp.IsError())
+	assert.False(t, resp.IsError())
 }
 
 // The backend must be configured before it will accept roles

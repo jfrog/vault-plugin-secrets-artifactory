@@ -96,10 +96,6 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, _ *fra
 		return nil, err
 	}
 
-	if entries == nil {
-		return logical.ErrorResponse("no roles found"), nil
-	}
-
 	return logical.ListResponse(entries), nil
 }
 
@@ -200,7 +196,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 	}
 
 	if role == nil {
-		return logical.ErrorResponse("no such role"), nil
+		return nil, nil
 	}
 
 	return &logical.Response{
