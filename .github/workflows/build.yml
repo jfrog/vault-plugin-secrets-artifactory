@@ -23,6 +23,14 @@ jobs:
             GOARCH: amd64
             artifact_name: vault/plugins/artifactory
             asset_name: artifactory-secrets-plugin-darwin-amd64
+          - os: macos-latest
+            GOARCH: arm64
+            artifact_name: vault/plugins/artifactory
+            asset_name: artifactory-secrets-plugin-darwin-arm64
+          - os: ubuntu-latest
+            GOARCH: arm64
+            artifact_name: vault/plugins/artifactory
+            asset_name: artifactory-secrets-plugin-linux-arm64
     runs-on: ${{ matrix.os }}
     steps:
     - name: Install Go
