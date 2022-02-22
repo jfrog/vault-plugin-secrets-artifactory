@@ -108,11 +108,19 @@ $ vault write artifactory/config/admin \
 ```
 $ vault write artifactory/roles/jenkins \
                username="example-service-jenkins" \
-               scope="applied-permissions/user " \  // for this scope user must exist in artifactory
+               scope="api:* member-of-groups:ci-server" \  // for artifactory < 7.21.1
+               default_ttl=1h max_ttl=3h 
+               
+$ vault write artifactory/roles/jenkins \
+               username="example-service-jenkins" \
+               scope="applied-permissions/groups:automation " \  // scope for artifactory >= 7.21.1
                default_ttl=1h max_ttl=3h 
 ```
 Also supports grant_type=[Optional, default: "client_credentials"], and audience=[Optional, default: *@*]
-see [JFrog documentation][artifactory-create-token]
+see [JFrog documentation][artifactory-create-token]. 
+**Note** : There are some changes in the **scopes** supported in artifactory request >7.21. 
+Please refer to the JFrog documentation for the same according to the artifactor version
+
 
 ```
 $ vault list artifactory/roles
