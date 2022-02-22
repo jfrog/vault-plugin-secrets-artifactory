@@ -46,9 +46,3 @@ jobs:
         CGO_ENABLED: "0"
     - name: Test
       run: go test -v ./...
-    - name: First interaction
-      uses: actions/first-interaction@v1.1.0
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        issue-message: 'Hello @${{ github.actor }} , thank you for submitting an issue!!'
-        pr-message: 'Hello @${{ github.actor }} , thank you for submitting a pull request!!'

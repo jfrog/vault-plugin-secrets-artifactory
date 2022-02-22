@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	artifactory "github.com/idcmp/artifactory-secrets-plugin"
+	artifactory "github.com/jfrog/artifactory-secrets-plugin"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"

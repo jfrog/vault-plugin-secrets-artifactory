@@ -6,7 +6,7 @@ This plugin is now being actively maintained by JFrog Inc. Please refer to [CONT
 
 # Vault Artifactory Secrets Plugin
 
-This is a [HashiCorp Vault](https://www.vaultproject.io/) plugin which talks to JFrog Artifactory server (5.0.0 or later) and will
+This is a [HashiCorp Vault](https://www.vaultproject.io/) plugin which talks to JFrog Artifactory server and will
 dynamically provision access tokens with specified scopes. This backend can be mounted multiple times
 to provide access to multiple Artifactory servers.
 
