@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/go-version"
@@ -165,7 +166,7 @@ func (b *backend) getSystemStatus(config adminConfiguration) (bool, error) {
 }
 
 func (b *backend) performArtifactorySystemRequest(config adminConfiguration, path, host string) (*http.Response, error) {
-	if !strings.Contains(host, "myserver.com") {
+	if !strings.Contains(host, "myserver.com") && !isProxyExists() {
 		conn, err := tls.Dial("tcp", host+":443", nil)
 		if err != nil {
 			return nil, err
@@ -192,7 +193,7 @@ func (b *backend) performArtifactorySystemRequest(config adminConfiguration, pat
 
 func (b *backend) performArtifactoryRequest(config adminConfiguration, path, host string, values url.Values) (*http.Response, error) {
 
-	if !strings.Contains(path, "myserver.com") {
+	if !strings.Contains(path, "myserver.com") && !isProxyExists() {
 		conn, err := tls.Dial("tcp", host+":443", nil)
 		if err != nil {
 			return nil, err
@@ -219,7 +220,7 @@ func (b *backend) performArtifactoryRequest(config adminConfiguration, path, hos
 
 func (b *backend) performArtifactoryDelRequest(config adminConfiguration, host, path string) (*http.Response, error) {
 
-	if !strings.Contains(path, "myserver.com") {
+	if !strings.Contains(path, "myserver.com") && !isProxyExists() {
 		conn, err := tls.Dial("tcp", host+":443", nil)
 		if err != nil {
 			return nil, err
@@ -243,4 +244,13 @@ func (b *backend) performArtifactoryDelRequest(config adminConfiguration, host, 
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	return b.httpClient.Do(req)
+}
+
+func isProxyExists() bool {
+	_, p1 := os.LookupEnv("https_proxy")
+	_, p2 := os.LookupEnv("HTTPS_PROXY")
+	if p1 || p2 {
+		return true
+	}
+	return false
 }
