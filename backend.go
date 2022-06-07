@@ -54,7 +54,8 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 		b.pathListRoles(),
 		b.pathRoles(),
 		b.pathTokenCreate(),
-		b.pathConfig())
+		b.pathConfig(),
+		b.pathConfigRotate())
 
 	return b, nil
 }
