@@ -3,6 +3,7 @@ module github.com/jfrog/artifactory-secrets-plugin
 go 1.17
 
 require (
+	github.com/golang-jwt/jwt/v4 v4.4.1
 	github.com/hashicorp/go-hclog v0.14.1
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/vault/api v1.0.2

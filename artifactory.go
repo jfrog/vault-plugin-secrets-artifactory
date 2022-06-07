@@ -2,16 +2,23 @@ package artifactory
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+var ErrIncompatibleVersion = errors.New("incompatible version")
 
 func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) error {
 
@@ -128,56 +135,147 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 	return &createdToken, nil
 }
 
+// getSystemStatus verifies whether or not the Artifactory version is 7.21.1 or higher.
 func (b *backend) getSystemStatus(config adminConfiguration) (bool, error) {
+	return b.checkVersion(config, "7.21.1")
+}
 
-	newAccessReq := false
-
-	u, err := url.Parse(config.ArtifactoryURL)
-	if err != nil {
-		b.Backend.Logger().Warn("could not parse artifactory url", "url", u, "err", err)
-		return newAccessReq, err
-	}
-
-	resp, err := b.performArtifactorySystemRequest(config, "/api/system/version", u.Host)
+// checkVersion will return a boolean and error to check compatibilty before making an API call
+// -- This was formerly "checkSystemStatus" but that was hard-coded, that method now calls this one
+func (b *backend) checkVersion(config adminConfiguration, ver string) (compatible bool, err error) {
+	resp, err := b.performArtifactoryGet(config, "/artifactory/api/system/version")
 	if err != nil {
 		b.Backend.Logger().Warn("error making system version request", "response", resp, "err", err)
-		return newAccessReq, err
+		return
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
-		return newAccessReq, fmt.Errorf("could not get the sytem version: HTTP response %v", resp.StatusCode)
+		return compatible, fmt.Errorf("could not get the sytem version: HTTP response %v", resp.StatusCode)
 	}
 
 	var systemVersion systemVersionResponse
-	if err := json.NewDecoder(resp.Body).Decode(&systemVersion); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&systemVersion); err != nil {
 		b.Backend.Logger().Warn("could not parse system version response", "response", resp, "err", err)
-		return newAccessReq, err
+		return
 	}
 
 	v1, err := version.NewVersion(systemVersion.Version)
-	v2, err := version.NewVersion("7.21.1")
-
-	if v1.GreaterThan(v2) {
-		newAccessReq = true
+	if err != nil {
+		b.Backend.Logger().Warn("could not parse Artifactory system version", "ver", systemVersion.Version, "err", err)
+		return
 	}
 
-	return newAccessReq, nil
+	v2, err := version.NewVersion(ver)
+	if err != nil {
+		b.Backend.Logger().Warn("could not parse provided version", "ver", ver, "err", err)
+		return
+	}
+
+	if v1.GreaterThanOrEqual(v2) {
+		compatible = true
+	}
+
+	return
 }
 
-func (b *backend) performArtifactorySystemRequest(config adminConfiguration, path, host string) (*http.Response, error) {
-	if !strings.Contains(host, "myserver.com") && !isProxyExists() {
-		conn, err := tls.Dial("tcp", host+":443", nil)
-		if err != nil {
-			return nil, err
+// parseJWT will parse a JWT token string from Artifactory and return a *jwt.Token, err
+func (b *backend) parseJWT(config adminConfiguration, token string) (jwtToken *jwt.Token, err error) {
+	validate := true
+
+	cert, err := b.getRootCert(config)
+	if err != nil {
+		if errors.Is(err, ErrIncompatibleVersion) {
+			b.Logger().Warn("outdated artifactory, unable to retrieve root cert, skipping token validation")
+			validate = false
+		} else {
+			// b.Logger().Error("error retrieving root cert", "err", err.Error())
+			return
 		}
-		defer conn.Close()
 	}
 
-	u, err := url.ParseRequestURI(config.ArtifactoryURL + path)
+	// Parse Token
+	if validate {
+		jwtToken, err = jwt.Parse(token,
+			func(token *jwt.Token) (interface{}, error) { return cert.PublicKey, nil },
+			jwt.WithValidMethods([]string{"RS256"}))
+		if err != nil {
+			return
+		}
+		if !jwtToken.Valid {
+			return
+		}
+	} else { // SKIP Validation
+		// -- NOTE THIS IGNORES THE SIGNATURE, which is probably bad,
+		//    but it is artifactory's job to validate the token, right?
+		// p := jwt.Parser{}
+		// token, _, err := p.ParseUnverified(oldAccessToken, jwt.MapClaims{})
+		jwtToken, err = jwt.Parse(token, nil, jwt.WithoutClaimsValidation())
+		if err != nil {
+			return
+		}
+	}
+
+	// If we got here, we should have a jwtToken and nil err
+	return
+}
+
+// getRootCert will return the Artifactory access root certificate's public key, for validating token signatures
+func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate, err error) {
+	// Verify Artifactory version is at 7.12.0 or higher, prior versions will not work
+	// REF: https://www.jfrog.com/confluence/display/JFROG/Artifactory+REST+API#ArtifactoryRESTAPI-GetRootCertificate
+	compatible, err := b.checkVersion(config, "7.12.0")
+	if err != nil {
+		b.Backend.Logger().Warn("could not get artifactory version", "err", err)
+		return
+	}
+	if !compatible {
+		return cert, ErrIncompatibleVersion
+	}
+
+	resp, err := b.performArtifactoryGet(config, "/access/api/v1/cert/root")
+	if err != nil {
+		b.Backend.Logger().Warn("error requesting cert/root", "response", resp, "err", err)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
+		return cert, fmt.Errorf("could not get the certificate: HTTP response %v", resp.StatusCode)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	// body, err := ioutil.ReadAll(resp.Body)  Go.1.15 and earlier
+	if err != nil {
+		b.Backend.Logger().Error("error reading root cert response body", "err", err)
+		return
+	}
+
+	// The certificate is base64 encoded DER
+	binCert := make([]byte, len(body))
+	n, err := base64.StdEncoding.Decode(binCert, body)
+	if err != nil {
+		b.Backend.Logger().Error("error decoding body", "err", err)
+		return
+	}
+
+	cert, err = x509.ParseCertificate(binCert[0:n])
+	if err != nil {
+		b.Backend.Logger().Error("error parsing certificate", "err", err)
+		return
+	}
+	return
+}
+
+func (b *backend) performArtifactoryGet(config adminConfiguration, path string) (*http.Response, error) {
+	u, err := url.ParseRequestURI(config.ArtifactoryURL)
 	if err != nil {
 		return nil, err
 	}
+
+	u.Path = path // replace any path in the URL with the provided path
 
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
