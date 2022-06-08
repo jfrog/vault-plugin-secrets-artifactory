@@ -25,7 +25,6 @@ This will rotate the "access_token" used to access artifactory from this plugin,
 }
 
 func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Logger().Debug("START: pathConfigRotateWrite")
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
@@ -40,9 +39,9 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 
 	oldAccessToken := config.AccessToken
 
-	// Parse Current Token (to get tokenID)
+	// Parse Current Token (to get tokenID/scope)
 	// -- NOTE THIS IGNORES THE SIGNATURE, which is probably bad,
-	//    but it is not our job to validate the token, right?
+	//    but it is artifactory's job to validate the token, right?
 	p := jwt.Parser{}
 	token, _, err := p.ParseUnverified(oldAccessToken, jwt.MapClaims{})
 	if err != nil {
@@ -58,36 +57,25 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	// 	b.Logger().Warn("While rotating, existing token seems to be invalid")
 	//  return logical.ErrorResponse("error parsing claims in existing AccessToken"), nil
 	// }
-	oldTokenID := claims["jti"] // jti -> JFrog Token ID
-	b.Logger().Debug("oldTokenID: " + oldTokenID.(string))
+	oldTokenID := claims["jti"].(string) // jti -> JFrog Token ID
+	scope := claims["scp"].(string)      // scp -> scope
+	b.Logger().Debug("oldTokenID: " + oldTokenID)
 
 	// Create admin role for the new token
 	role := &artifactoryRole{
 		Username: "admin",
-		Scope:    "applied-permissions/admin",
+		Scope:    scope,
 	}
 
 	// Create a new token
-	b.Logger().Debug("pathConfigRotateWrite: create new token")
 	resp, err := b.createToken(*config, *role)
 	if err != nil {
 		return logical.ErrorResponse("error parsing claims in existing AccessToken"), err
 	}
+	b.Logger().Debug("newTokenID: " + resp.TokenId)
 
 	// Set new token
 	config.AccessToken = resp.AccessToken
-
-	// Invalidate Old Token (TODO)
-	oldSecret := logical.Secret{
-		InternalData: map[string]interface{}{
-			"access_token": config.AccessToken,
-			"token_id":     oldTokenID,
-		},
-	}
-	err = b.revokeToken(*config, oldSecret)
-	if err != nil {
-		return logical.ErrorResponse("error revoking existing AccessToken"), err
-	}
 
 	// Save new config
 	entry, err := logical.StorageEntryJSON("config/admin", config)
@@ -98,6 +86,18 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
+	}
+
+	// Invalidate Old Token (TODO)
+	oldSecret := logical.Secret{
+		InternalData: map[string]interface{}{
+			"access_token": oldAccessToken,
+			"token_id":     oldTokenID,
+		},
+	}
+	err = b.revokeToken(*config, oldSecret)
+	if err != nil {
+		return logical.ErrorResponse("error revoking existing AccessToken"), err
 	}
 
 	return nil, nil
