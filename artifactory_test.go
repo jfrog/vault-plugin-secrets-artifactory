@@ -282,3 +282,58 @@ func TestBackend_RevokeToken(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
 }
+
+// Test that the HTTP request sent to Artifactory matches what the docs say, and that
+// handling the response translates into a proper response.
+func TestBackend_RotateAdminToken(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"GET",
+		"https://myserver.com/artifactory/api/system/version",
+		httpmock.NewStringResponder(200, `{"version" : "7.33.8", "revision" : "73308900"}`))
+
+	httpmock.RegisterResponder(
+		"GET",
+		"https://myserver.com/access/api/v1/cert/root",
+		httpmock.NewStringResponder(200, rootCert))
+
+	httpmock.RegisterResponder(
+		"POST",
+		"https://myserver.com/access/api/v1/tokens",
+		httpmock.NewStringResponder(200, jwtAccessToken))
+
+	httpmock.RegisterResponder(
+		"DELETE",
+		"https://myserver.com/access/api/v1/tokens/fe3e6322-eb6d-468e-8445-c790113278c0",
+		httpmock.NewStringResponder(200, ""))
+
+	// Valid jwt Access Token
+	// TokenID: fe3e6322-eb6d-468e-8445-c790113278c0
+	b, config := configuredBackend(t, map[string]interface{}{
+		"access_token": `eyJ2ZXIiOiIyIiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYiLCJraWQ` +
+			`iOiJxdkhkX3lTNWlPQTlfQ3E5Z3BVSl9WdDBzYVhsTExhdWk2SzFrb291MEJzIn0.eyJl` +
+			`eHQiOiJ7XCJyZXZvY2FibGVcIjpcInRydWVcIn0iLCJzdWIiOiJqZmFjQDAxZzVoZWs2a` +
+			`2IyOTUyMHJiejcxdjkxY3c5XC91c2Vyc1wvYWRtaW4iLCJzY3AiOiJhcHBsaWVkLXBlcm` +
+			`1pc3Npb25zXC9hZG1pbiIsImF1ZCI6WyJqZnJ0QCoiLCJqZmFjQCoiLCJqZmV2dEAqIiw` +
+			`iamZtZEAqIiwiamZjb25AKiJdLCJpc3MiOiJqZmZlQDAwMCIsImV4cCI6MTY4Njc3Nzgw` +
+			`MCwiaWF0IjoxNjU1MjQxODAwLCJqdGkiOiJmZTNlNjMyMi1lYjZkLTQ2OGUtODQ0NS1jN` +
+			`zkwMTEzMjc4YzAifQ.LTacjxne84AbgDPiIVPt3UeKxTpO70ZEOOrVmGMMzl9TjV3tEZO` +
+			`e6m2HBeaXOPofbX9B7wFdRRNiCLYKwJ0-E1igywK34uC-TxWmUIvwWOias6E107UBahd_` +
+			`H0fg9Q2NKrA1vAPy18iKMKshyL-ZerbIS77z8jD92zzx6C9wrSbDJ96aNqMYHYUyhp5jf` +
+			`qHdAEivER-5ZrXsTFGX4dqym4NuSN6WsW-0eUdTb8gwI4FfVJGtqdwRUkbnX_gg3CCwOS` +
+			`Cqy5kl48WBdqwv9GyPVmnO4fafIJ-8oAqh9vCaD8lB0MHjFFciwEMggoaucLlQZ15yPuT` +
+			`aK9Zr82EigQMM-g`,
+		"url": "https://myserver.com/artifactory",
+	})
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/rotate",
+		Storage:   config.StorageView,
+	})
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+
+}
