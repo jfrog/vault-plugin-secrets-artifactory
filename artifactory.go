@@ -42,8 +42,8 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 
 	var resp *http.Response
 
-	if newAccessReq == true {
-		resp, err = b.performArtifactoryDelRequest(config, u.Host, u.Scheme+"://"+u.Host+"/access/api/v1/tokens/"+tokenId)
+	if newAccessReq {
+		resp, err = b.performArtifactoryDelete(config, "/access/api/v1/tokens/"+tokenId)
 		if err != nil {
 			b.Backend.Logger().Warn("error deleting access token", "response", resp, "err", err)
 			return err
@@ -51,7 +51,7 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 
 	} else {
 
-		resp, err = b.performArtifactoryRequest(config, u.Scheme+"://"+u.Host+u.Path+"/api/security/token/revoke", u.Host, values)
+		resp, err = b.performArtifactoryPost(config, u.Path+"/api/security/token/revoke", values)
 		if err != nil {
 			b.Backend.Logger().Warn("error deleting token", "response", resp, "err", err)
 			return err
@@ -106,13 +106,13 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 
 	path := ""
 
-	if newAccessReq == true {
-		path = u.Scheme + "://" + u.Host + "/access/api/v1/tokens"
+	if newAccessReq {
+		path = "/access/api/v1/tokens"
 	} else {
-		path = u.Scheme + "://" + u.Host + u.Path + "/api/security/token"
+		path = u.Path + "/api/security/token"
 	}
 
-	resp, err := b.performArtifactoryRequest(config, path, u.Host, values)
+	resp, err := b.performArtifactoryPost(config, path, values)
 	if err != nil {
 		b.Backend.Logger().Warn("error making  token request", "response", resp, "err", err)
 		return nil, err
@@ -291,20 +291,24 @@ func (b *backend) performArtifactoryGet(config adminConfiguration, path string) 
 	return b.httpClient.Do(req)
 }
 
-func (b *backend) performArtifactoryRequest(config adminConfiguration, path, host string, values url.Values) (*http.Response, error) {
+// performArtifactoryPost will HTTP POST values to the Artifactory API.
+func (b *backend) performArtifactoryPost(config adminConfiguration, path string, values url.Values) (*http.Response, error) {
 
-	if !strings.Contains(path, "myserver.com") && !isProxyExists() {
-		conn, err := tls.Dial("tcp", host+":443", nil)
+	u, err := url.ParseRequestURI(config.ArtifactoryURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if u.Scheme == "https" && !strings.Contains(u.Host, "myserver.com") && !isProxyExists() {
+		conn, err := tls.Dial("tcp", u.Host, nil)
 		if err != nil {
 			return nil, err
 		}
 		defer conn.Close()
 	}
 
-	u, err := url.ParseRequestURI(path)
-	if err != nil {
-		return nil, err
-	}
+	// Replace URL Path
+	u.Path = path
 
 	req, err := http.NewRequest(http.MethodPost, u.String(), strings.NewReader(values.Encode()))
 
@@ -318,20 +322,25 @@ func (b *backend) performArtifactoryRequest(config adminConfiguration, path, hos
 	return b.httpClient.Do(req)
 }
 
-func (b *backend) performArtifactoryDelRequest(config adminConfiguration, host, path string) (*http.Response, error) {
+// performArtifactoryDelete will HTTP DELETE to the Artifactory API.
+//   The path will be appended to the configured configured URL Path (usually /artifactory)
+func (b *backend) performArtifactoryDelete(config adminConfiguration, path string) (*http.Response, error) {
 
-	if !strings.Contains(path, "myserver.com") && !isProxyExists() {
-		conn, err := tls.Dial("tcp", host+":443", nil)
+	u, err := url.ParseRequestURI(config.ArtifactoryURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if u.Scheme == "https" && !strings.Contains(u.Host, "myserver.com") && !isProxyExists() {
+		conn, err := tls.Dial("tcp", u.Host, nil)
 		if err != nil {
 			return nil, err
 		}
 		defer conn.Close()
 	}
 
-	u, err := url.ParseRequestURI(path)
-	if err != nil {
-		return nil, err
-	}
+	// Replace URL Path
+	u.Path = path
 
 	req, err := http.NewRequest(http.MethodDelete, u.String(), nil)
 
