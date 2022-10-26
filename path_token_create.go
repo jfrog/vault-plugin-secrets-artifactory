@@ -103,6 +103,7 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	response := b.Secret(SecretArtifactoryAccessTokenType).Response(map[string]interface{}{
 		"access_token": resp.AccessToken,
 		"role":         roleName,
+		"username":     role.Username,
 		"scope":        resp.Scope,
 		"token_id":     resp.TokenId,
 	}, map[string]interface{}{
