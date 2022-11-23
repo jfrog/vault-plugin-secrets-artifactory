@@ -136,6 +136,8 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 }
 
 // getSystemStatus verifies whether or not the Artifactory version is 7.21.1 or higher.
+// The access API changed in v7.21.1
+// REF: https://www.jfrog.com/confluence/display/JFROG/Artifactory+REST+API#ArtifactoryRESTAPI-AccessTokens
 func (b *backend) getSystemStatus(config adminConfiguration) (bool, error) {
 	return b.checkVersion(config, "7.21.1")
 }
@@ -189,7 +191,7 @@ func (b *backend) parseJWT(config adminConfiguration, token string) (jwtToken *j
 			b.Logger().Warn("outdated artifactory, unable to retrieve root cert, skipping token validation")
 			validate = false
 		} else {
-			// b.Logger().Error("error retrieving root cert", "err", err.Error())
+			b.Logger().Error("error retrieving root cert", "err", err.Error())
 			return
 		}
 	}
