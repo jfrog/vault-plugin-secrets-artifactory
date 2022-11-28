@@ -1,10 +1,11 @@
+# Vault Artifactory Secrets Plugin
+
 ----------------------------------------------------------------
-This plugin is now being actively maintained by JFrog Inc. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and create github issues to ask for support.
+
+This plugin is now being actively maintained by JFrog Inc. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and create github issues to ask for support
 -----------------------------------------------------------------
 
 ![Build](https://github.com/idcmp/artifactory-secrets-plugin/workflows/Build/badge.svg)
-
-# Vault Artifactory Secrets Plugin
 
 This is a [HashiCorp Vault](https://www.vaultproject.io/) plugin which talks to JFrog Artifactory server and will
 dynamically provision access tokens with specified scopes. This backend can be mounted multiple times
@@ -16,10 +17,6 @@ Using this plugin, you can limit the accidental exposure window of Artifactory t
 
 This backend creates access tokens in Artifactory using the admin credentials provided. Note that if you
 provide non-admin credentials, then the "username" must match the username of the credential owner.
-
-## What's Missing
-
-* rotate the admin/config access_token when it's configured (if it's refreshable).
 
 ## Testing Locally
 
@@ -60,7 +57,7 @@ plugin_directory = "path/to/plugin/directory"
 Start a Vault server with this configuration file:
 
 ```sh
-$ vault server -config=path/to/vault/config.hcl
+vault server -config=path/to/vault/config.hcl
 ```
 
 Once the server is started, register the plugin in the Vault server's [plugin catalog][vaultdocplugincatalog]:
@@ -74,9 +71,8 @@ $ vault write sys/plugins/catalog/secret/artifactory \
 You can now enable the Artifactory secrets plugin:
 
 ```sh
-$ vault secrets enable artifactory
+vault secrets enable artifactory
 ```
-
 
 ## Usage
 
@@ -90,7 +86,7 @@ You will need the "admin" user's password (not an admin, but admin specifically)
 
 You will now create the Access Token that Vault will use to interact with Artifactory. In Artifactory 7.4+ this can be done in the UI Administration --> Identity and Access --> Access Tokens(Service: Artifactory, Expiry: Never Expires), otherwise use the REST API:
 
-```
+```sh
 curl -XPOST -u admin:$KEY "https://artifactory.example.org/artifactory/api/security/token" \
     -dusername=admin \
     -dexpires_in=0 \
@@ -99,38 +95,50 @@ curl -XPOST -u admin:$KEY "https://artifactory.example.org/artifactory/api/secur
 
 Note that "username" must be "admin" otherwise you will not be able to specify different usernames for roles. Save the "access_token" from the JSON response as the environment variable `TOKEN`.
 
-```
-$ vault write artifactory/config/admin \
-               url=https://artifactory.example.org/artifactory \
-               access_token=$TOKEN
+```sh
+vault write artifactory/config/admin \
+    url=https://artifactory.example.org/artifactory \
+    access_token=$TOKEN
 ```
 
+* Rotate the admin token, so that only vault knows it.
+
+```sh
+vault write -f artifactory/config/rotate
 ```
+
+* Create a Role (scope for artifactory < 7.21.1)
+
+```sh
 $ vault write artifactory/roles/jenkins \
-               username="example-service-jenkins" \
-               scope="api:* member-of-groups:ci-server" \  // for artifactory < 7.21.1
-               default_ttl=1h max_ttl=3h 
-               
-$ vault write artifactory/roles/jenkins \
-               username="example-service-jenkins" \
-               scope="applied-permissions/groups:automation " \  // scope for artifactory >= 7.21.1
-               default_ttl=1h max_ttl=3h 
+    username="example-service-jenkins" \
+    scope="api:* member-of-groups:ci-server" \
+    default_ttl=1h max_ttl=3h
 ```
+
+* Create a role (scope for artifactory >= 7.21.1)
+
+```sh
+$ vault write artifactory/roles/jenkins \
+    username="example-service-jenkins" \
+    scope="applied-permissions/groups:automation " \
+    default_ttl=1h max_ttl=3h
+```
+
 Also supports grant_type=[Optional, default: "client_credentials"], and audience=[Optional, default: *@*]
-see [JFrog documentation][artifactory-create-token]. 
-**Note** : There are some changes in the **scopes** supported in artifactory request >7.21. 
+see [JFrog documentation][artifactory-create-token].
+**Note** : There are some changes in the **scopes** supported in artifactory request >7.21.
 Please refer to the JFrog documentation for the same according to the artifactor version
 
-
-```
+```sh
 $ vault list artifactory/roles
 Keys
 ----
 jenkins
 ```
 
-```
-$ vault read artifactory/token/jenkins 
+```sh
+$ vault read artifactory/token/jenkins
 Key                Value
 ---                -----
 lease_id           artifactory/token/jenkins/25jYH8DjUU548323zPWiSakh
@@ -149,5 +157,3 @@ RTFACT-22477, proposing CIDR restrictions on the created access tokens.
 [vaultdocplugindir]: https://www.vaultproject.io/docs/configuration/index.html#plugin_directory
 [vaultdocplugincatalog]: https://www.vaultproject.io/docs/internals/plugins.html#plugin-catalog
 [artifactory-create-token]: https://www.jfrog.com/confluence/display/JFROG/Artifactory+REST+API#ArtifactoryRESTAPI-CreateToken.1
-
-
