@@ -19,17 +19,17 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		"https://myserver.com/artifactory/api/system/version",
+		"http://myserver.com/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, artVersion))
 
 	httpmock.RegisterResponder(
 		"POST",
-		"https://myserver.com/artifactory/api/security/token",
+		"http://myserver.com/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "https://myserver.com/artifactory",
+		"url":          "http://myserver.com/artifactory",
 	})
 
 	// Setup a role
@@ -291,22 +291,22 @@ func TestBackend_RotateAdminToken(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		"https://myserver.com/artifactory/api/system/version",
+		"http://myserver.com/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, `{"version" : "7.33.8", "revision" : "73308900"}`))
 
 	httpmock.RegisterResponder(
 		"GET",
-		"https://myserver.com/access/api/v1/cert/root",
+		"http://myserver.com/access/api/v1/cert/root",
 		httpmock.NewStringResponder(200, rootCert))
 
 	httpmock.RegisterResponder(
 		"POST",
-		"https://myserver.com/access/api/v1/tokens",
+		"http://myserver.com/access/api/v1/tokens",
 		httpmock.NewStringResponder(200, jwtAccessToken))
 
 	httpmock.RegisterResponder(
 		"DELETE",
-		"https://myserver.com/access/api/v1/tokens/fe3e6322-eb6d-468e-8445-c790113278c0",
+		"http://myserver.com/access/api/v1/tokens/fe3e6322-eb6d-468e-8445-c790113278c0",
 		httpmock.NewStringResponder(200, ""))
 
 	// Valid jwt Access Token
@@ -325,7 +325,7 @@ func TestBackend_RotateAdminToken(t *testing.T) {
 			`qHdAEivER-5ZrXsTFGX4dqym4NuSN6WsW-0eUdTb8gwI4FfVJGtqdwRUkbnX_gg3CCwOS` +
 			`Cqy5kl48WBdqwv9GyPVmnO4fafIJ-8oAqh9vCaD8lB0MHjFFciwEMggoaucLlQZ15yPuT` +
 			`aK9Zr82EigQMM-g`,
-		"url": "https://myserver.com/artifactory",
+		"url": "http://myserver.com/artifactory",
 	})
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
