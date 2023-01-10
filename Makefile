@@ -12,7 +12,7 @@ endif
 
 .DEFAULT_GOAL := all
 
-all: fmt  build  test start 
+all: fmt build test start
 
 build:
 	GOOS=$(OS) GOARCH="$(GOARCH)" go build -o vault/plugins/artifactory cmd/artifactory/main.go
@@ -33,7 +33,7 @@ fmt:
 	go fmt $$(go list ./...)
 
 setup:	enable
-	vault write artifactory/config/admin  url=http://localhost:8080 access_token=access_token
+	vault write artifactory/config/admin url=http://localhost:8080 access_token=access_token
 	vault read artifactory/config/admin
 	vault write artifactory/roles/test scope="test" username="test-user" max_ttl=3h default_ttl=2h
 	vault read artifactory/roles/test
@@ -41,5 +41,4 @@ setup:	enable
 artifactory:
 	cat test/http-create-response.txt | nc -l 8080
 
-.PHONY: build clean fmt start  enable test setup artifactory
-
+.PHONY: build clean fmt start enable test setup artifactory

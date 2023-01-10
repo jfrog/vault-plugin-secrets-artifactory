@@ -50,7 +50,6 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 		}
 
 	} else {
-
 		resp, err = b.performArtifactoryPost(config, u.Path+"/api/security/token/revoke", values)
 		if err != nil {
 			b.Backend.Logger().Warn("error deleting token", "response", resp, "err", err)
@@ -150,6 +149,8 @@ func (b *backend) checkVersion(config adminConfiguration, ver string) (compatibl
 		b.Backend.Logger().Warn("error making system version request", "response", resp, "err", err)
 		return
 	}
+
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
