@@ -1,3 +1,9 @@
+## 0.2.2 (January 24, 2023)
+
+BUG FIXES:
+
+- Fix HTTP response body not closed before root certificate error is returned. PR: [#26](https://github.com/jfrog/artifactory-secrets-plugin/pull/28)
+
 ## 0.2.1 (January 11, 2023)
 
 BUG FIXES:
