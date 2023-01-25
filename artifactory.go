@@ -242,12 +242,12 @@ func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate
 		return
 	}
 
+	defer resp.Body.Close()
+	
 	if resp.StatusCode != http.StatusOK {
 		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
 		return cert, fmt.Errorf("could not get the certificate: HTTP response %v", resp.StatusCode)
 	}
-
-	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	// body, err := ioutil.ReadAll(resp.Body)  Go.1.15 and earlier
