@@ -19,17 +19,17 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		"http://myserver.com/artifactory/api/system/version",
+		"http://myserver.com:80/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, artVersion))
 
 	httpmock.RegisterResponder(
 		"POST",
-		"http://myserver.com/artifactory/api/security/token",
+		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com/artifactory",
+		"url":          "http://myserver.com:80/artifactory",
 	})
 
 	// Setup a role
@@ -77,17 +77,17 @@ func TestBackend_CreateTokenArtifactoryUnavailable(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		"http://myserver.com/artifactory/api/system/version",
+		"http://myserver.com:80/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, artVersion))
 
 	httpmock.RegisterResponder(
 		"POST",
-		"http://myserver.com/artifactory/api/security/token",
+		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(400, ""))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com/artifactory",
+		"url":          "http://myserver.com:80/artifactory",
 	})
 
 	// Setup a role
@@ -126,17 +126,17 @@ func TestBackend_CreateTokenUnauthorized(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		"http://myserver.com/artifactory/api/system/version",
+		"http://myserver.com:80/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, artVersion))
 
 	httpmock.RegisterResponder(
 		"POST",
-		"http://myserver.com/artifactory/api/security/token",
+		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(401, ""))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com/artifactory",
+		"url":          "http://myserver.com:80/artifactory",
 	})
 
 	// Setup a role
@@ -177,17 +177,17 @@ func TestBackend_CreateTokenArtifactoryMisconfigured(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		"http://myserver.com/artifactory/api/system/version",
+		"http://myserver.com:80/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, artVersion))
 
 	httpmock.RegisterResponder(
 		"POST",
-		"http://myserver.com/artifactory/api/security/token",
+		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(401, `<html><body><h1>Bad Gateway</h1><hr/></body></html>`))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com/artifactory",
+		"url":          "http://myserver.com:80/artifactory",
 	})
 
 	// Setup a role
@@ -226,22 +226,22 @@ func TestBackend_RevokeToken(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		"http://myserver.com/artifactory/api/system/version",
+		"http://myserver.com:80/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, artVersion))
 
 	httpmock.RegisterResponder(
 		"POST",
-		"http://myserver.com/artifactory/api/security/token",
+		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
 	httpmock.RegisterResponder(
 		"POST",
-		"http://myserver.com/artifactory/api/security/token/revoke",
+		"http://myserver.com:80/artifactory/api/security/token/revoke",
 		httpmock.NewStringResponder(200, ""))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com/artifactory",
+		"url":          "http://myserver.com:80/artifactory",
 	})
 
 	// Setup a role
@@ -291,22 +291,22 @@ func TestBackend_RotateAdminToken(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		"http://myserver.com/artifactory/api/system/version",
+		"http://myserver.com:80/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, `{"version" : "7.33.8", "revision" : "73308900"}`))
 
 	httpmock.RegisterResponder(
 		"GET",
-		"http://myserver.com/access/api/v1/cert/root",
+		"http://myserver.com:80/access/api/v1/cert/root",
 		httpmock.NewStringResponder(200, rootCert))
 
 	httpmock.RegisterResponder(
 		"POST",
-		"http://myserver.com/access/api/v1/tokens",
+		"http://myserver.com:80/access/api/v1/tokens",
 		httpmock.NewStringResponder(200, jwtAccessToken))
 
 	httpmock.RegisterResponder(
 		"DELETE",
-		"http://myserver.com/access/api/v1/tokens/fe3e6322-eb6d-468e-8445-c790113278c0",
+		"http://myserver.com:80/access/api/v1/tokens/fe3e6322-eb6d-468e-8445-c790113278c0",
 		httpmock.NewStringResponder(200, ""))
 
 	// Valid jwt Access Token
@@ -325,7 +325,7 @@ func TestBackend_RotateAdminToken(t *testing.T) {
 			`qHdAEivER-5ZrXsTFGX4dqym4NuSN6WsW-0eUdTb8gwI4FfVJGtqdwRUkbnX_gg3CCwOS` +
 			`Cqy5kl48WBdqwv9GyPVmnO4fafIJ-8oAqh9vCaD8lB0MHjFFciwEMggoaucLlQZ15yPuT` +
 			`aK9Zr82EigQMM-g`,
-		"url": "http://myserver.com/artifactory",
+		"url": "http://myserver.com:80/artifactory",
 	})
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{

@@ -20,12 +20,12 @@ func TestBackend_NoRoleMaxTTLUsesSystemMaxTTL(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		"http://myserver.com/artifactory/api/system/version",
+		"http://myserver.com:80/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, artVersion))
 
 	httpmock.RegisterResponder(
 		"POST",
-		"http://myserver.com/artifactory/api/security/token",
+		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, `
 		{
 		   "access_token":   "adsdgbtybbeeyh...",
@@ -38,7 +38,7 @@ func TestBackend_NoRoleMaxTTLUsesSystemMaxTTL(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com/artifactory",
+		"url":          "http://myserver.com:80/artifactory",
 	})
 
 	// Role with no maximum TTL
@@ -77,17 +77,17 @@ func TestBackend_WorkingWithBothMaxTTLs(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		"http://myserver.com/artifactory/api/system/version",
+		"http://myserver.com:80/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, artVersion))
 
 	httpmock.RegisterResponder(
 		"POST",
-		"http://myserver.com/artifactory/api/security/token",
+		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com/artifactory",
+		"url":          "http://myserver.com:80/artifactory",
 		"max_ttl":      10 * time.Minute,
 	})
 
