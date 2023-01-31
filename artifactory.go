@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -243,7 +244,7 @@ func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate
 	}
 
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
 		return cert, fmt.Errorf("could not get the certificate: HTTP response %v", resp.StatusCode)
@@ -273,7 +274,7 @@ func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate
 }
 
 func (b *backend) performArtifactoryGet(config adminConfiguration, path string) (*http.Response, error) {
-	u, err := url.ParseRequestURI(config.ArtifactoryURL)
+	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
 	if err != nil {
 		return nil, err
 	}
@@ -295,12 +296,12 @@ func (b *backend) performArtifactoryGet(config adminConfiguration, path string) 
 // performArtifactoryPost will HTTP POST values to the Artifactory API.
 func (b *backend) performArtifactoryPost(config adminConfiguration, path string, values url.Values) (*http.Response, error) {
 
-	u, err := url.ParseRequestURI(config.ArtifactoryURL)
+	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
 	if err != nil {
 		return nil, err
 	}
 
-	if u.Scheme == "https" && !strings.Contains(u.Host, "myserver.com") && !isProxyExists() {
+	if u.Scheme == "https" && !strings.Contains(u.Host, "myserver.com:80") && !isProxyExists() {
 		conn, err := tls.Dial("tcp", u.Host, nil)
 		if err != nil {
 			return nil, err
@@ -324,15 +325,15 @@ func (b *backend) performArtifactoryPost(config adminConfiguration, path string,
 }
 
 // performArtifactoryDelete will HTTP DELETE to the Artifactory API.
-//   The path will be appended to the configured configured URL Path (usually /artifactory)
+// The path will be appended to the configured configured URL Path (usually /artifactory)
 func (b *backend) performArtifactoryDelete(config adminConfiguration, path string) (*http.Response, error) {
 
-	u, err := url.ParseRequestURI(config.ArtifactoryURL)
+	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
 	if err != nil {
 		return nil, err
 	}
 
-	if u.Scheme == "https" && !strings.Contains(u.Host, "myserver.com") && !isProxyExists() {
+	if u.Scheme == "https" && !strings.Contains(u.Host, "myserver.com:80") && !isProxyExists() {
 		conn, err := tls.Dial("tcp", u.Host, nil)
 		if err != nil {
 			return nil, err
@@ -363,4 +364,21 @@ func isProxyExists() bool {
 		return true
 	}
 	return false
+}
+
+func parseURLWithDefaultPort(rawUrl string) (*url.URL, error) {
+	urlParsed, err := url.ParseRequestURI(rawUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	if urlParsed.Port() == "" {
+		defaultPort, err := net.LookupPort("tcp", urlParsed.Scheme)
+		if err != nil {
+			return nil, err
+		}
+		urlParsed.Host = fmt.Sprintf("%s:%d", urlParsed.Host, defaultPort)
+	}
+
+	return urlParsed, nil
 }
