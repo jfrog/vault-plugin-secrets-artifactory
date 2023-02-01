@@ -45,7 +45,7 @@ vault read artifactory/token/test
 
 ### Using pre-built releases
 
-You can find pre-built releases of the plugin [here][artreleases]. Once you have downloaded the latest archive corresponding to your target OS, uncompress it to retrieve the `artifactory`  binary file.
+You can find pre-built releases of the plugin [here][artreleases]. Once you have downloaded the latest archive corresponding to your target OS, uncompress it to retrieve the `artifactory` binary file.
 
 ### From Sources
 
@@ -72,6 +72,9 @@ vault write sys/plugins/catalog/secret/artifactory \
     sha_256="$(sha256sum path/to/plugin/directory/artifactory | cut -d " " -f 1)" \
     command="artifactory"
 ```
+
+> **Note**
+> This checksum above is provided for illustration purpose and does not validate your binary. It should **not** be used for production environment. At minimum, you should use the checksum provided as [part of the release](https://github.com/jfrog/artifactory-secrets-plugin/releases).
 
 You can now enable the Artifactory secrets plugin:
 
@@ -121,10 +124,10 @@ vault write artifactory/roles/jenkins \
     default_ttl=1h max_ttl=3h
 ```
 
-Also supports grant_type=[Optional, default: "client_credentials"], and audience=[Optional, default: *@*]
-see [JFrog documentation][artifactory-create-token].
+Also supports `grant_type=[Optional, default: "client_credentials"]`, and `audience=[Optional, default: *@*]` see [JFrog documentation][artifactory-create-token].
 
-**Note** : There are some changes in the **scopes** supported in artifactory request >7.21. Please refer to the JFrog documentation for the same according to the artifactory version.
+> **Note**
+> There are some changes in the **scopes** supported in artifactory request >7.21. Please refer to the JFrog documentation for the same according to the artifactory version.
 
 ```sh
 vault list artifactory/roles
@@ -190,7 +193,7 @@ RTFACT-22477, proposing CIDR restrictions on the created access tokens.
 
 
 ## Contributors
-See the [contribution guide](CONTRIBUTIONS.md).
+See the [contribution guide](./CONTRIBUTING.md).
 
 ## License
 
