@@ -22,7 +22,7 @@ This backend creates access tokens in Artifactory using the admin credentials pr
 >
 > Therefore if you created access token(s) with Artifactory prior to 7.42.1, the tokens will have a 1 year expiration time (or whatever value set in Artifactory configuration) and will become unusable silently when it expires.
 >
-> We suggest upgrade your Artifactory to 7.42.1 (if possible) and rotate your tokens to get new, non-expiring tokens. Or set reminders to ensure you rotate your tokens before expiration.
+> We suggest upgrade your Artifactory to 7.42.1 or later (if possible) and rotate your tokens to get new, non-expiring tokens. Or set reminders to ensure you rotate your tokens before expiration.
 
 ## Testing Locally
 
