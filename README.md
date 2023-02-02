@@ -20,7 +20,7 @@ This backend creates access tokens in Artifactory using the admin credentials pr
 > **Note**
 > Prior to Artifactory 7.42.1, admin access token was created with the system token expiration (default to 1 hour) even when `expires_in` API field is set to 0. In 7.42.1, admin token expiration no longer constrained by system configuration and therefore can be set to non-expiring. See section ["Generate a Non-expiry Admin Token without Changing the Configuration"](https://www.jfrog.com/confluence/display/JFROG/Artifactory+Release+Notes#ArtifactoryReleaseNotes-Artifactory7.42.1Cloud) in the release note.
 >
-> Therefore if you created access token(s) with Artifactory prior to 7.42.1, the tokens will have a 1 year expiration time (or whatever value set in Artifactory configuration) and will become unusable silently when it expires.
+> Therefore if you created access token(s) with Artifactory prior to 7.42.1, the tokens will have a 1 year expiration time (or whatever value is set in the Artifactory configuration) and will become unusable silently when it expires.
 >
 > We suggest upgrade your Artifactory to 7.42.1 or later (if possible) and rotate your tokens to get new, non-expiring tokens. Or set reminders to ensure you rotate your tokens before expiration.
 
