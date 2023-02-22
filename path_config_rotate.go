@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"strings"
 
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -50,13 +51,18 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("error parsing claims in existing AccessToken"), nil
 	}
 
-	oldTokenID := claims["jti"].(string) // jti -> JFrog Token ID
-	scope := claims["scp"].(string)      // scp -> scope
+	oldTokenID := claims["jti"].(string)              // jti -> JFrog Token ID
+	scope := claims["scp"].(string)                   // scp -> scope
+	sub := strings.Split(claims["sub"].(string), "/") // sub -> subject (jfac@01fr1x1h805xmg0t17xhqr1v7a/users/admin)
+	username := "admin"                               // default to admin
+	if len(sub) > 0 {
+		username = sub[len(sub)-1]
+	}
 	b.Logger().Debug("oldTokenID: " + oldTokenID)
 
 	// Create admin role for the new token
 	role := &artifactoryRole{
-		Username: "admin",
+		Username: username,
 		Scope:    scope,
 	}
 
