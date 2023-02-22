@@ -1,3 +1,10 @@
+## 0.2.5 (February 22, 2023)
+
+IMPROVEMENTS:
+
+- Use username from current token for new token during rotation. PR: [#34](https://github.com/jfrog/artifactory-secrets-plugin/pull/34)
+- Add env vars to make command `make setup` works. PR: [#37](https://github.com/jfrog/artifactory-secrets-plugin/pull/37)
+
 ## 0.2.4 (February 21, 2023)
 
 IMPROVEMENTS:
