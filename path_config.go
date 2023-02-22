@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -45,7 +46,8 @@ individual calls, so do not include it in the URL here.
 
 The second is "access_token" which must be an access token powerful enough to generate the other access tokens you'll
 be using. This value is stored seal wrapped when available. Once set, the access token cannot be retrieved, but the backend
-will send a sha256 hash of the token so you can compare it to your notes. 
+will send a sha256 hash of the token so you can compare it to your notes. If the token is a JWT Access Token, it will return
+additional informaiton such as jfrog_token_id, username and scope.
 
 No renewals or new tokens will be issued if the backend configuration (config/admin) is deleted.
 `,
@@ -116,6 +118,16 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 	configMap := map[string]interface{}{
 		"access_token_sha256": fmt.Sprintf("%x", accessTokenHash[:]),
 		"url":                 config.ArtifactoryURL,
+	}
+
+	// Optionally include token info if it parses properly
+	token, err := b.getAdminTokenInfo(*config)
+	if err != nil {
+		b.Logger().Warn("Error parsing AccessToken: " + err.Error())
+	} else {
+		configMap["jfrog_token_id"] = token["TokenID"]
+		configMap["username"] = token["Username"]
+		configMap["scope"] = token["Scope"]
 	}
 
 	return &logical.Response{
