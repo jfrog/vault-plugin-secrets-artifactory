@@ -2,9 +2,7 @@ package artifactory
 
 import (
 	"context"
-	"strings"
 
-	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -41,35 +39,26 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	oldAccessToken := config.AccessToken
 
 	// Parse Current Token (to get tokenID/scope)
-	token, err := b.parseJWT(*config, oldAccessToken)
+	token, err := b.getTokenInfo(*config, oldAccessToken)
 	if err != nil {
 		return logical.ErrorResponse("error parsing existing AccessToken: " + err.Error()), err
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return logical.ErrorResponse("error parsing claims in existing AccessToken"), nil
+	if len(token["Username"]) == 0 {
+		token["Username"] = "admin" // default username to admin if not found, not sure if this is needed
 	}
-
-	oldTokenID := claims["jti"].(string)              // jti -> JFrog Token ID
-	scope := claims["scp"].(string)                   // scp -> scope
-	sub := strings.Split(claims["sub"].(string), "/") // sub -> subject (jfac@01fr1x1h805xmg0t17xhqr1v7a/users/admin)
-	username := "admin"                               // default to admin
-	if len(sub) > 0 {
-		username = sub[len(sub)-1]
-	}
-	b.Logger().Debug("oldTokenID: " + oldTokenID)
+	b.Logger().Debug("oldToken ID: " + token["TokenID"])
 
 	// Create admin role for the new token
 	role := &artifactoryRole{
-		Username: username,
-		Scope:    scope,
+		Username: token["Username"],
+		Scope:    token["Scope"],
 	}
 
 	// Create a new token
 	resp, err := b.createToken(*config, *role)
 	if err != nil {
-		return logical.ErrorResponse("error parsing claims in existing AccessToken"), err
+		return logical.ErrorResponse("error creating new token"), err
 	}
 	b.Logger().Debug("newTokenID: " + resp.TokenId)
 
@@ -87,11 +76,11 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 
-	// Invalidate Old Token (TODO)
+	// Invalidate Old Token
 	oldSecret := logical.Secret{
 		InternalData: map[string]interface{}{
 			"access_token": oldAccessToken,
-			"token_id":     oldTokenID,
+			"token_id":     token["TokenID"],
 		},
 	}
 	err = b.revokeToken(*config, oldSecret)

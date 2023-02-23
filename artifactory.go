@@ -224,6 +224,29 @@ func (b *backend) parseJWT(config adminConfiguration, token string) (jwtToken *j
 	return
 }
 
+// getTokenInfo will parse the provided token to return useful information about it
+func (b *backend) getTokenInfo(config adminConfiguration, token string) (info map[string]string, err error) {
+	// Parse Current Token (to get tokenID/scope)
+	jwtToken, err := b.parseJWT(config, token)
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := jwtToken.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, errors.New("error parsing claims in AccessToken")
+	}
+
+	sub := strings.Split(claims["sub"].(string), "/") // sub -> subject (jfac@01fr1x1h805xmg0t17xhqr1v7a/users/admin)
+
+	info = map[string]string{
+		"TokenID":  claims["jti"].(string), // jti -> JFrog Token ID
+		"Scope":    claims["scp"].(string), // scp -> scope
+		"Username": sub[len(sub)-1],        // last element of subject
+	}
+	return
+}
+
 // getRootCert will return the Artifactory access root certificate's public key, for validating token signatures
 func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate, err error) {
 	// Verify Artifactory version is at 7.12.0 or higher, prior versions will not work
