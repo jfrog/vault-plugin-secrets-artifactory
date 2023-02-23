@@ -247,11 +247,6 @@ func (b *backend) getTokenInfo(config adminConfiguration, token string) (info ma
 	return
 }
 
-// getAdminTokenInfo will return tokenInfo for the currently configured AccessToken
-func (b *backend) getAdminTokenInfo(config adminConfiguration) (info map[string]string, err error) {
-	return b.getTokenInfo(config, config.AccessToken)
-}
-
 // getRootCert will return the Artifactory access root certificate's public key, for validating token signatures
 func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate, err error) {
 	// Verify Artifactory version is at 7.12.0 or higher, prior versions will not work

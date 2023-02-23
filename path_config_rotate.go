@@ -39,7 +39,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	oldAccessToken := config.AccessToken
 
 	// Parse Current Token (to get tokenID/scope)
-	token, err := b.getAdminTokenInfo(*config)
+	token, err := b.getTokenInfo(*config, oldAccessToken)
 	if err != nil {
 		return logical.ErrorResponse("error parsing existing AccessToken: " + err.Error()), err
 	}
