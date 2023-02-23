@@ -1,3 +1,9 @@
+## 0.2.6 (February 23, 2023)
+
+IMPROVEMENTS:
+
+- Include additional token information when reading from config. PR: [#39](https://github.com/jfrog/artifactory-secrets-plugin/pull/39)
+
 ## 0.2.5 (February 22, 2023)
 
 IMPROVEMENTS:
