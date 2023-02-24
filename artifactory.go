@@ -46,14 +46,14 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 	if newAccessReq {
 		resp, err = b.performArtifactoryDelete(config, "/access/api/v1/tokens/"+tokenId)
 		if err != nil {
-			b.Backend.Logger().Warn("error deleting access tokenID", tokenId, "response", resp, "err", err)
+			b.Backend.Logger().Warn("error deleting access token", "tokenId", tokenId, "response", resp, "err", err)
 			return err
 		}
 
 	} else {
 		resp, err = b.performArtifactoryPost(config, u.Path+"/api/security/token/revoke", values)
 		if err != nil {
-			b.Backend.Logger().Warn("error deleting tokenID", tokenId, "response", resp, "err", err)
+			b.Backend.Logger().Warn("error deleting token", "tokenId", tokenId, "response", resp, "err", err)
 			return err
 		}
 	}
