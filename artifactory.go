@@ -60,8 +60,8 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
+	if resp.StatusCode >= http.StatusBadRequest {
+		b.Backend.Logger().Warn("revokeToken got bad http status code", "statusCode", resp.StatusCode)
 		return fmt.Errorf("could not revoke tokenID: %v - HTTP response %v", tokenId, resp.StatusCode)
 	}
 
