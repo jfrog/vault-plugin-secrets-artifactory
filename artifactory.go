@@ -46,23 +46,23 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 	if newAccessReq {
 		resp, err = b.performArtifactoryDelete(config, "/access/api/v1/tokens/"+tokenId)
 		if err != nil {
-			b.Backend.Logger().Warn("error deleting access token", "response", resp, "err", err)
+			b.Backend.Logger().Warn("error deleting access token", "tokenId", tokenId, "response", resp, "err", err)
 			return err
 		}
 
 	} else {
 		resp, err = b.performArtifactoryPost(config, u.Path+"/api/security/token/revoke", values)
 		if err != nil {
-			b.Backend.Logger().Warn("error deleting token", "response", resp, "err", err)
+			b.Backend.Logger().Warn("error deleting token", "tokenId", tokenId, "response", resp, "err", err)
 			return err
 		}
 	}
 	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
-		return fmt.Errorf("could not revoke token: HTTP response %v", resp.StatusCode)
+	if resp.StatusCode >= http.StatusBadRequest {
+		b.Backend.Logger().Warn("revokeToken got bad http status code", "statusCode", resp.StatusCode)
+		return fmt.Errorf("could not revoke tokenID: %v - HTTP response %v", tokenId, resp.StatusCode)
 	}
 
 	return nil
