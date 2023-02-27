@@ -1,3 +1,9 @@
+## 0.2.7 (February 27, 2023)
+
+BUG FIXES:
+
+- Fix revoke token error check only for HTTP status code 200. Now it errors only for status code >= 400. Also include token ID in logs and error message. PR: [#41](https://github.com/jfrog/artifactory-secrets-plugin/pull/41)
+
 ## 0.2.6 (February 23, 2023)
 
 IMPROVEMENTS:
