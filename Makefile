@@ -1,9 +1,12 @@
 GOARCH = amd64
-ACCESS_TOKEN ?= $(shell printenv ACCESS_TOKEN || echo 'access_token')
-ARTIFACTORY_URL ?= $(shell printenv ARTIFACTORY_URL || echo 'http://localhost:8080')
-ARTIFACTORY_SCOPE ?= $(shell printenv ARTIFACTORY_SCOPE || echo 'applied-permissions/groups:readers')
-
+ARTIFACTORY_ENV := ./vault/artifactory.env
+ARTIFACTORY_SCOPE ?= applied-permissions/groups:readers
+ARTIFACTORY_URL ?= http://localhost:8082
+JFROG_ACCESS_TOKEN ?= $(shell [ -f $(ARTIFACTORY_ENV) ] && ./scripts/get-access-key.sh $(ARTIFACTORY_URL) TOKEN_USERNAME=$(TOKEN_USERNAME) || echo 'access-token')
+TOKEN_USERNAME ?= vault-admin
 UNAME = $(shell uname -s)
+VAULT_TOKEN ?= $(shell printenv VAULT_TOKEN || echo 'root')
+VAULT_ADDR ?= $(shell printenv VAULT_ADDR || echo 'http://localhost:8200')
 
 ifndef OS
 	ifeq ($(UNAME), Linux)
@@ -26,6 +29,9 @@ start:
 test:
 	go test -v ./...
 
+disable:
+	vault secrets disable artifactory
+
 enable:
 	vault secrets enable artifactory
 
@@ -35,13 +41,19 @@ clean:
 fmt:
 	go fmt $$(go list ./...)
 
-setup:	enable
-	vault write artifactory/config/admin url=$(ARTIFACTORY_URL) access_token=$(ACCESS_TOKEN)
+setup: disable enable
+	vault write artifactory/config/admin url=$(ARTIFACTORY_URL) access_token=$(JFROG_ACCESS_TOKEN)
 	vault read artifactory/config/admin
 	vault write artifactory/roles/test scope="$(ARTIFACTORY_SCOPE)" username="test-user" max_ttl=3h default_ttl=2h
 	vault read artifactory/roles/test
 
-artifactory:
-	cat test/http-create-response.txt | nc -l 8080
+artifactory: $(ARTIFACTORY_ENV)
 
-.PHONY: build clean fmt start enable test setup artifactory
+$(ARTIFACTORY_ENV):
+	@./scripts/run-artifactory-container.sh | tee $(ARTIFACTORY_ENV)
+
+stop_artifactory:
+	source $(ARTIFACTORY_ENV) && docker stop $$ARTIFACTORY_CONTAINER_ID
+	rm -f $(ARTIFACTORY_ENV)
+
+.PHONY: build clean fmt start disable enable test setup artifactory stop_artifactory

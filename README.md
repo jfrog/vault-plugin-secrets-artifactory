@@ -2,10 +2,11 @@
 
 ----------------------------------------------------------------
 
-This plugin is now being actively maintained by JFrog Inc. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and create github issues to ask for support
------------------------------------------------------------------
+This plugin is now being actively maintained by JFrog Inc.Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and create github issues to ask for support
 
-![Build](https://github.com/idcmp/artifactory-secrets-plugin/workflows/Build/badge.svg)
+----------------------------------------------------------------
+
+![Build](https://github.com/jfrog/artifactory-secrets-plugin/actions/workflows/build.yml/badge.svg)
 
 This is a [HashiCorp Vault](https://www.vaultproject.io/) plugin which talks to JFrog Artifactory server and will
 dynamically provision access tokens with specified scopes. This backend can be mounted multiple times
@@ -26,25 +27,47 @@ This backend creates access tokens in Artifactory using the admin credentials pr
 
 ## Testing Locally
 
-If you're compiling this yourself and want to do a local sanity test, you
-can do something like:
+If you're compiling this yourself and want to test locally, you will need a working docker environment. You will also need vault and golang installed, then you can follow the steps below.
 
-In first terminal, build the plugin and start the local dev server:
+* In first terminal, build the plugin and start the local dev server:
+
 ```sh
 make
 ```
 
-In another terminal, setup the vault with values:
+* In another terminal, setup a test artifactory instance. If you want to test a specific version, you can set `ARTIFACTORY_VERSION` environment variable.
+
 ```sh
-export VAULT_ADDR=http://127.0.0.1:8200
-export VAULT_TOKEN=root
-make setup
+make artifactory
 ```
 
-Once that's completed, in the same terminal:
 ```sh
-make artifactory &  # Runs netcat returning a static JSON response
+make artifactory ARTIFACTORY_VERSION=7.52.3
+```
+
+* Then, setup artifactory-secrets-engine in vault with values:
+
+```sh
+export VAULT_ADDR=http://localhost:8200
+export VAULT_token=root
+make setup
 vault read artifactory/token/test
+```
+
+NOTE: Each time you rebuild (making changes?), you will need to run `make setup` again, since vault is in dev mode.
+
+* Once you are done testing, you can destroy the local artifactory instance:
+
+```sh
+make stop_artifactory
+```
+
+If you would like to test against another artifactory:
+
+```sh
+export ARTIFACTORY_URL=https://artifactory.example.com
+export JFROG_ACCESS_TOKEN=(PASTE YOUR JFROG ADMIN TOKEN)
+make setup
 ```
 
 ## Installation
