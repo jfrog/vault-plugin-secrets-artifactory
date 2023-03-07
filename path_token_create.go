@@ -83,16 +83,15 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	}
 
 	maxLeaseTTL := b.Backend.System().MaxLeaseTTL()
-	maxTTL := role.MaxTTL
 
-	if maxTTL == 0 {
-		maxTTL = maxLeaseTTL
-	} else if maxTTL > maxLeaseTTL {
-		maxTTL = maxLeaseTTL
+	// Set the role.MaxTTL based on maxLeaseTTL
+	// - This value will be passed to createToken and used as expires_in for versions of Artifactory 7.50.3 or higher
+	if role.MaxTTL == 0 || role.MaxTTL > maxLeaseTTL {
+		role.MaxTTL = maxLeaseTTL
 	}
 
-	if maxTTL > 0 && ttl > maxTTL {
-		ttl = maxTTL
+	if role.MaxTTL > 0 && ttl > role.MaxTTL {
+		ttl = role.MaxTTL
 	}
 
 	resp, err := b.createToken(*config, *role)
@@ -112,7 +111,7 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	})
 
 	response.Secret.TTL = ttl
-	response.Secret.MaxTTL = maxTTL
+	response.Secret.MaxTTL = role.MaxTTL
 
 	return response, nil
 }
