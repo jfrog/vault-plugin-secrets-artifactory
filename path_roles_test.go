@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +31,6 @@ func TestBackend_PathRoleList_CannotAddRoleWhenNotConfigured(t *testing.T) {
 	b, config := makeBackend(t)
 
 	roleData := map[string]interface{}{
-		"role":     "test-role",
 		"username": "test-username",
 		"scope":    "test-scope",
 	}
@@ -50,9 +50,17 @@ func TestBackend_PathRoleList_CannotAddRoleWhenNotConfigured(t *testing.T) {
 
 // A configured backend must accept a new role.
 func TestBackend_PathRoleList_AddRole(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"GET",
+		"http://myserver.com:80/artifactory/api/system/version",
+		httpmock.NewStringResponder(200, artVersion))
+
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "test-url",
+		"url":          "http://myserver.com:80",
 	})
 
 	roleData := map[string]interface{}{
@@ -74,9 +82,17 @@ func TestBackend_PathRoleList_AddRole(t *testing.T) {
 
 // Listing roles must return the name of the role.
 func TestBackend_PathRoleListReturnsRole(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"GET",
+		"http://myserver.com:80/artifactory/api/system/version",
+		httpmock.NewStringResponder(200, artVersion))
+
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "test-url",
+		"url":          "http://myserver.com:80",
 	})
 
 	roleData := map[string]interface{}{
@@ -109,10 +125,17 @@ func TestBackend_PathRoleListReturnsRole(t *testing.T) {
 
 // Simple test that enforces what goes in is what comes out.
 func TestBackend_PathRoleWriteThenRead(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"GET",
+		"http://myserver.com:80/artifactory/api/system/version",
+		httpmock.NewStringResponder(200, artVersion))
 
 	b, config := configuredBackend(t, map[string]interface{}{
-		"access_token": "ignored",
-		"url":          "ignored",
+		"access_token": "test-access-token",
+		"url":          "http://myserver.com:80",
 	})
 
 	roleData := map[string]interface{}{

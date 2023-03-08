@@ -75,6 +75,17 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("no such role"), nil
 	}
 
+	// Define username for token by template if a static one is not set
+	if len(role.Username) == 0 {
+		role.Username, err = b.usernameProducer.Generate(UsernameMetadata{
+			RoleName:    roleName,
+			DisplayName: req.DisplayName,
+		})
+		if err != nil {
+			return logical.ErrorResponse("error generating username from template"), err
+		}
+	}
+
 	var ttl time.Duration
 	if value, ok := data.GetOk("ttl"); ok {
 		ttl = time.Second * time.Duration(value.(int))
@@ -104,10 +115,12 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		"role":         roleName,
 		"scope":        resp.Scope,
 		"token_id":     resp.TokenId,
+		"username":     role.Username,
 	}, map[string]interface{}{
 		"role":         roleName,
 		"access_token": resp.AccessToken,
 		"token_id":     resp.TokenId,
+		"username":     role.Username,
 	})
 
 	response.Secret.TTL = ttl

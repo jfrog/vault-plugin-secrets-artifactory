@@ -17,7 +17,12 @@ import (
 
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/hashicorp/vault/sdk/logical"
+)
+
+const (
+	defaultUserNameTemplate string = `{{ printf "v-%s-%s" (.RoleName | truncate 24) (random 8) }}` // Docs indicate max length is 256
 )
 
 var ErrIncompatibleVersion = errors.New("incompatible version")
@@ -30,12 +35,6 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 	values := url.Values{}
 	values.Set("token", accessToken)
 
-	newAccessReq, err := b.getSystemStatus(config)
-	if err != nil {
-		b.Backend.Logger().Warn("could not get artifactory version", "err", err)
-		return err
-	}
-
 	u, err := url.Parse(config.ArtifactoryURL)
 	if err != nil {
 		b.Backend.Logger().Warn("could not parse artifactory url", "url", u, "err", err)
@@ -44,7 +43,7 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 
 	var resp *http.Response
 
-	if newAccessReq {
+	if b.useNewAccessAPI() {
 		resp, err = b.performArtifactoryDelete(config, "/access/api/v1/tokens/"+tokenId)
 		if err != nil {
 			b.Backend.Logger().Warn("error deleting access token", "tokenId", tokenId, "response", resp, "err", err)
@@ -76,6 +75,9 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 	}
 
 	values.Set("username", role.Username)
+	if len(role.Username) == 0 {
+		return nil, fmt.Errorf("empty username not allowed, possibly a template error")
+	}
 	values.Set("scope", role.Scope)
 
 	// A refreshable access token gets replaced by a new access token, which is not
@@ -89,13 +91,7 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 	// but the token is still usable even after it's deleted. See RTFACT-15293.
 	values.Set("expires_in", "0") // never expires
 
-	forceRevoke, err := b.supportForceRevocable(config)
-	if err != nil {
-		b.Backend.Logger().Warn("could not get artifactory version", "err", err)
-		return nil, err
-	}
-
-	if forceRevoke && role.MaxTTL > 0 {
+	if b.supportForceRevocable() && role.MaxTTL > 0 {
 		expiresIn := strconv.FormatFloat(role.MaxTTL.Seconds(), 'f', -1, 64)
 		b.Backend.Logger().Debug("Setting expires_in and force_revocable", "expires_in", expiresIn)
 		values.Set("expires_in", expiresIn)
@@ -106,12 +102,6 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 		values.Set("audience", role.Audience)
 	}
 
-	newAccessReq, err := b.getSystemStatus(config)
-	if err != nil {
-		b.Backend.Logger().Warn("could not get artifactory version", "err", err)
-		return nil, err
-	}
-
 	u, err := url.Parse(config.ArtifactoryURL)
 	if err != nil {
 		b.Backend.Logger().Warn("could not parse artifactory url", "url", u, "err", err)
@@ -120,7 +110,7 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 
 	path := ""
 
-	if newAccessReq {
+	if b.useNewAccessAPI() {
 		path = "/access/api/v1/tokens"
 	} else {
 		path = u.Path + "/api/security/token"
@@ -152,20 +142,19 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 // supportForceRevocable verifies whether or not the Artifactory version is 7.50.3 or higher.
 // The access API changes in v7.50.3 to support force_revocable to allow us to set the expiration for the tokens.
 // REF: https://www.jfrog.com/confluence/display/JFROG/JFrog+Platform+REST+API#JFrogPlatformRESTAPI-CreateToken
-func (b *backend) supportForceRevocable(config adminConfiguration) (bool, error) {
-	return b.checkVersion(config, "7.50.3")
+func (b *backend) supportForceRevocable() bool {
+	return b.checkVersion("7.50.3")
 }
 
-// getSystemStatus verifies whether or not the Artifactory version is 7.21.1 or higher.
+// useNewAccessAPI verifies whether or not the Artifactory version is 7.21.1 or higher.
 // The access API changed in v7.21.1
 // REF: https://www.jfrog.com/confluence/display/JFROG/Artifactory+REST+API#ArtifactoryRESTAPI-AccessTokens
-func (b *backend) getSystemStatus(config adminConfiguration) (bool, error) {
-	return b.checkVersion(config, "7.21.1")
+func (b *backend) useNewAccessAPI() bool {
+	return b.checkVersion("7.21.1")
 }
 
-// checkVersion will return a boolean and error to check compatibilty before making an API call
-// -- This was formerly "checkSystemStatus" but that was hard-coded, that method now calls this one
-func (b *backend) checkVersion(config adminConfiguration, ver string) (compatible bool, err error) {
+// getVersion will fetch the current Artifactory version and store it in the backend
+func (b *backend) getVersion(config adminConfiguration) (err error) {
 	resp, err := b.performArtifactoryGet(config, "/artifactory/api/system/version")
 	if err != nil {
 		b.Backend.Logger().Warn("error making system version request", "response", resp, "err", err)
@@ -176,7 +165,7 @@ func (b *backend) checkVersion(config adminConfiguration, ver string) (compatibl
 
 	if resp.StatusCode != http.StatusOK {
 		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
-		return compatible, fmt.Errorf("could not get the sytem version: HTTP response %v", resp.StatusCode)
+		return fmt.Errorf("could not get the system version: HTTP response %v", resp.StatusCode)
 	}
 
 	var systemVersion systemVersionResponse
@@ -184,10 +173,17 @@ func (b *backend) checkVersion(config adminConfiguration, ver string) (compatibl
 		b.Backend.Logger().Warn("could not parse system version response", "response", resp, "err", err)
 		return
 	}
+	b.version = systemVersion.Version
+	return
+}
 
-	v1, err := version.NewVersion(systemVersion.Version)
+// checkVersion will return a boolean and error to check compatibility before making an API call
+// -- This was formerly "checkSystemStatus" but that was hard-coded, that method now calls this one
+func (b *backend) checkVersion(ver string) (compatible bool) {
+
+	v1, err := version.NewVersion(b.version)
 	if err != nil {
-		b.Backend.Logger().Warn("could not parse Artifactory system version", "ver", systemVersion.Version, "err", err)
+		b.Backend.Logger().Warn("could not parse Artifactory system version", "ver", b.version, "err", err)
 		return
 	}
 
@@ -245,8 +241,15 @@ func (b *backend) parseJWT(config adminConfiguration, token string) (jwtToken *j
 	return
 }
 
+type TokenInfo struct {
+	TokenID  string `json:"token_id"`
+	Scope    string `json:"scope"`
+	Username string `json:"username"`
+	Expires  int64  `json:"expires"`
+}
+
 // getTokenInfo will parse the provided token to return useful information about it
-func (b *backend) getTokenInfo(config adminConfiguration, token string) (info map[string]string, err error) {
+func (b *backend) getTokenInfo(config adminConfiguration, token string) (info *TokenInfo, err error) {
 	// Parse Current Token (to get tokenID/scope)
 	jwtToken, err := b.parseJWT(config, token)
 	if err != nil {
@@ -260,11 +263,26 @@ func (b *backend) getTokenInfo(config adminConfiguration, token string) (info ma
 
 	sub := strings.Split(claims["sub"].(string), "/") // sub -> subject (jfac@01fr1x1h805xmg0t17xhqr1v7a/users/admin)
 
-	info = map[string]string{
-		"TokenID":  claims["jti"].(string), // jti -> JFrog Token ID
-		"Scope":    claims["scp"].(string), // scp -> scope
-		"Username": sub[len(sub)-1],        // last element of subject
+	info = &TokenInfo{
+		TokenID:  claims["jti"].(string), // jti -> JFrog Token ID
+		Scope:    claims["scp"].(string), // scp -> scope
+		Username: sub[len(sub)-1],        // last element of subject
 	}
+
+	// exp -> expires at (unixtime) - may not be present
+	switch exp := claims["exp"].(type) {
+	case int64:
+		info.Expires = exp
+	case float64:
+		info.Expires = int64(exp) // close enough this should be int64 anyhow
+	case json.Number:
+		v, err := exp.Int64()
+		if err != nil {
+			b.Backend.Logger().Warn("error parsing token exp as json.Number", "err", err)
+		}
+		info.Expires = v
+	}
+
 	return
 }
 
@@ -272,12 +290,7 @@ func (b *backend) getTokenInfo(config adminConfiguration, token string) (info ma
 func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate, err error) {
 	// Verify Artifactory version is at 7.12.0 or higher, prior versions will not work
 	// REF: https://www.jfrog.com/confluence/display/JFROG/Artifactory+REST+API#ArtifactoryRESTAPI-GetRootCertificate
-	compatible, err := b.checkVersion(config, "7.12.0")
-	if err != nil {
-		b.Backend.Logger().Warn("could not get artifactory version", "err", err)
-		return
-	}
-	if !compatible {
+	if !b.checkVersion("7.12.0") {
 		return cert, ErrIncompatibleVersion
 	}
 
@@ -425,4 +438,16 @@ func parseURLWithDefaultPort(rawUrl string) (*url.URL, error) {
 	}
 
 	return urlParsed, nil
+}
+
+func testUsernameTemplate(testTemplate string) (up template.StringTemplate, err error) {
+	up, err = template.NewTemplate(template.Template(testTemplate))
+	if err != nil {
+		return up, fmt.Errorf("username_template initialization error: %w", err)
+	}
+	_, err = up.Generate(UsernameMetadata{})
+	if err != nil {
+		return up, fmt.Errorf("username_template failed to generate username: %w", err)
+	}
+	return
 }

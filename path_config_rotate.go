@@ -44,15 +44,15 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("error parsing existing AccessToken: " + err.Error()), err
 	}
 
-	if len(token["Username"]) == 0 {
-		token["Username"] = "admin" // default username to admin if not found, not sure if this is needed
+	if len(token.Username) == 0 {
+		token.Username = "admin" // default username to admin if not found, not sure if this is needed
 	}
-	b.Logger().Debug("oldToken ID: " + token["TokenID"])
+	b.Logger().Debug("oldToken ID: " + token.TokenID)
 
 	// Create admin role for the new token
 	role := &artifactoryRole{
-		Username: token["Username"],
-		Scope:    token["Scope"],
+		Username: token.Username,
+		Scope:    token.Scope,
 	}
 
 	// Create a new token
@@ -80,7 +80,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	oldSecret := logical.Secret{
 		InternalData: map[string]interface{}{
 			"access_token": oldAccessToken,
-			"token_id":     token["TokenID"],
+			"token_id":     token.TokenID,
 		},
 	}
 	err = b.revokeToken(*config, oldSecret)
