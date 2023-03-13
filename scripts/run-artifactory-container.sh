@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
 ## Heavily borrowed from: https://github.com/jfrog/terraform-provider-artifactory/tree/master/scripts
+set -eo pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" > /dev/null && pwd )"
 source "${SCRIPT_DIR}/wait-for-rt.sh"
 
 ARTIFACTORY_REPO="${ARTIFACTORY_REPO:-releases-docker.jfrog.io/jfrog}"
 ARTIFACTORY_IMAGE="${ARTIFACTORY_IMAGE:-artifactory-jcr}"
-ARTIFACTORY_VERSION=${ARTIFACTORY_VERSION:-7.55.2}
+ARTIFACTORY_VERSION=${ARTIFACTORY_VERSION:-$(awk -F: '/FROM/ {print $2}' ${SCRIPT_DIR}/Dockerfile)}
+
+# Get actual version for latest
+if [ $ARTIFACTORY_VERSION == "latest" ]; then
+  REPO_HOST=$(echo $ARTIFACTORY_REPO | cut -d/ -f1)
+  REPO_PATH=$(echo $ARTIFACTORY_REPO | cut -d/ -f2-)
+  ARTIFACTORY_VERSION=$(curl -u anonymous: -sS "https://${REPO_HOST}/v2/${REPO_PATH}/${ARTIFACTORY_IMAGE}/tags/list" \
+    | jq -er '.tags | map(select(. | index("latest") | not)) | sort_by(values | split(".") | map(tonumber)) | last')
+fi
+
 echo "ARTIFACTORY_IMAGE=${ARTIFACTORY_IMAGE}" > /dev/stderr
 echo "ARTIFACTORY_VERSION=${ARTIFACTORY_VERSION}" > /dev/stderr
 

@@ -61,7 +61,11 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= http.StatusBadRequest {
-		b.Backend.Logger().Warn("revokeToken got bad http status code", "statusCode", resp.StatusCode)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			b.Backend.Logger().Warn("revokeToken could not read bad response body", "response", resp, "err", err)
+		}
+		b.Backend.Logger().Warn("revokeToken got bad http status code", "statusCode", resp.StatusCode, "body", string(bodyBytes))
 		return fmt.Errorf("could not revoke tokenID: %v - HTTP response %v", tokenId, resp.StatusCode)
 	}
 
@@ -118,7 +122,7 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 
 	resp, err := b.performArtifactoryPost(config, path, values)
 	if err != nil {
-		b.Backend.Logger().Warn("error making  token request", "response", resp, "err", err)
+		b.Backend.Logger().Warn("error making token request", "response", resp, "err", err)
 		return nil, err
 	}
 
@@ -126,7 +130,11 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			b.Backend.Logger().Warn("createToken could not read bad response", "response", resp, "err", err)
+		}
+		b.Backend.Logger().Warn("createToken got non-200 status code", "statusCode", resp.StatusCode, "body", string(bodyBytes))
 		return nil, fmt.Errorf("could not create access token: HTTP response %v", resp.StatusCode)
 	}
 

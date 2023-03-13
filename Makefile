@@ -2,7 +2,7 @@ GOARCH = amd64
 ARTIFACTORY_ENV := ./vault/artifactory.env
 ARTIFACTORY_SCOPE ?= applied-permissions/groups:readers
 ARTIFACTORY_URL ?= http://localhost:8082
-JFROG_ACCESS_TOKEN ?= $(shell [ -f $(ARTIFACTORY_ENV) ] && TOKEN_USERNAME=$(TOKEN_USERNAME) ./scripts/get-access-key.sh $(ARTIFACTORY_URL) || echo 'access-token')
+JFROG_ACCESS_TOKEN ?= $(shell TOKEN_USERNAME=$(TOKEN_USERNAME) ARTIFACTORY_URL=$(ARTIFACTORY_URL) ./scripts/getArtifactoryAdminToken.sh)
 TOKEN_USERNAME ?= vault-admin
 UNAME = $(shell uname -s)
 VAULT_TOKEN ?= $(shell printenv VAULT_TOKEN || echo 'root')
@@ -34,6 +34,10 @@ disable:
 
 enable:
 	vault secrets enable artifactory
+
+upgrade: build
+	vault plugin register -sha256=$$(sha256sum ./vault/plugins/artifactory | cut -d " " -f 1) secret artifactory
+	vault plugin reload -plugin=artifactory
 
 clean:
 	rm -f ./vault/plugins/artifactory
