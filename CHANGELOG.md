@@ -1,3 +1,9 @@
+## 0.2.10 (March 13, 2023)
+
+BUG FIXES:
+
+- Temporarily disable `force_revocable` due to revoke token failing. Issue: [$50](https://github.com/jfrog/artifactory-secrets-plugin/pull/50) PR: [#51](https://github.com/jfrog/artifactory-secrets-plugin/pull/51)
+
 ## 0.2.9 (March 13, 2023)
 
 IMPROVEMENTS:
