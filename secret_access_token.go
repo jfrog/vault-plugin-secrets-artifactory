@@ -22,6 +22,10 @@ func (b *backend) secretAccessToken() *framework.Secret {
 				Type:        framework.TypeString,
 				Description: `Artifactory Access Token Id`,
 			},
+			"username": {
+				Type:        framework.TypeString,
+				Description: `Artifactory Username for Token ID`,
+			},
 		},
 
 		Renew:  b.secretAccessTokenRenew,

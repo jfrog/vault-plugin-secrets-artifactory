@@ -41,11 +41,18 @@ clean:
 fmt:
 	go fmt $$(go list ./...)
 
-setup: disable enable
+setup: disable enable admin testrole
+
+admin:
 	vault write artifactory/config/admin url=$(ARTIFACTORY_URL) access_token=$(JFROG_ACCESS_TOKEN)
 	vault read artifactory/config/admin
-	vault write artifactory/roles/test scope="$(ARTIFACTORY_SCOPE)" username="test-user" max_ttl=3h default_ttl=2h
+	vault write -f artifactory/config/rotate
+	vault read artifactory/config/admin
+
+testrole:
+	vault write artifactory/roles/test scope="$(ARTIFACTORY_SCOPE)" max_ttl=3h default_ttl=2h
 	vault read artifactory/roles/test
+	vault read artifactory/token/test
 
 artifactory: $(ARTIFACTORY_ENV)
 
@@ -56,4 +63,4 @@ stop_artifactory:
 	source $(ARTIFACTORY_ENV) && docker stop $$ARTIFACTORY_CONTAINER_ID
 	rm -f $(ARTIFACTORY_ENV)
 
-.PHONY: build clean fmt start disable enable test setup artifactory stop_artifactory
+.PHONY: build clean fmt start disable enable test setup admin testrole artifactory stop_artifactory

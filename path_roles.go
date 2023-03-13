@@ -35,8 +35,7 @@ func (b *backend) pathRoles() *framework.Path {
 			},
 			"username": {
 				Type:        framework.TypeString,
-				Required:    true,
-				Description: `Required. The username for which the access token is created. If the user does not exist, Artifactory will create a transient user. Note that non-admininstrative access tokens can only create tokens for themselves.`,
+				Description: `Optional. Defaults to using the username_template. The static username for which the access token is created. If the user does not exist, Artifactory will create a transient user. Note that non-administrative access tokens can only create tokens for themselves.`,
 			},
 			"scope": {
 				Type:        framework.TypeString,
@@ -162,10 +161,6 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data 
 
 	if role.Scope == "" {
 		return logical.ErrorResponse("missing scope"), nil
-	}
-
-	if role.Username == "" {
-		return logical.ErrorResponse("missing username"), nil
 	}
 
 	entry, err := logical.StorageEntryJSON("roles/"+roleName, role)
