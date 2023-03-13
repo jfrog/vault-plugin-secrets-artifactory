@@ -143,7 +143,7 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 // The access API changes in v7.50.3 to support force_revocable to allow us to set the expiration for the tokens.
 // REF: https://www.jfrog.com/confluence/display/JFROG/JFrog+Platform+REST+API#JFrogPlatformRESTAPI-CreateToken
 func (b *backend) supportForceRevocable() bool {
-	return b.checkVersion("7.50.3")
+	return false // b.checkVersion("7.50.3")
 }
 
 // useNewAccessAPI verifies whether or not the Artifactory version is 7.21.1 or higher.
