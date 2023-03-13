@@ -1,3 +1,13 @@
+## 0.2.9 (March 13, 2023)
+
+IMPROVEMENTS:
+
+- Add support for [Vault Username Templating](https://developer.hashicorp.com/vault/docs/concepts/username-templating).
+- Improve README.md
+- Update Vault API and SDK packages to latest version.
+
+PR: [#47](https://github.com/jfrog/artifactory-secrets-plugin/pull/47)
+
 ## 0.2.8 (March 13, 2023)
 
 IMPROVEMENTS:
