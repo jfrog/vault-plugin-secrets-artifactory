@@ -1,3 +1,9 @@
+## 0.2.8 (March 13, 2023)
+
+IMPROVEMENTS:
+
+- Add support for `force_revocable` flag available in Artifactory 7.50.3+. PR: [#45](https://github.com/jfrog/artifactory-secrets-plugin/pull/45)
+
 ## 0.2.7 (February 27, 2023)
 
 BUG FIXES:
