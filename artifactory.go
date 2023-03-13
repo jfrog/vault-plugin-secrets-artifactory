@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	jwt "github.com/golang-jwt/jwt/v4"
@@ -88,6 +89,19 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 	// but the token is still usable even after it's deleted. See RTFACT-15293.
 	values.Set("expires_in", "0") // never expires
 
+	forceRevoke, err := b.supportForceRevocable(config)
+	if err != nil {
+		b.Backend.Logger().Warn("could not get artifactory version", "err", err)
+		return nil, err
+	}
+
+	if forceRevoke && role.MaxTTL > 0 {
+		expiresIn := strconv.FormatFloat(role.MaxTTL.Seconds(), 'f', -1, 64)
+		b.Backend.Logger().Debug("Setting expires_in and force_revocable", "expires_in", expiresIn)
+		values.Set("expires_in", expiresIn)
+		values.Set("force_revocable", "true")
+	}
+
 	if role.Audience != "" {
 		values.Set("audience", role.Audience)
 	}
@@ -133,6 +147,13 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 	}
 
 	return &createdToken, nil
+}
+
+// supportForceRevocable verifies whether or not the Artifactory version is 7.50.3 or higher.
+// The access API changes in v7.50.3 to support force_revocable to allow us to set the expiration for the tokens.
+// REF: https://www.jfrog.com/confluence/display/JFROG/JFrog+Platform+REST+API#JFrogPlatformRESTAPI-CreateToken
+func (b *backend) supportForceRevocable(config adminConfiguration) (bool, error) {
+	return b.checkVersion(config, "7.50.3")
 }
 
 // getSystemStatus verifies whether or not the Artifactory version is 7.21.1 or higher.
