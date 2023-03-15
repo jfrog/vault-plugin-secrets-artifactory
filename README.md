@@ -43,7 +43,13 @@ vault write artifactory/config/admin username_template="v_{{.DisplayName}}_{{.Ro
 
 ### Expiring Tokens
 
-By default, the Vault generated Artifactory tokens will not show an expiration date, which means that Artifactory will not automatically revoke them. Vault will revoke the token when its lease expires due to logout or timeout (ttl/max_ttl). If you would like the artifactory token itself to show an expiration, and you are using Artifactory v7.50.3 or higher, you can write `use_expiring_tokens=true` to the `/artifactory/config/admin` endpoint. This will set the `force_revocable=true` parameter and set `expires_in` to either max lease TTL or role max_ttl, whichever is lower.
+By default, the Vault generated Artifactory tokens will not show an expiration date, which means that Artifactory will not
+automatically revoke them. Vault will revoke the token when its lease expires due to logout or timeout (ttl/max_ttl). The reason
+for this is because of the [default Revocable/Persistency Thresholds][artifactory-token-thresholds] in Artifactory. If you would
+like the artifactory token itself to show an expiration, and you are using Artifactory v7.50.3 or higher, you can write
+`use_expiring_tokens=true` to the `/artifactory/config/admin` endpoint. This will set the `force_revocable=true` parameter and
+set `expires_in` to either max lease TTL or role max_ttl, whichever is lower, when a token is created, overriding the default
+thresholds mentioned above.
 
 Example:
 
@@ -440,3 +446,4 @@ Apache 2.0 licensed, see [LICENSE][LICENSE] file.
 [artifactory-create-token]: https://www.jfrog.com/confluence/display/JFROG/JFrog+Platform+REST+API#JFrogPlatformRESTAPI-CreateToken
 [vault-username-templating]: https://developer.hashicorp.com/vault/docs/concepts/username-templating
 [artifactory-release-notes]: https://www.jfrog.com/confluence/display/JFROG/Artifactory+Release+Notes
+[artifactory-token-thresholds]: https://www.jfrog.com/confluence/display/JFROG/Access+Tokens#AccessTokens-UsingtheRevocableandPersistencyThresholds
