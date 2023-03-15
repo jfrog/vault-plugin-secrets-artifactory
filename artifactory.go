@@ -1,7 +1,7 @@
 package artifactory
 
 import (
-	"crypto/tls"
+	"bytes"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -11,8 +11,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
-	"strconv"
 	"strings"
 
 	jwt "github.com/golang-jwt/jwt/v4"
@@ -72,38 +70,43 @@ func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) 
 	return nil
 }
 
+type CreateTokenRequest struct {
+	GrantType      string `json:"grant_type,omitempty"`
+	Username       string `json:"username,omitempty"`
+	Scope          string `json:"scope,omitempty"`
+	ExpiresIn      int64  `json:"expires_in"`
+	Refreshable    bool   `json:"refreshable,omitempty"`
+	Description    string `json:"description,omitempty"`
+	Audience       string `json:"audience,omitempty"`
+	ForceRevocable bool   `json:"force_revocable,omitempty"`
+}
+
 func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
-	values := url.Values{}
-	if role.GrantType != "" {
-		values.Set("grant_type", role.GrantType)
+	request := CreateTokenRequest{
+		GrantType: role.GrantType,
+		Username:  role.Username,
+		Scope:     role.Scope,
+		Audience:  role.Audience,
 	}
 
-	values.Set("username", role.Username)
-	if len(role.Username) == 0 {
+	if len(request.Username) == 0 {
 		return nil, fmt.Errorf("empty username not allowed, possibly a template error")
 	}
-	values.Set("scope", role.Scope)
 
 	// A refreshable access token gets replaced by a new access token, which is not
 	// what a consumer of tokens from this backend would be expecting; instead they'd
 	// likely just request a new token periodically.
-	values.Set("refreshable", "false")
+	request.Refreshable = false
 
 	// Artifactory will not let you revoke a token that has an expiry unless it also meets
 	// criteria that can only be set in its configuration file. The version of Artifactory
 	// I'm testing against will actually delete a token when you ask it to revoke by token_id,
 	// but the token is still usable even after it's deleted. See RTFACT-15293.
-	values.Set("expires_in", "0") // never expires
+	request.ExpiresIn = 0 // never expires
 
-	if b.supportForceRevocable() && role.MaxTTL > 0 {
-		expiresIn := strconv.FormatFloat(role.MaxTTL.Seconds(), 'f', -1, 64)
-		b.Backend.Logger().Debug("Setting expires_in and force_revocable", "expires_in", expiresIn)
-		values.Set("expires_in", expiresIn)
-		values.Set("force_revocable", "true")
-	}
-
-	if role.Audience != "" {
-		values.Set("audience", role.Audience)
+	if b.supportForceRevocable() && role.MaxTTL > 0 && config.UseExpiringTokens {
+		request.ExpiresIn = int64(role.MaxTTL.Seconds())
+		request.ForceRevocable = true
 	}
 
 	u, err := url.Parse(config.ArtifactoryURL)
@@ -120,7 +123,12 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 		path = u.Path + "/api/security/token"
 	}
 
-	resp, err := b.performArtifactoryPost(config, path, values)
+	jsonReq, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := b.performArtifactoryPostWithJSON(config, path, jsonReq)
 	if err != nil {
 		b.Backend.Logger().Warn("error making token request", "response", resp, "err", err)
 		return nil, err
@@ -151,7 +159,7 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 // The access API changes in v7.50.3 to support force_revocable to allow us to set the expiration for the tokens.
 // REF: https://www.jfrog.com/confluence/display/JFROG/JFrog+Platform+REST+API#JFrogPlatformRESTAPI-CreateToken
 func (b *backend) supportForceRevocable() bool {
-	return false // b.checkVersion("7.50.3")
+	return b.checkVersion("7.50.3")
 }
 
 // useNewAccessAPI verifies whether or not the Artifactory version is 7.21.1 or higher.
@@ -360,31 +368,43 @@ func (b *backend) performArtifactoryGet(config adminConfiguration, path string) 
 
 // performArtifactoryPost will HTTP POST values to the Artifactory API.
 func (b *backend) performArtifactoryPost(config adminConfiguration, path string, values url.Values) (*http.Response, error) {
-
 	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
 	if err != nil {
 		return nil, err
-	}
-
-	if u.Scheme == "https" && !strings.Contains(u.Host, "myserver.com:80") && !isProxyExists() {
-		conn, err := tls.Dial("tcp", u.Host, nil)
-		if err != nil {
-			return nil, err
-		}
-		defer conn.Close()
 	}
 
 	// Replace URL Path
 	u.Path = path
 
 	req, err := http.NewRequest(http.MethodPost, u.String(), strings.NewReader(values.Encode()))
-
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	return b.httpClient.Do(req)
+}
+
+// performArtifactoryPost will HTTP POST data to the Artifactory API.
+func (b *backend) performArtifactoryPostWithJSON(config adminConfiguration, path string, postData []byte) (*http.Response, error) {
+	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
+	if err != nil {
+		return nil, err
+	}
+
+	// Replace URL Path
+	u.Path = path
+
+	postDataBuf := bytes.NewBuffer(postData)
+	req, err := http.NewRequest(http.MethodPost, u.String(), postDataBuf)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
+	req.Header.Add("Content-Type", "application/json")
 
 	return b.httpClient.Do(req)
 }
@@ -396,14 +416,6 @@ func (b *backend) performArtifactoryDelete(config adminConfiguration, path strin
 	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
 	if err != nil {
 		return nil, err
-	}
-
-	if u.Scheme == "https" && !strings.Contains(u.Host, "myserver.com:80") && !isProxyExists() {
-		conn, err := tls.Dial("tcp", u.Host, nil)
-		if err != nil {
-			return nil, err
-		}
-		defer conn.Close()
 	}
 
 	// Replace URL Path
@@ -420,15 +432,6 @@ func (b *backend) performArtifactoryDelete(config adminConfiguration, path strin
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	return b.httpClient.Do(req)
-}
-
-func isProxyExists() bool {
-	_, p1 := os.LookupEnv("https_proxy")
-	_, p2 := os.LookupEnv("HTTPS_PROXY")
-	if p1 || p2 {
-		return true
-	}
-	return false
 }
 
 func parseURLWithDefaultPort(rawUrl string) (*url.URL, error) {
