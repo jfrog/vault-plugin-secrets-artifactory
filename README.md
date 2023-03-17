@@ -29,11 +29,11 @@ This backend creates access tokens in Artifactory using the admin credentials pr
 >
 > It should also be noted that some "scripts" used to create an admin token may default to expiration in `1h`, so it is best to **rotate** the admin token immediately, to ensure it doesn't expire unexpectedly.
 >
-> You can check your admin token expiration using `vault read artifactory/config/admin`
+> If you are using v0.2.9 or later, you can check if your admin token has an expiration using `vault read artifactory/config/admin`. If the exp/expires fields are not present, your token has no expiration set.
 
 ### Dynamic Usernames
 
-Previous versions of this plugin required a static `username` associated to the roles. This is still supported for backwards compatibility, but you can now use a dynamically generated username, based on [Vault Username Templates][vault-username-templating]. The generated tokens will be associated to a username generated from the template `v-{{.RoleName}}-{{Random 8}})` (`v-jenkins-x4mohTA8`), , by default. You can change this template by specifying a `username_template=` option to the `/artifactory/config/admin` endpoint.
+Previous versions of this plugin required a static `username` associated to the roles. This is still supported for backwards compatibility, but you can now use a dynamically generated username, based on [Vault Username Templates][vault-username-templating]. The generated tokens will be associated to a username generated from the template `v-{{.RoleName}}-{{Random 8}})` (`v-jenkins-x4mohTA8`), by default. You can change this template by specifying a `username_template=` option to the `/artifactory/config/admin` endpoint. The "scope" in the role should be `applied-permissions/groups:(list-of-groups)`, since `applied-permissions/user` would require the username to exist ahead of time. The user will not show in the Users list, but will be dynamically created during the scope of the token. The username still needs to be compliant with [artifactory requirements][artifactory-create-token] (less than 255 characters). It will be converted to lowercase by the API.
 
 * Example:
 
@@ -100,9 +100,28 @@ vault secrets enable artifactory
 ### Artifactory
 
 1. Log into the Artifactory UI as an "admin".
-1. Create the Access Token that Vault will use to interact with Artifactory. In Artifactory 7.x this can be done in the UI Administration (gear) -> User Management -> Access Tokens -> Generate Token. (Scoped Token, User name: `admin`, Service: `Artifactory`, Expiration time: `Never`). Or use the [CreateToken REST API][artifactory-create-token]. See [`get-access-key.sh`](./scripts/get-access-key.sh).
+1. Create the Access Token that Vault will use to interact with Artifactory. In Artifactory 7.x this can be done in the UI Administration (gear) -> User Management -> Access Tokens -> Generate Token.
+    * Token Type: `Scoped Token`
+    * Description: (optional) `Vault-artifactory-secrets-plugin` (NOTE: This will be lost on admin token rotation, because it is not part of the token)
+    * Token Scope: `Admin` **(IMPORTANT)**
+    * User name: `vault-admin` (for example)
+    * Service: `Artifactory` (or you can leave it on "All")
+    * Expiration time: `Never` (do not set the expiration time less than `7h`, since by default, it will not be revocable once the expiration is less than 6h)
+1. Save the generated token as the environment variable `TOKEN`
 
-Save the `access_token` from the JSON response as the environment variable `TOKEN`.
+Alternatives:
+
+* Use the [CreateToken REST API][artifactory-create-token], and save the `access_token` from the JSON response as the environment variable `TOKEN`.
+* Use [`getArtifactoryAdminToken.sh`](./scripts/getArtifactoryAdminToken.sh).
+
+    ```sh
+    export ARTIFACTORY_URL=https://artifactory.example.org
+    export ARTIFACTORY_USERNAME=admin
+    export ARTIFACTORY_PASSWORD=password
+    TOKEN=$(scripts/getArtifactoryAdminToken.sh)
+    ```
+
+### Vault
 
 ```sh
 vault write artifactory/config/admin \
@@ -236,6 +255,9 @@ This section is informational, and is not intended as a step-by-step. If you rea
 
 #### Install Vault binary
 
+* You can follow the [Installing Vault](https://developer.hashicorp.com/vault/docs/install) instructions.
+* Alternatively, if you are on MacOS, and have HomeBrew, you can use that:
+
 ```sh
 brew tap hashicorp/tap
 brew install hashicorp/tap/vault
@@ -268,6 +290,16 @@ make build
 
 ----------------------------------------------------------------
 
+#### Upgrade plugin binary
+
+To build and upgrade the plugin without having to reconfigure it...
+
+```sh
+make upgrade
+```
+
+----------------------------------------------------------------
+
 #### Create Test Artifactory
 
 ```sh
@@ -281,6 +313,15 @@ Example:
 ```sh
 make artifactory ARTIFACTORY_VERSION=7.49.10
 ```
+
+NOTE: If you get a message like:
+
+```console
+make: Nothing to be done for `artifactory'.
+```
+
+This simply means that "make" thinks artifactory is already running due to the existence of the `./vault/artifactory.env` file.
+If you want to run a different version, first use `make stop_artifactory`. If you stopped artifactory using other means (docker), then `rm vault/artifactory.env` manually.
 
 ----------------------------------------------------------------
 
@@ -311,13 +352,13 @@ make admin
 NOTE: This following might be some useful environment variables:
 
 > * `ARTIFACTORY_URL`
-> * `USERNAME`
-> * `PASSWORD`
+> * `ARTIFACTORY_USERNAME`
+> * `ARTIFACTORY_PASSWORD`
 
 For example:
 
 ```sh
-ARTIFACTORY_URL=https://artifactory.example.org USERNAME=tommy PASSWORD='SuperSecret' make admin
+ARTIFACTORY_URL=https://artifactory.example.org ARTIFACTORY_USERNAME=tommy ARTIFACTORY_PASSWORD='SuperSecret' make admin
 ```
 
 If you already have a JFROG_ACCESS_TOKEN, you can skip straight to that too:
