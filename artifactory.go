@@ -104,7 +104,7 @@ func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (
 	// but the token is still usable even after it's deleted. See RTFACT-15293.
 	request.ExpiresIn = 0 // never expires
 
-	if b.supportForceRevocable() && role.MaxTTL > 0 && config.UseExpiringTokens {
+	if config.UseExpiringTokens && b.supportForceRevocable() && role.MaxTTL > 0 {
 		request.ExpiresIn = int64(role.MaxTTL.Seconds())
 		request.ForceRevocable = true
 	}
