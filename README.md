@@ -41,9 +41,53 @@ Previous versions of this plugin required a static `username` associated to the 
 vault write artifactory/config/admin username_template="v_{{.DisplayName}}_{{.RoleName}}_{{random 10}}_{{unix_time}}"
 ```
 
+### Expiring Tokens
+
+By default, the Vault generated Artifactory tokens will not show an expiration date, which means that Artifactory will not
+automatically revoke them. Vault will revoke the token when its lease expires due to logout or timeout (ttl/max_ttl). The reason
+for this is because of the [default Revocable/Persistency Thresholds][artifactory-token-thresholds] in Artifactory. If you would
+like the artifactory token itself to show an expiration, and you are using Artifactory v7.50.3 or higher, you can write
+`use_expiring_tokens=true` to the `/artifactory/config/admin` endpoint. This will set the `force_revocable=true` parameter and
+set `expires_in` to either max lease TTL or role max_ttl, whichever is lower, when a token is created, overriding the default
+thresholds mentioned above.
+
+Example:
+
+```sh
+vault write artifactory/config/admin use_expiring_tokens=true
+```
+
+* Example Token Output:
+
+    ```console
+    $ ACCESS_TOKEN=$(vault read -field access_token artifactory/token/test)
+    $ jwt decode $ACCESS_TOKEN
+
+    Token header
+    ------------
+    {
+    "typ": "JWT",
+    "alg": "RS256",
+    "kid": "nxB2_1jNkYS5oYsl6nbUaaeALfKpfBZUyP0SW3txYUM"
+    }
+
+    Token claims
+    ------------
+    {
+    "aud": "*@*",
+    "exp": 1678913614,
+    "ext": "{\"revocable\":\"true\"}",
+    "iat": 1678902814,
+    "iss": "jfac@01gvgpzpv8jytn0fvq41wb1srj",
+    "jti": "e39cec86-069c-4b75-8897-c2bf05dc8354",
+    "scp": "applied-permissions/groups:readers",
+    "sub": "jfac@01gvgpzpv8jytn0fvq41wb1srj/users/v-test-p9nprfwr"
+    }
+    ```
+
 ### Artifactory Version Detection
 
-Some of the functionality of this plugin requires certain versions of Artifactory. For example, as of Artifactory 7.50.3, we set the `force_revocable` flag and set the expiration of the token to `max_ttl`.
+Some of the functionality of this plugin requires certain versions of Artifactory. For example, as of Artifactory 7.50.3, we can optionally set the `force_revocable` flag and set the expiration of the token to `max_ttl`.
 If you have upgraded Artifactory after installing this plugin, and would like to take advantage of newer features, you can issue an empty write to the `artifactory/config/admin` endpoint to re-detect the version, or it will re-detect upon reload.
 
 * Example:
@@ -148,12 +192,13 @@ Example output:
 ```console
 Key                    Value
 ---                    -----
-access_token_sha256    f4259e051d6f81732d65ffb648f09fc959411c2c8fcbdc9bffae2179021ccb91
+access_token_sha256    74834a86b2082750201e2a1e520f21f7bfc7d4026e5bd2b075ca2d0699b7c4e3
 scope                  applied-permissions/admin
-token_id               4b7f6b11-069c-4c28-8090-37064808cb20
+token_id               db0002b0-af08-486c-bbad-b255a3cc7b31
 url                    http://localhost:8082
-username               admin
-version                7.55.2
+use_expiring_tokens    false
+username               vault-admin
+version                7.55.6
 ```
 
 * Create a role (scope for artifactory >= 7.21.1)
@@ -401,3 +446,4 @@ Apache 2.0 licensed, see [LICENSE][LICENSE] file.
 [artifactory-create-token]: https://www.jfrog.com/confluence/display/JFROG/JFrog+Platform+REST+API#JFrogPlatformRESTAPI-CreateToken
 [vault-username-templating]: https://developer.hashicorp.com/vault/docs/concepts/username-templating
 [artifactory-release-notes]: https://www.jfrog.com/confluence/display/JFROG/Artifactory+Release+Notes
+[artifactory-token-thresholds]: https://www.jfrog.com/confluence/display/JFROG/Access+Tokens#AccessTokens-UsingtheRevocableandPersistencyThresholds
