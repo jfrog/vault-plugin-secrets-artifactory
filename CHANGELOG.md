@@ -1,8 +1,17 @@
+## 0.2.11 (March 20, 2023)
+
+IMPROVEMENTS:
+
+- Switch to using POSTing JSON (instead of form) when creating token.
+- `expires_in` and `force_revocable` fields are now opt-in.
+
+Issue: [#50](https://github.com/jfrog/artifactory-secrets-plugin/pull/50) PR: [#52](https://github.com/jfrog/artifactory-secrets-plugin/pull/52)
+
 ## 0.2.10 (March 13, 2023)
 
 BUG FIXES:
 
-- Temporarily disable `force_revocable` due to revoke token failing. Issue: [$50](https://github.com/jfrog/artifactory-secrets-plugin/pull/50) PR: [#51](https://github.com/jfrog/artifactory-secrets-plugin/pull/51)
+- Temporarily disable `force_revocable` due to revoke token failing. Issue: [#50](https://github.com/jfrog/artifactory-secrets-plugin/pull/50) PR: [#51](https://github.com/jfrog/artifactory-secrets-plugin/pull/51)
 
 ## 0.2.9 (March 13, 2023)
 
