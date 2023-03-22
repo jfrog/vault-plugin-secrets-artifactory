@@ -1,4 +1,17 @@
-GOARCH = amd64
+GO_ARCH=$(shell go env GOARCH)
+TARGET_ARCH=$(shell go env GOOS)_${GO_ARCH}
+GORELEASER_ARCH=${TARGET_ARCH}
+
+ifeq ($(GO_ARCH), amd64)
+GORELEASER_ARCH=${TARGET_ARCH}_$(shell go env GOAMD64)
+endif
+
+CURRENT_VERSION?=$(shell git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
+NEXT_VERSION := $(shell echo ${CURRENT_VERSION}| awk -F '.' '{print $$1 "." $$2 "." $$3 +1 }' )
+
+PLUGIN_DIR=dist/artifactory-secrets-plugin_${GORELEASER_ARCH}
+PLUGIN_FILE=artifactory-secrets-plugin
+
 ARTIFACTORY_ENV := ./vault/artifactory.env
 ARTIFACTORY_SCOPE ?= applied-permissions/groups:readers
 ARTIFACTORY_URL ?= http://localhost:8082
@@ -8,23 +21,15 @@ UNAME = $(shell uname -s)
 VAULT_TOKEN ?= $(shell printenv VAULT_TOKEN || echo 'root')
 VAULT_ADDR ?= $(shell printenv VAULT_ADDR || echo 'http://localhost:8200')
 
-ifndef OS
-	ifeq ($(UNAME), Linux)
-		OS = linux
-	else ifeq ($(UNAME), Darwin)
-		OS = darwin
-	endif
-endif
-
 .DEFAULT_GOAL := all
 
 all: fmt build test start
 
-build:
-	GOOS=$(OS) GOARCH="$(GOARCH)" go build -o vault/plugins/artifactory cmd/artifactory/main.go
+build: fmt
+	GORELEASER_CURRENT_TAG=${NEXT_VERSION} goreleaser build --single-target --clean --snapshot
 
 start:
-	vault server -dev -dev-root-token-id=root -dev-plugin-dir=./vault/plugins -log-level=DEBUG
+	vault server -dev -dev-root-token-id=root -dev-plugin-dir=${PLUGIN_DIR} -log-level=DEBUG
 
 test:
 	go test -v ./...
@@ -35,8 +40,10 @@ disable:
 enable:
 	vault secrets enable artifactory
 
-upgrade: build
-	vault plugin register -sha256=$$(sha256sum ./vault/plugins/artifactory | cut -d " " -f 1) secret artifactory
+register: build
+	vault plugin register -sha256=$$(sha256sum ${PLUGIN_DIR}/${PLUGIN_FILE} | cut -d " " -f 1) ${PLUGIN_FILE}
+	
+upgrade: register
 	vault plugin reload -plugin=artifactory
 
 clean:

@@ -13,7 +13,8 @@ builds:
   flags:
     - -trimpath
   ldflags:
-    - '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}'
+    # use 'go tool nm <path_to_binary> | grep Version' to find the Version variable path
+    - '-s -w -X github.com/jfrog/artifactory-secrets-plugin.Version=v{{ .Version }}'
   goos:
     - freebsd
     - windows
@@ -27,7 +28,9 @@ builds:
   ignore:
     - goos: darwin
       goarch: '386'
-  binary: '{{ .ProjectName }}_v{{ .Version }}'
+  binary: '{{ .ProjectName }}'
+snapshot:
+  name_template: '{{ .Version }}'
 archives:
 - format: zip
   name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
