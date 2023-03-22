@@ -41,13 +41,16 @@ enable:
 	vault secrets enable artifactory
 
 register: build
-	vault plugin register -sha256=$$(sha256sum ${PLUGIN_DIR}/${PLUGIN_FILE} | cut -d " " -f 1) ${PLUGIN_FILE}
+	vault plugin register -sha256=$$(sha256sum ${PLUGIN_DIR}/${PLUGIN_FILE} | cut -d " " -f 1) -command=${PLUGIN_FILE} secret artifactory
+
+deregister:
+	value plugin deregister -version=${NEXT_VERSION} secret artifactory
 	
 upgrade: register
 	vault plugin reload -plugin=artifactory
 
 clean:
-	rm -f ./vault/plugins/artifactory
+	rm -f ${PLUGIN_DIR}/${PLUGIN_FILE}
 
 fmt:
 	go fmt $$(go list ./...)
