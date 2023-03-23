@@ -125,6 +125,7 @@ Once the server is started, register the plugin in the Vault server's [plugin ca
 ```sh
 vault plugin register \
   -sha256=$(sha256sum path/to/plugin/directory/artifactory | cut -d " " -f 1) \
+  -command=artifactory-secrets-plugin \
   secret artifactory
 ```
 

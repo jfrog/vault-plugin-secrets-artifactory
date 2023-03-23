@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+var Version = "v1.0.0"
+
 type backend struct {
 	*framework.Backend
 	configMutex      sync.RWMutex
@@ -56,7 +58,8 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 	b.usernameProducer = up
 
 	b.Backend = &framework.Backend{
-		Help: strings.TrimSpace(artifactoryHelp),
+		Help:           strings.TrimSpace(artifactoryHelp),
+		RunningVersion: Version,
 
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{"config/admin"},
