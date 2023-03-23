@@ -1,3 +1,12 @@
+## 0.2.12 (March 23, 2023)
+
+IMPROVEMENTS:
+
+- Plugin now reports its version to Vault server. You can see it with `vault plugin list` command.
+- Remove version number from the binary file name (now `artifactory-secrets-plugin`, vs `artifactory-secrets-plugin_v0.2.6`) now that it registers as 'versioned' plugin with Vault server.
+- Update README on how to register plugin to reflect this change of binary name.
+- Update Makefile to use GoRelease (same as GitHub Action) to build binary for development process.
+
 ## 0.2.11 (March 20, 2023)
 
 IMPROVEMENTS:
