@@ -14,11 +14,11 @@ resources:
 pipelines:
   - name: vault_plugin_artifactory
     steps:
-      - name: build_and_run_vault_plugin
+      - name: build_and_test_vault_plugin
         type: Bash
         configuration:
           priority: 1
-          timeoutSeconds: 1200 # 20 minutes
+          timeoutSeconds: 600 # 10 minutes
           runtime:
             type: image
             image:
@@ -33,11 +33,11 @@ pipelines:
             - name: GitHubVaultPluginRepoJFrog
         execution:
           onStart:
-            - echo "Preparing for work. Install GoReleaser"
             - echo "Install GoReleaser"
             - echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
             - sudo apt update
             - sudo apt install goreleaser
+            - printenv
           onExecute:
             - cd ${res_GitHubVaultPluginRepoJFrog_resourcePath} # we need to manually move into the resource path
             - echo "Verify the code contents merged feature branch with master branch (detached mode)"
