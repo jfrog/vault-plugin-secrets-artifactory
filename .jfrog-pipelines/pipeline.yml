@@ -45,7 +45,6 @@ pipelines:
             - add_run_variables PLUGIN_VERSION=$(git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
             - export NEXT_VERSION=${PLUGIN_VERSION} && echo ${NEXT_VERSION}
             - make test
-            - exit 1
           onSuccess:
             - echo "Success"
             - export STATE="success"
