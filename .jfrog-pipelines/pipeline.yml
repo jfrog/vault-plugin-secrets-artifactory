@@ -54,8 +54,8 @@ pipelines:
           onFailure:
             - echo "Failure"
             - export STATE="failure"
-            - export DESCRIPTION="Tests or step is failed."
+            - export DESCRIPTION="Pipeline has failed."
             - ./scripts/github-status.sh ${res_GitHubVaultPluginRepoJFrog_gitProvider_token} ${res_GitHubVaultPluginRepoJFrog_gitRepoFullName} ${res_GitHubVaultPluginRepoJFrog_commitSha}
-            - send_notification partnership_slack --text "${pipeline_name} pipeline failed on <${step_url}|${step_name}> step"
+            - send_notification partnership_slack --text "${pipeline_name} pipeline failed on <${step_url}|${step_name}> step."
           onComplete:
             - echo "Complete"
