@@ -50,27 +50,13 @@ pipelines:
             - echo "Success"
             - export STATE="success"
             - export DESCRIPTION="All tests passed successfully."
-            - >-
-              curl -L \
-                -X POST \
-                -H "Accept: application/vnd.github+json" \
-                -H "Authorization: Bearer ${res_GitHubVaultPluginRepoJFrog_gitProvider_token}"\
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                https://api.github.com/repos/${res_GitHubVaultPluginRepoJFrog_gitRepoFullName}/statuses/${res_GitHubVaultPluginRepoJFrog_commitSha} \
-                -d '{"state":"'"${STATE}"'","target_url":"'"${step_url}"'","description":"'"${DESCRIPTION}"'","context":"continuous-integration/jfrog-pipelines"}'
+            - ./scripts/github-status.sh ${res_GitHubVaultPluginRepoJFrog_gitProvider_token} ${res_GitHubVaultPluginRepoJFrog_gitRepoFullName} ${res_GitHubVaultPluginRepoJFrog_commitSha}
             - send_notification partnership_slack --text "${pipeline_name} step <${step_url}|${step_name}> is completed. Version ${NEXT_VERSION:-" wasn't set"}."
           onFailure:
             - echo "Failure"
             - export STATE="failure"
             - export DESCRIPTION="Tests or step is failed."
-            - >-
-              curl -L \
-                -X POST \
-                -H "Accept: application/vnd.github+json" \
-                -H "Authorization: Bearer ${res_GitHubVaultPluginRepoJFrog_gitProvider_token}"\
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                https://api.github.com/repos/${res_GitHubVaultPluginRepoJFrog_gitRepoFullName}/statuses/${res_GitHubVaultPluginRepoJFrog_commitSha} \
-                -d '{"state":"'"${STATE}"'","target_url":"'"${step_url}"'","description":"'"${DESCRIPTION}"'","context":"continuous-integration/jfrog-pipelines"}'
+            - ./scripts/github-status.sh ${res_GitHubVaultPluginRepoJFrog_gitProvider_token} ${res_GitHubVaultPluginRepoJFrog_gitRepoFullName} ${res_GitHubVaultPluginRepoJFrog_commitSha}
             - send_notification partnership_slack --text "${pipeline_name} pipeline failed on <${step_url}|${step_name}> step"
           onComplete:
             - echo "Complete"
