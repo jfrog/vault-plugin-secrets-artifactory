@@ -33,6 +33,7 @@ pipelines:
             - name: GitHubVaultPluginRepoJFrog
         execution:
           onStart:
+            - cd ${res_GitHubVaultPluginRepoJFrog_resourcePath} # we need to manually move into the resource path
             - echo "Pending"
             - export STATE="pending"
             - export DESCRIPTION="Pipeline run is in progress."
@@ -43,7 +44,6 @@ pipelines:
             - sudo apt install goreleaser
             - printenv
           onExecute:
-            - cd ${res_GitHubVaultPluginRepoJFrog_resourcePath} # we need to manually move into the resource path
             - echo "Verify the code contents merged feature branch with master branch (detached mode)"
             - git branch && ls -al
             - add_run_variables PLUGIN_VERSION=$(git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
