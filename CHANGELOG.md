@@ -1,3 +1,11 @@
+## 0.2.13 (March 30, 2023)
+
+IMPROVEMENTS:
+
+- Sign release checksums file with GPG key. Release also include public key for signature verification.
+
+PR: [#54](https://github.com/jfrog/artifactory-secrets-plugin/pull/54)
+
 ## 0.2.12 (March 23, 2023)
 
 IMPROVEMENTS:
@@ -6,6 +14,8 @@ IMPROVEMENTS:
 - Remove version number from the binary file name (now `artifactory-secrets-plugin`, vs `artifactory-secrets-plugin_v0.2.6`) now that it registers as 'versioned' plugin with Vault server.
 - Update README on how to register plugin to reflect this change of binary name.
 - Update Makefile to use GoRelease (same as GitHub Action) to build binary for development process.
+
+PR: [#53](https://github.com/jfrog/artifactory-secrets-plugin/pull/53)
 
 ## 0.2.11 (March 20, 2023)
 
