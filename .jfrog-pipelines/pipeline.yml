@@ -5,7 +5,7 @@ resources:
       gitProvider: partnership_github
       path: jfrog/artifactory-secrets-plugin # if path is modified, change the name as well, per Pipelines doc
       branches:
-        include: pipeline
+        include: master
       buildOn:
         commit: false
         pullRequestCreate: true
