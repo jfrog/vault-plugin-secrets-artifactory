@@ -4,37 +4,51 @@ before:
   hooks:
     - go mod tidy
 builds:
-- env:
-    # goreleaser does not work with CGO, it could also complicate
-    # they are unable to install libraries.
-    - CGO_ENABLED=0
-  main: ./cmd/artifactory/main.go
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  flags:
-    - -trimpath
-  ldflags:
-    # use 'go tool nm <path_to_binary> | grep Version' to find the Version variable path
-    - '-s -w -X github.com/jfrog/artifactory-secrets-plugin.Version=v{{ .Version }}'
-  goos:
-    - freebsd
-    - windows
-    - linux
-    - darwin
-  goarch:
-    - amd64
-    - '386'
-    - arm
-    - arm64
-  ignore:
-    - goos: darwin
-      goarch: '386'
-  binary: '{{ .ProjectName }}'
+  - env:
+      # goreleaser does not work with CGO, it could also complicate
+      # they are unable to install libraries.
+      - CGO_ENABLED=0
+    main: ./cmd/artifactory/main.go
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    flags:
+      - -trimpath
+    ldflags:
+      # use 'go tool nm <path_to_binary> | grep Version' to find the Version variable path
+      - '-s -w -X github.com/jfrog/artifactory-secrets-plugin.Version=v{{ .Version }}'
+    goos:
+      - freebsd
+      - windows
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - '386'
+      - arm
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: '386'
+    binary: '{{ .ProjectName }}'
 snapshot:
   name_template: '{{ .Version }}'
 archives:
-- format: zip
-  name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+  - format: zip
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+signs:
+  - artifacts: checksum
+    args:
+      # if you are using this is a GitHub action or some other automated pipeline, you
+      # need to pass the batch flag to indicate it's not interactive.
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}" # set this environment variable for your signing key
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
 release:
+  extra_files:
+    - glob: './artifactory-secrets-plugin-public-key.asc'
   # If you want to manually examine the release before its live, uncomment this line:
   # draft: true
 changelog:
