@@ -100,7 +100,7 @@ vault write -f artifactory/config/admin
 
 ### Using pre-built releases
 
-You can find pre-built releases of the plugin [here][artreleases]. Once you have downloaded the latest archive corresponding to your target OS, unzip it to retrieve the `artifactory` binary file.
+You can find pre-built releases of the plugin [here][artreleases]. Once you have downloaded the latest archive corresponding to your target OS, unzip it to retrieve the `artifactory-secrets-plugin` binary file.
 
 ### From Sources
 
@@ -129,7 +129,7 @@ vault plugin register \
   secret artifactory
 ```
 
-* NOTE: you may need to also add arguments to the registration like `-args="-ca-cert ca.pem` or something insecure like: `-args="-tls-skip-verify"` depending on your environment. (see `./path/to/plugins/artifactory -help` for all the options)
+* NOTE: you may need to also add arguments to the registration like `-args="-ca-cert ca.pem` or something insecure like: `-args="-tls-skip-verify"` depending on your environment. (see `./path/to/plugins/artifactory-secrets-plugin -help` for all the options)
 
 > **Note**
 > This inline checksum calculation above is provided for illustration purpose and does not validate your binary. It should **not** be used for production environment. At minimum, you should use the checksum provided as [part of the release](https://github.com/jfrog/artifactory-secrets-plugin/releases).
