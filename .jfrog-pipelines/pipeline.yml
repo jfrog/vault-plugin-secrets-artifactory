@@ -1,0 +1,61 @@
+resources:
+  - name: GitHubVaultPluginRepoJFrog
+    type: GitRepo
+    configuration:
+      gitProvider: partnership_github
+      path: jfrog/artifactory-secrets-plugin # if path is modified, change the name as well, per Pipelines doc
+      branches:
+        include: master
+      buildOn:
+        commit: false
+        pullRequestCreate: true
+      cancelPendingRunsOn:
+        pullRequestUpdate: true
+pipelines:
+  - name: vault_plugin_artifactory
+    steps:
+      - name: build_and_test_vault_plugin
+        type: Bash
+        configuration:
+          priority: 1
+          timeoutSeconds: 600 # 10 minutes
+          runtime:
+            type: image
+            image:
+              auto:
+                language: go
+                versions:
+                  - "1.18"
+          integrations:
+            - name: partnership_slack
+            - name: partnership_github
+          inputResources:
+            - name: GitHubVaultPluginRepoJFrog
+        execution:
+          onStart:
+            - echo "Install GoReleaser"
+            - echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+            - sudo apt update
+            - sudo apt install goreleaser
+            - printenv
+          onExecute:
+            - cd ${res_GitHubVaultPluginRepoJFrog_resourcePath} # we need to manually move into the resource path
+            - echo "Verify the code contents merged feature branch with master branch (detached mode)"
+            - git branch && ls -al
+            - add_run_variables PLUGIN_VERSION=$(git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
+            - export NEXT_VERSION=${PLUGIN_VERSION} && echo ${NEXT_VERSION}
+            - make test
+          onSuccess:
+            - echo "Success"
+            - export STATE="success"
+            - export DESCRIPTION="All tests passed successfully."
+            - ./scripts/github-status.sh ${res_GitHubVaultPluginRepoJFrog_gitProvider_token} ${res_GitHubVaultPluginRepoJFrog_gitRepoFullName} ${res_GitHubVaultPluginRepoJFrog_commitSha}
+            - send_notification partnership_slack --text "${pipeline_name} step <${step_url}|${step_name}> is completed. Version ${NEXT_VERSION:-" wasn't set"}."
+          onFailure:
+            - echo "Failure"
+            - export STATE="failure"
+            - export DESCRIPTION="Pipeline has failed."
+            - ./scripts/github-status.sh ${res_GitHubVaultPluginRepoJFrog_gitProvider_token} ${res_GitHubVaultPluginRepoJFrog_gitRepoFullName} ${res_GitHubVaultPluginRepoJFrog_commitSha}
+            - send_notification partnership_slack --text "${pipeline_name} pipeline failed on <${step_url}|${step_name}> step."
+          onComplete:
+            - echo "Complete"
