@@ -5,7 +5,7 @@
 
 version: 2
 registries:
-  releases-docker.jfrog.io:
+  releases-docker:
     type: docker-registry
     url: https://releases-docker.jfrog.io/jfrog/artifactory-jcr
     username: anonymous
@@ -13,7 +13,7 @@ updates:
   - package-ecosystem: "docker"
     directory: "/scripts"
     registries:
-      - releases-docker.jfrog.io
+      - releases-docker
     schedule:
       interval: "weekly"
   - package-ecosystem: gomod
