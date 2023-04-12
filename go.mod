@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/vault/api v1.9.0
 	github.com/hashicorp/vault/sdk v0.8.1
-	github.com/jarcoal/httpmock v1.0.8
+	github.com/jarcoal/httpmock v1.3.0
 	github.com/stretchr/testify v1.7.0
 )
 
