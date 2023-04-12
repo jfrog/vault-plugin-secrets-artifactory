@@ -7,7 +7,7 @@ version: 2
 registries:
   releases-docker:
     type: docker-registry
-    url: https://releases-docker.jfrog.io/jfrog/artifactory-jcr
+    url: https://releases-docker.jfrog.io
     username: anonymous
 updates:
   - package-ecosystem: "docker"
