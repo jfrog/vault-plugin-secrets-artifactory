@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/golang-jwt/jwt/v4 v4.4.1
 	github.com/hashicorp/go-hclog v0.16.2
-	github.com/hashicorp/go-version v1.2.0
+	github.com/hashicorp/go-version v1.6.0
 	github.com/hashicorp/vault/api v1.9.0
 	github.com/hashicorp/vault/sdk v0.8.1
 	github.com/jarcoal/httpmock v1.0.8
