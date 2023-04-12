@@ -9,6 +9,7 @@ registries:
     type: docker-registry
     url: https://releases-docker.jfrog.io
     username: anonymous
+    password: ""
 updates:
   - package-ecosystem: "docker"
     directory: "/scripts"
