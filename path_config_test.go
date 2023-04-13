@@ -9,6 +9,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestAcceptanceBackend_PathConfig(t *testing.T) {
+	if !runAcceptanceTests {
+		t.SkipNow()
+	}
+
+	accTestEnv, err := newAcceptanceTestEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("update", accTestEnv.UpdatePathConfig)
+	t.Run("read", accTestEnv.ReadPathConfig)
+	t.Run("delete", accTestEnv.DeletePathConfig)
+}
+
 func TestBackend_AccessTokenRequired(t *testing.T) {
 	b, config := makeBackend(t)
 
@@ -62,6 +77,10 @@ func TestBackend_AccessTokenAsSHA256(t *testing.T) {
 		"GET",
 		"http://myserver.com:80/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, artVersion))
+	httpmock.RegisterResponder(
+		"GET",
+		"http://myserver.com:80/access/api/v1/cert/root",
+		httpmock.NewStringResponder(200, rootCert))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",

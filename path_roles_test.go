@@ -10,6 +10,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestAcceptanceBackend_PathRole(t *testing.T) {
+	if !runAcceptanceTests {
+		t.SkipNow()
+	}
+
+	accTestEnv, err := newAcceptanceTestEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("configure backend", accTestEnv.UpdatePathConfig)
+	t.Run("create", accTestEnv.CreatePathRole)
+	t.Run("read", accTestEnv.ReadPathRole)
+	t.Run("delete", accTestEnv.DeletePathRole)
+	t.Run("cleanup backend", accTestEnv.DeletePathConfig)
+}
+
 // When there are no roles, no error should be returned.
 func TestBackend_PathRoleList_Empty(t *testing.T) {
 	b, config := makeBackend(t)

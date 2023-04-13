@@ -25,7 +25,7 @@ const (
 
 var ErrIncompatibleVersion = errors.New("incompatible version")
 
-func (b *backend) revokeToken(config adminConfiguration, secret logical.Secret) error {
+func (b *backend) RevokeToken(config adminConfiguration, secret logical.Secret) error {
 
 	accessToken := secret.InternalData["access_token"].(string)
 	tokenId := secret.InternalData["token_id"].(string)
@@ -81,7 +81,7 @@ type CreateTokenRequest struct {
 	ForceRevocable bool   `json:"force_revocable,omitempty"`
 }
 
-func (b *backend) createToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
+func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
 	request := CreateTokenRequest{
 		GrantType: role.GrantType,
 		Username:  role.Username,

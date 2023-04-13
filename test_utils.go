@@ -1,26 +1,269 @@
 package artifactory
 
 import (
-	"bytes"
 	"context"
-	"io/ioutil"
-	"net/http"
+	"os"
 	"testing"
+	"time"
 
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 )
 
-type roundTripperFunc func(*http.Request) (*http.Response, error)
+var runAcceptanceTests = os.Getenv("VAULT_ACC") != ""
 
-func (rt roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
-	return rt(r)
+// accTestEnv creates an object to store and track testing environment
+// resources
+type accTestEnv struct {
+	AccessToken string
+	URL         string
+
+	Backend logical.Backend
+	Context context.Context
+	Storage logical.Storage
 }
 
-func newTestClient(fn roundTripperFunc) *http.Client {
-	return &http.Client{
-		Transport: fn,
+// createNewTestToken creates a new scoped token using the one from test environment
+// so that the original token won't be revoked by the path config rotate test
+func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
+	config := adminConfiguration{
+		AccessToken:    e.AccessToken,
+		ArtifactoryURL: e.URL,
 	}
+
+	role := artifactoryRole{
+		GrantType: "client_credentials",
+		Username:  "admin",
+		Scope:     "applied-permissions/admin",
+	}
+
+	err := e.Backend.(*backend).getVersion(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := e.Backend.(*backend).CreateToken(config, role)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return resp.TokenId, resp.AccessToken
+}
+
+func (e *accTestEnv) revokeTestToken(t *testing.T, accessToken string, tokenID string) {
+	config := adminConfiguration{
+		AccessToken:    e.AccessToken,
+		ArtifactoryURL: e.URL,
+	}
+
+	err := e.Backend.(*backend).getVersion(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	secret := logical.Secret{
+		InternalData: map[string]interface{}{
+			"access_token": accessToken,
+			"token_id":     tokenID,
+		},
+	}
+
+	err = e.Backend.(*backend).RevokeToken(config, secret)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (e *accTestEnv) UpdatePathConfig(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/admin",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"access_token": e.AccessToken,
+			"url":          e.URL,
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+}
+
+func (e *accTestEnv) ReadPathConfig(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config/admin",
+		Storage:   e.Storage,
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotEmpty(t, resp.Data["access_token_sha256"])
+}
+
+func (e *accTestEnv) DeletePathConfig(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "config/admin",
+		Storage:   e.Storage,
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+}
+
+func (e *accTestEnv) RotatePathConfig(t *testing.T) {
+	// create new test token
+	tokenID, accessToken := e.createNewTestToken(t)
+
+	// setup new path configuration
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/admin",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"access_token": accessToken,
+			"url":          e.URL,
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+
+	// read back the path configuration and save the access token hash for comparison later
+	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config/admin",
+		Storage:   e.Storage,
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotEmpty(t, resp.Data["access_token_sha256"])
+
+	accessTokenHash := resp.Data["access_token_sha256"]
+
+	// rotate the path config
+	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/rotate",
+		Storage:   e.Storage,
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+
+	// read back the path configuration and assert access token hash is now different
+	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config/admin",
+		Storage:   e.Storage,
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotEmpty(t, resp.Data["access_token_sha256"])
+	assert.NotEqual(t, accessTokenHash, resp.Data["access_token_sha256"])
+
+	// clean up path config
+	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "config/admin",
+		Storage:   e.Storage,
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+
+	// revoke the test token
+	e.revokeTestToken(t, accessToken, tokenID)
+}
+
+func (e *accTestEnv) CreatePathRole(t *testing.T) {
+	roleData := map[string]interface{}{
+		"role":        "test-role",
+		"username":    "admin",
+		"scope":       "applied-permissions/user",
+		"audience":    "*@*",
+		"default_ttl": 30 * time.Minute,
+		"max_ttl":     45 * time.Minute,
+	}
+
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test-role",
+		Storage:   e.Storage,
+		Data:      roleData,
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+}
+
+func (e *accTestEnv) ReadPathRole(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "roles/test-role",
+		Storage:   e.Storage,
+	})
+
+	assert.NotNil(t, resp)
+	assert.NoError(t, err)
+
+	assert.EqualValues(t, "admin", resp.Data["username"])
+	assert.EqualValues(t, "applied-permissions/user", resp.Data["scope"])
+	assert.EqualValues(t, "*@*", resp.Data["audience"])
+	assert.EqualValues(t, 30*time.Minute.Seconds(), resp.Data["default_ttl"])
+	assert.EqualValues(t, 45*time.Minute.Seconds(), resp.Data["max_ttl"])
+}
+
+func (e *accTestEnv) DeletePathRole(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "roles/test-role",
+		Storage:   e.Storage,
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+}
+
+func (e *accTestEnv) CreatePathToken(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "token/test-role",
+		Storage:   e.Storage,
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotEmpty(t, resp.Data["access_token"])
+	assert.NotEmpty(t, resp.Data["token_id"])
+	assert.Equal(t, "admin", resp.Data["username"])
+	assert.Equal(t, "test-role", resp.Data["role"])
+	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
+}
+
+func newAcceptanceTestEnv() (*accTestEnv, error) {
+	ctx := context.Background()
+
+	conf := &logical.BackendConfig{
+		System: &logical.StaticSystemView{},
+		Logger: logging.NewVaultLogger(log.Debug),
+	}
+	backend, err := Factory(ctx, conf)
+	if err != nil {
+		return nil, err
+	}
+	return &accTestEnv{
+		AccessToken: os.Getenv("ARTIFACTORY_ACCESS_TOKEN"),
+		URL:         os.Getenv("JFROG_URL"),
+		Backend:     backend,
+		Context:     ctx,
+		Storage:     &logical.InmemStorage{},
+	}, nil
 }
 
 const rootCert string = `MIIDHzCCAgegAwIBAgIQHC4IERZbTl67GGjV8KH04jANBgkqhkiG9w0BAQ` +
@@ -73,15 +316,6 @@ const artVersion = `{
     "revision": "71910900",
     "license": "05179b957028fa9aa1ceb88da6519a245e55b9fc5"
 }`
-
-func tokenCreatedResponse(token string) roundTripperFunc {
-	return func(req *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewBufferString(token)),
-		}, nil
-	}
-}
 
 func makeBackend(t *testing.T) (*backend, *logical.BackendConfig) {
 	config := logical.TestBackendConfig()

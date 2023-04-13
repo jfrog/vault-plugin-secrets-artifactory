@@ -56,7 +56,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	}
 
 	// Create a new token
-	resp, err := b.createToken(*config, *role)
+	resp, err := b.CreateToken(*config, *role)
 	if err != nil {
 		return logical.ErrorResponse("error creating new token"), err
 	}
@@ -83,7 +83,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 			"token_id":     token.TokenID,
 		},
 	}
-	err = b.revokeToken(*config, oldSecret)
+	err = b.RevokeToken(*config, oldSecret)
 	if err != nil {
 		return logical.ErrorResponse("error revoking existing AccessToken"), err
 	}
