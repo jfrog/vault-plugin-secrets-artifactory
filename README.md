@@ -425,6 +425,16 @@ make testrole
 
 ----------------------------------------------------------------
 
+#### Run Acceptance Tests
+
+```sh
+make acceptance
+```
+
+This requires the following:
+* A running Artifactory instance
+* Env vars `ARTIFACTORY_URL` and `JFROG_ACCESS_TOKEN` for the running Artifactory instance be set
+
 ## Issues
 
 * RTFACT-22477 - proposing CIDR restrictions on the created access tokens.
