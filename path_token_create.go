@@ -105,7 +105,7 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		ttl = role.MaxTTL
 	}
 
-	resp, err := b.createToken(*config, *role)
+	resp, err := b.CreateToken(*config, *role)
 	if err != nil {
 		return nil, err
 	}

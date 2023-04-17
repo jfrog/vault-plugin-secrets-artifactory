@@ -2,5 +2,6 @@
 /.idea
 /vendor
 
-
+.DS_Store
 dist/
+coverage.txt

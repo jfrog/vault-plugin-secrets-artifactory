@@ -31,9 +31,6 @@ build: fmt
 start:
 	vault server -dev -dev-root-token-id=root -dev-plugin-dir=${PLUGIN_DIR} -log-level=DEBUG
 
-test:
-	go test -v ./...
-
 disable:
 	vault secrets disable artifactory
 
@@ -48,6 +45,13 @@ deregister:
 	
 upgrade: register
 	vault plugin reload -plugin=artifactory
+
+test:
+	go test -v ./...
+
+acceptance:
+	export VAULT_ACC=true && \
+		go test -run TestAcceptance -cover -coverprofile=coverage.txt -v -p 1 -timeout 5m ./...
 
 clean:
 	rm -f ${PLUGIN_DIR}/${PLUGIN_FILE}

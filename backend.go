@@ -46,6 +46,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 	return b, nil
 }
+
 func Backend(_ *logical.BackendConfig) (*backend, error) {
 	b := &backend{
 		httpClient: http.DefaultClient,
