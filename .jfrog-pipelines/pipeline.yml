@@ -17,6 +17,7 @@ pipelines:
       - name: build_and_test_vault_plugin
         type: Bash
         configuration:
+          nodePool: default
           priority: 1
           timeoutSeconds: 600 # 10 minutes
           runtime:
