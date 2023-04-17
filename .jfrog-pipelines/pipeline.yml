@@ -42,6 +42,11 @@ pipelines:
             - echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
             - sudo apt update
             - sudo apt install goreleaser
+            - ls -al && pwd
+            - echo "Helm 3 install"
+            - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 && chmod 700 get_helm.sh
+            - echo "Run Helm installation script" && ./get_helm.sh && rm get_helm.sh
+            - helm version
             - printenv
           onExecute:
             - echo "Verify the code contents merged feature branch with master branch (detached mode)"
