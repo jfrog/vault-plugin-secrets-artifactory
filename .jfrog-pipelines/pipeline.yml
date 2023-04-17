@@ -52,7 +52,7 @@ pipelines:
             - helm repo add artifactory https://charts.jfrog.io
             - helm repo update
             - add_run_variables ARTIFACTORY_VERSION=$(helm search repo | grep "artifactory " | awk '{$1=$1};1' |  cut -f3 -d " ")
-            - echo "Artifactory version: "${ARTIFACTORY_VERSION}"
+            - echo "Artifactory version: ${ARTIFACTORY_VERSION}"
             - export ARTIFACTORY_CONTAINER_NAME=artifactory
             - >-
               docker run -i --name ${ARTIFACTORY_CONTAINER_NAME} -t -d --rm -v "${res_GitHubTFProviderRepoJFrog_resourcePath}/scripts/artifactory.lic:/artifactory_extra_conf/artifactory.lic:ro" \
