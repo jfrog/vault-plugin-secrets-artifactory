@@ -15,8 +15,8 @@ PLUGIN_PATH ?= artifactory
 
 ARTIFACTORY_ENV := ./vault/artifactory.env
 ARTIFACTORY_SCOPE ?= applied-permissions/groups:readers
-export ARTIFACTORY_URL ?= http://localhost:8082
-export JFROG_ACCESS_TOKEN ?= $(shell TOKEN_USERNAME=$(TOKEN_USERNAME) ARTIFACTORY_URL=$(ARTIFACTORY_URL) ./scripts/getArtifactoryAdminToken.sh)
+# export ARTIFACTORY_URL ?= http://localhost:8082
+# export JFROG_ACCESS_TOKEN ?= $(shell TOKEN_USERNAME=$(TOKEN_USERNAME) ARTIFACTORY_URL=$(ARTIFACTORY_URL) ./scripts/getArtifactoryAdminToken.sh)
 TOKEN_USERNAME ?= vault-admin
 UNAME = $(shell uname -s)
 export VAULT_TOKEN ?= root
