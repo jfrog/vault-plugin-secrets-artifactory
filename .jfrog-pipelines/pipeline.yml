@@ -38,6 +38,7 @@ pipelines:
             - echo "Pending"
             - export STATE="pending"
             - export DESCRIPTION="Pipeline run is in progress."
+            - cd ${res_GitHubTFProviderRepoJFrog_resourcePath} # we need to manually move into the resource path
             - ./scripts/github-status.sh ${res_GitHubVaultPluginRepoJFrog_gitProvider_token} ${res_GitHubVaultPluginRepoJFrog_gitRepoFullName} ${res_GitHubVaultPluginRepoJFrog_commitSha}
             - echo "Install GoReleaser"
             - echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
@@ -50,13 +51,13 @@ pipelines:
             - helm version
             - printenv
           onExecute:
-            - cd ${res_GitHubTFProviderRepoJFrog_resourcePath} # we need to manually move into the resource path
             - echo "Verify the code contents merged feature branch with master branch (detached mode)"
             - git branch && ls -al
             - add_run_variables PLUGIN_VERSION=$(git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
             - export NEXT_VERSION=${PLUGIN_VERSION} && echo ${NEXT_VERSION}
             - echo "Save RT licenses from the variable to the license file"
             - echo ${int_partnership_rt_cluster_license_5licenses} > scripts/artifactory.lic
+            - more scripts/artifactory.lic
             - echo "Set Artifactory version, run RT in a container"
             - helm repo add artifactory https://charts.jfrog.io
             - helm repo update
