@@ -1,3 +1,10 @@
+## 0.2.15 (April 18, 2023)
+
+IMPROVEMENTS:
+
+- Fix empty strings for optional attributes when reading roles. PR: [#66](https://github.com/jfrog/artifactory-secrets-plugin/pull/66)
+- Fix inconsistent use of env vars for acceptance tests. PR: [#71](https://github.com/jfrog/artifactory-secrets-plugin/pull/71)
+
 ## 0.2.14 (April 18, 2023)
 
 IMPROVEMENTS:
