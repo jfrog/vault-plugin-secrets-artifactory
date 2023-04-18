@@ -30,6 +30,7 @@ pipelines:
           integrations:
             - name: partnership_slack
             - name: partnership_github
+            - name: partnership_rt_cluster_license
           inputResources:
             - name: GitHubVaultPluginRepoJFrog
         execution:
@@ -54,6 +55,8 @@ pipelines:
             - git branch && ls -al
             - add_run_variables PLUGIN_VERSION=$(git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
             - export NEXT_VERSION=${PLUGIN_VERSION} && echo ${NEXT_VERSION}
+            - echo "Save RT licenses from the variable to the license file"
+            - echo ${int_partnership_rt_cluster_license_5licenses} > scripts/artifactory.lic
             - echo "Set Artifactory version, run RT in a container"
             - helm repo add artifactory https://charts.jfrog.io
             - helm repo update
