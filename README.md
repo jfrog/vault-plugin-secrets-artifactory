@@ -263,6 +263,21 @@ username           v-jenkins-x4mohTA8
 
 ## Development
 
+### Local Development Prerequisites
+
+* Vault
+  * <https://developer.hashicorp.com/vault/docs/install>
+  * `brew install vault`
+* Golang
+  * <https://go.dev/doc/install>
+  * `brew install golang`
+* GoReleaser - Used during the build process
+  *  <https://goreleaser.com/install/>
+  * `brew install goreleaser`
+* Docker - To run a test Artifactory instance (very useful for testing)
+  * <https://docs.docker.com/get-docker/>
+  * `brew install docker --cask`
+
 ### Testing Locally
 
 If you're compiling this yourself and want to test locally, you will need a working docker environment. You will also need vault and golang installed, then you can follow the steps below.
@@ -283,7 +298,7 @@ make artifactory
 
 ```sh
 export VAULT_ADDR=http://localhost:8200
-export VAULT_token=root
+export VAULT_TOKEN=root
 make setup
 ```
 
