@@ -98,6 +98,7 @@ pipelines:
                                              --header "accept: application/json, text/plain, */*" \
                                              --header "x-requested-with: XMLHttpRequest" \
                                              --header "cookie: ACCESSTOKEN=${ACCESSTOKEN}; REFRESHTOKEN=${REFRESHTOKEN}")
+            - printenv
             - make acceptance
           onSuccess:
             - echo "Success"
