@@ -1,3 +1,12 @@
+## 0.2.14 (April 18, 2023)
+
+IMPROVEMENTS:
+
+- Upgrade dependencies to latest version.
+- Update Go minimum version to 1.18 (which we have been using for a while now).
+
+PR: [#65](https://github.com/jfrog/artifactory-secrets-plugin/pull/65)
+
 ## 0.2.13 (March 30, 2023)
 
 IMPROVEMENTS:
