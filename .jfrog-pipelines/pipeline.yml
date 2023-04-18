@@ -35,7 +35,6 @@ pipelines:
             - name: GitHubVaultPluginRepoJFrog
         execution:
           onStart:
-            - cd ${res_GitHubVaultPluginRepoJFrog_resourcePath} # we need to manually move into the resource path
             - echo "Pending"
             - export STATE="pending"
             - export DESCRIPTION="Pipeline run is in progress."
