@@ -78,7 +78,7 @@ func (b *backend) pathRoles() *framework.Path {
 }
 
 type artifactoryRole struct {
-	GrantType  string        `json:"grant_type"`
+	GrantType  string        `json:"grant_type,omitempty"`
 	Username   string        `json:"username,omitempty"`
 	Scope      string        `json:"scope"`
 	Audience   string        `json:"audience,omitempty"`
@@ -218,16 +218,26 @@ func (b *backend) Role(ctx context.Context, storage logical.Storage, roleName st
 	return &role, nil
 }
 
-func (b *backend) roleToMap(roleName string, role artifactoryRole) map[string]interface{} {
-	return map[string]interface{}{
+func (b *backend) roleToMap(roleName string, role artifactoryRole) (roleMap map[string]interface{}) {
+	roleMap = map[string]interface{}{
 		"role":        roleName,
-		"grant_type":  role.GrantType,
-		"username":    role.Username,
 		"scope":       role.Scope,
-		"audience":    role.Audience,
 		"default_ttl": role.DefaultTTL.Seconds(),
 		"max_ttl":     role.MaxTTL.Seconds(),
 	}
+
+	// Optional Attributes
+	if len(role.GrantType) > 0 {
+		roleMap["grant_type"] = role.GrantType
+	}
+	if len(role.Username) > 0 {
+		roleMap["username"] = role.Username
+	}
+	if len(role.Audience) > 0 {
+		roleMap["audience"] = role.Audience
+	}
+
+	return
 }
 
 func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
