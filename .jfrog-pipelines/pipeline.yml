@@ -94,10 +94,12 @@ pipelines:
             - export ACCESSTOKEN=$(echo $COOKIES | grep ACCESSTOKEN | awk '{print $7}') # awk returns null on Mac, and the actual key on Ubuntu 18
             - export REFRESHTOKEN=$(echo $COOKIES | grep REFRESHTOKEN | awk '{print $14}')
             - >-
-              export JFROG_ACCESS_TOKEN=$(curl -g --request GET "${ARTIFACTORY_URL}/ui/api/v1/system/security/token?services[]=all" \
-                                             --header "accept: application/json, text/plain, */*" \
-                                             --header "x-requested-with: XMLHttpRequest" \
-                                             --header "cookie: ACCESSTOKEN=${ACCESSTOKEN}; REFRESHTOKEN=${REFRESHTOKEN}")
+              export ACCESS_KEY=$(curl -g --request GET "${ARTIFACTORY_URL}/ui/api/v1/system/security/token?services[]=all" \
+                                 --header "accept: application/json, text/plain, */*" \
+                                 --header "x-requested-with: XMLHttpRequest" \
+                                 --header "cookie: ACCESSTOKEN=${ACCESSTOKEN}; REFRESHTOKEN=${REFRESHTOKEN}")
+            - add_run_variables ARTIFACTORY_URL=${ARTIFACTORY_URL}
+            - add_run_variables JFROG_ACCESS_TOKEN=${ACCESS_KEY}
             - printenv
             - make acceptance
           onSuccess:
