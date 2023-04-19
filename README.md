@@ -1,12 +1,8 @@
 # Vault Artifactory Secrets Plugin
 
-----------------------------------------------------------------
-
 This plugin is now being actively maintained by JFrog Inc.Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and create github issues to ask for support
 
 ----------------------------------------------------------------
-
-![Build](https://github.com/jfrog/artifactory-secrets-plugin/actions/workflows/build.yml/badge.svg)
 
 This is a [HashiCorp Vault](https://www.vaultproject.io/) plugin which talks to JFrog Artifactory server and will
 dynamically provision access tokens with specified scopes. This backend can be mounted multiple times
@@ -59,31 +55,31 @@ vault write artifactory/config/admin use_expiring_tokens=true
 
 * Example Token Output:
 
-    ```console
-    $ ACCESS_TOKEN=$(vault read -field access_token artifactory/token/test)
-    $ jwt decode $ACCESS_TOKEN
+```console
+$ ACCESS_TOKEN=$(vault read -field access_tokeartifactory/token/test)
+$ jwt decode $ACCESS_TOKEN
 
-    Token header
-    ------------
-    {
-    "typ": "JWT",
-    "alg": "RS256",
-    "kid": "nxB2_1jNkYS5oYsl6nbUaaeALfKpfBZUyP0SW3txYUM"
-    }
+Token header
+------------
+{
+"typ": "JWT",
+"alg": "RS256",
+"kid": "nxB2_1jNkYS5oYsl6nbUaaeALfKpfBZUyP0SW3txYUM"
+}
 
-    Token claims
-    ------------
-    {
-    "aud": "*@*",
-    "exp": 1678913614,
-    "ext": "{\"revocable\":\"true\"}",
-    "iat": 1678902814,
-    "iss": "jfac@01gvgpzpv8jytn0fvq41wb1srj",
-    "jti": "e39cec86-069c-4b75-8897-c2bf05dc8354",
-    "scp": "applied-permissions/groups:readers",
-    "sub": "jfac@01gvgpzpv8jytn0fvq41wb1srj/users/v-test-p9nprfwr"
-    }
-    ```
+Token claims
+------------
+{
+"aud": "*@*",
+"exp": 1678913614,
+"ext": "{\"revocable\":\"true\"}",
+"iat": 1678902814,
+"iss": "jfac@01gvgpzpv8jytn0fvq41wb1srj",
+"jti": "e39cec86-069c-4b75-8897-c2bf05dc8354",
+"scp": "applied-permissions/groups:readers",
+"sub": "jfac@01gvgpzpv8jytn0fvq41wb1srj/userv-test-p9nprfwr"
+}
+```
 
 ### Artifactory Version Detection
 
@@ -100,11 +96,15 @@ vault write -f artifactory/config/admin
 
 ### Using pre-built releases
 
-You can find pre-built releases of the plugin [here][artreleases]. Once you have downloaded the latest archive corresponding to your target OS, unzip it to retrieve the `artifactory` binary file.
+You can find pre-built releases of the plugin [here][artreleases]. Once you have downloaded the latest archive corresponding to your target OS, unzip it to retrieve the `artifactory-secrets-plugin` binary file.
 
 ### From Sources
 
-If you prefer to build the plugin from sources, clone the GitHub repository locally and run the command `make build` from the root of the sources directory. Upon successful compilation, the resulting `artifactory` binary is stored in the `vault/plugins` directory.
+If you prefer to build the plugin from sources, clone the GitHub repository locally and run the command `make build` from the root of the sources directory.
+
+See [Local Development Prerequisites](#local-development-prerequisites) section for pre-requisites.
+
+Upon successful compilation, the resulting `artifactory-secrets-plugin` binary is stored in the `dist/artifactory-secrets-plugin_<OS architecture>` directory.
 
 ## Configuration
 
