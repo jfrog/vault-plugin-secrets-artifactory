@@ -6,8 +6,9 @@ ifeq ($(GO_ARCH), amd64)
 GORELEASER_ARCH=${TARGET_ARCH}_$(shell go env GOAMD64)
 endif
 
+GIT_SHORT_HASH=$(shell git rev-parse --short HEAD)
 CURRENT_VERSION?=$(shell git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
-NEXT_VERSION := $(shell echo ${CURRENT_VERSION}| awk -F '.' '{print $$1 "." $$2 "." $$3 +1 }' )
+NEXT_VERSION := $(shell echo ${CURRENT_VERSION} | awk -F '.' '{print $$1 "." $$2 "." $$3 +1}')-dev+${GIT_SHORT_HASH}
 
 PLUGIN_DIR=dist/artifactory-secrets-plugin_${GORELEASER_ARCH}
 PLUGIN_FILE=artifactory-secrets-plugin
@@ -36,13 +37,14 @@ disable:
 	vault secrets disable ${PLUGIN_PATH}
 
 enable:
-	vault secrets enable -path=${PLUGIN_PATH} ${PLUGIN_FILE}
+	vault secrets enable -path=${PLUGIN_PATH} -plugin-version=${NEXT_VERSION} ${PLUGIN_FILE}
 
 register: build
 	vault plugin register -sha256=$$(sha256sum ${PLUGIN_DIR}/${PLUGIN_FILE} | cut -d " " -f 1) -command=${PLUGIN_FILE} secret ${PLUGIN_FILE}
+	vault plugin info -version=${NEXT_VERSION} secret ${PLUGIN_FILE}
 
 deregister:
-	value plugin deregister -version=${NEXT_VERSION} secret ${PLUGIN_FILE}
+	vault plugin deregister -version=${NEXT_VERSION} secret ${PLUGIN_FILE}
 	
 upgrade: register
 	vault plugin reload -plugin=${PLUGIN_FILE}
