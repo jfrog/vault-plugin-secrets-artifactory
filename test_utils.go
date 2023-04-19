@@ -259,7 +259,7 @@ func newAcceptanceTestEnv() (*accTestEnv, error) {
 	}
 	return &accTestEnv{
 		AccessToken: os.Getenv("JFROG_ACCESS_TOKEN"),
-		URL:         os.Getenv("ARTIFACTORY_URL"),
+		URL:         os.Getenv("JFROG_URL"),
 		Backend:     backend,
 		Context:     ctx,
 		Storage:     &logical.InmemStorage{},

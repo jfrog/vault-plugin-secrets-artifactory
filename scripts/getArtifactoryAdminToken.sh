@@ -11,7 +11,7 @@ set -e
 # Use otherwise at your own peril!                                         #
 #                                                                          #
 # Globals (env variables)                                                  #
-#     ARTIFACTORY_URL          - artifactory base url                      #
+#     JFROG_URL                - artifactory base url                      #
 #     ARTIFACTORY_USERNAME     - artifactory admin username                #
 #     ARTIFACTORY_PASSWORD     - artifactory admin password                #
 #     TOKEN_USERNAME           - generated token username                  #
@@ -20,7 +20,7 @@ set -e
 ############################################################################
 
 # defaulted variables
-ARTIFACTORY_URL="${ARTIFACTORY_URL:-http://localhost:8082}"
+JFROG_URL="${JFROG_URL:-http://localhost:8082}"
 ARTIFACTORY_USERNAME="${ARTIFACTORY_USERNAME:-admin}"
 ARTIFACTORY_PASSWORD="${ARTIFACTORY_PASSWORD:-password}"
 TOKEN_USERNAME="${TOKEN_USERNAME:-admin-$(date '+%Y-%m-%d-%H%M%S')}"
@@ -29,7 +29,7 @@ TOKEN_EXPIRY="${EXPIRY:-8}" # By default, token expiration under 6h are not revo
 
 # login function
 login() {
-    curl "${ARTIFACTORY_URL}/ui/api/v1/ui/auth/login" \
+    curl "${JFROG_URL}/ui/api/v1/ui/auth/login" \
     --fail \
     --silent \
     --show-error \
@@ -44,7 +44,7 @@ login() {
 
 # function to get admin access token
 getToken() {
-    curl "${ARTIFACTORY_URL}/ui/api/v1/access/token/scoped" \
+    curl "${JFROG_URL}/ui/api/v1/access/token/scoped" \
     --request GET \
     --get \
     --fail \
@@ -65,7 +65,7 @@ getToken() {
 }
 
 # login to artifactory
-echo "Logging in to Artifactory (${ARTIFACTORY_URL}) as ${ARTIFACTORY_USERNAME} ..." >&2
+echo "Logging in to Artifactory (${JFROG_URL}) as ${ARTIFACTORY_USERNAME} ..." >&2
 cookies=$(login) >&2 || {
     echo "Failed to login to Artifactory" >&2
     exit 1
