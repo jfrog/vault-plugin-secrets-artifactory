@@ -40,7 +40,7 @@ enable:
 	vault secrets enable -path=${PLUGIN_PATH} -plugin-version=${NEXT_VERSION} ${PLUGIN_FILE}
 
 register: build
-	vault plugin register -sha256=$$(sha256sum ${PLUGIN_DIR}/${PLUGIN_FILE} | cut -d " " -f 1) -command=${PLUGIN_FILE} secret ${PLUGIN_FILE}
+	vault plugin register -sha256=$$(sha256sum ${PLUGIN_DIR}/${PLUGIN_FILE} | cut -d " " -f 1) -command=${PLUGIN_FILE} -version=${NEXT_VERSION} secret ${PLUGIN_FILE}
 	vault plugin info -version=${NEXT_VERSION} secret ${PLUGIN_FILE}
 
 deregister:
