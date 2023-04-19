@@ -15,8 +15,8 @@ PLUGIN_PATH ?= artifactory
 
 ARTIFACTORY_ENV := ./vault/artifactory.env
 ARTIFACTORY_SCOPE ?= applied-permissions/groups:readers
-export ARTIFACTORY_URL ?= http://localhost:8082
-export JFROG_ACCESS_TOKEN ?= $(shell TOKEN_USERNAME=$(TOKEN_USERNAME) ARTIFACTORY_URL=$(ARTIFACTORY_URL) ./scripts/getArtifactoryAdminToken.sh)
+export JFROG_URL ?= http://localhost:8082
+export JFROG_ACCESS_TOKEN ?= $(shell TOKEN_USERNAME=$(TOKEN_USERNAME) JFROG_URL=$(JFROG_URL) ./scripts/getArtifactoryAdminToken.sh)
 TOKEN_USERNAME ?= vault-admin
 UNAME = $(shell uname -s)
 export VAULT_TOKEN ?= root
@@ -63,7 +63,7 @@ fmt:
 setup: disable enable admin testrole
 
 admin:
-	vault write ${PLUGIN_PATH}/config/admin url=$(ARTIFACTORY_URL) access_token=$(JFROG_ACCESS_TOKEN)
+	vault write ${PLUGIN_PATH}/config/admin url=$(JFROG_URL) access_token=$(JFROG_ACCESS_TOKEN)
 	vault read ${PLUGIN_PATH}/config/admin
 	vault write -f ${PLUGIN_PATH}/config/rotate
 	vault read ${PLUGIN_PATH}/config/admin

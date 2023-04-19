@@ -160,7 +160,7 @@ Alternatives:
 * Use [`getArtifactoryAdminToken.sh`](./scripts/getArtifactoryAdminToken.sh).
 
     ```sh
-    export ARTIFACTORY_URL=https://artifactory.example.org
+    export JFROG_URL=https://artifactory.example.org
     export ARTIFACTORY_USERNAME=admin
     export ARTIFACTORY_PASSWORD=password
     TOKEN=$(scripts/getArtifactoryAdminToken.sh)
@@ -412,20 +412,20 @@ make admin
 
 NOTE: This following might be some useful environment variables:
 
-> * `ARTIFACTORY_URL`
+> * `JFROG_URL`
 > * `ARTIFACTORY_USERNAME`
 > * `ARTIFACTORY_PASSWORD`
 
 For example:
 
 ```sh
-ARTIFACTORY_URL=https://artifactory.example.org ARTIFACTORY_USERNAME=tommy ARTIFACTORY_PASSWORD='SuperSecret' make admin
+JFROG_URL=https://artifactory.example.org ARTIFACTORY_USERNAME=tommy ARTIFACTORY_PASSWORD='SuperSecret' make admin
 ```
 
 If you already have a JFROG_ACCESS_TOKEN, you can skip straight to that too:
 
 ```sh
-export ARTIFACTORY_URL=https://artifactory.example.com
+export JFROG_URL=https://artifactory.example.com
 export JFROG_ACCESS_TOKEN=(PASTE YOUR JFROG ADMIN TOKEN)
 make admin
 ```
@@ -448,7 +448,7 @@ make acceptance
 
 This requires the following:
 * A running Artifactory instance
-* Env vars `ARTIFACTORY_URL` and `JFROG_ACCESS_TOKEN` for the running Artifactory instance be set
+* Env vars `JFROG_URL` and `JFROG_ACCESS_TOKEN` for the running Artifactory instance be set
 
 ## Issues
 
