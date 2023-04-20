@@ -1,3 +1,10 @@
+## 0.2.16 (April 20, 2023)
+
+IMPROVEMENTS:
+
+- Add version suffix for development build (`-dev+<git short hash>`). PR: [#74](https://github.com/jfrog/artifactory-secrets-plugin/pull/74)
+- Update Vault API module to 1.9.1. PR: [#75](https://github.com/jfrog/artifactory-secrets-plugin/pull/75)
+
 ## 0.2.15 (April 18, 2023)
 
 IMPROVEMENTS:
