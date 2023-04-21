@@ -280,9 +280,9 @@ func (b *backend) getTokenInfo(config adminConfiguration, token string) (info *T
 	sub := strings.Split(claims["sub"].(string), "/") // sub -> subject (jfac@01fr1x1h805xmg0t17xhqr1v7a/users/admin)
 
 	info = &TokenInfo{
-		TokenID:  claims["jti"].(string), // jti -> JFrog Token ID
-		Scope:    claims["scp"].(string), // scp -> scope
-		Username: sub[len(sub)-1],        // last element of subject
+		TokenID:  claims["jti"].(string),     // jti -> JFrog Token ID
+		Scope:    claims["scp"].(string),     // scp -> scope
+		Username: strings.Join(sub[2:], "/"), // 3rd+ elements (incase username has / in it)
 	}
 
 	// exp -> expires at (unixtime) - may not be present
