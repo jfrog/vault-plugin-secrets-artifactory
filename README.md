@@ -56,7 +56,7 @@ vault write artifactory/config/admin use_expiring_tokens=true
 * Example Token Output:
 
 ```console
-$ ACCESS_TOKEN=$(vault read -field access_tokeartifactory/token/test)
+$ ACCESS_TOKEN=$(vault read -field access_token artifactory/token/test)
 $ jwt decode $ACCESS_TOKEN
 
 Token header
@@ -140,8 +140,6 @@ You can now enable the Artifactory secrets plugin:
 vault secrets enable artifactory
 ```
 
-## Usage
-
 ### Artifactory
 
 1. Log into the Artifactory UI as an "admin".
@@ -201,6 +199,8 @@ use_expiring_tokens    false
 username               vault-admin
 version                7.55.6
 ```
+
+## Usage
 
 * Create a role (scope for artifactory >= 7.21.1)
 
