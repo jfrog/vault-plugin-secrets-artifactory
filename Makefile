@@ -28,7 +28,10 @@ export VAULT_ADDR ?= http://localhost:8200
 all: fmt build test start
 
 build: fmt
-	GORELEASER_CURRENT_TAG=$(NEXT_VERSION) goreleaser build --single-target --clean --snapshot
+	GORELEASER_CURRENT_TAG=${NEXT_VERSION} goreleaser build --single-target --clean --snapshot
+
+release:
+	goreleaser release --clean --snapshot --parallelism 2
 
 start:
 	vault server -dev -dev-root-token-id=root -dev-plugin-dir=$(PLUGIN_DIR) -log-level=DEBUG
