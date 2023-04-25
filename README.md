@@ -180,6 +180,11 @@ vault write -f artifactory/config/rotate
 
 **NOTE** some versions of artifactory (notably `7.39.10`) fail to rotate correctly. As noted above, we recommend being on `7.42.1` or higher. The token was indeed rotated, but as the error indicates, the old token could not be revoked.
 
+**ALSO** If you want to change the username for the admin token (tired of it just being "admin"?) or set a "Description" on the token, those parameters are optionally
+available on the `artifactory/config/rotate` endpoint.
+
+> `vault write artifactory/config/rotate username="new-username" description="A token used by vault-secrets-engine on our vault server"`
+
 * OPTIONAL: Check the results:
 
 ```sh

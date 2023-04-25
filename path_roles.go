@@ -78,12 +78,13 @@ func (b *backend) pathRoles() *framework.Path {
 }
 
 type artifactoryRole struct {
-	GrantType  string        `json:"grant_type,omitempty"`
-	Username   string        `json:"username,omitempty"`
-	Scope      string        `json:"scope"`
-	Audience   string        `json:"audience,omitempty"`
-	DefaultTTL time.Duration `json:"default_ttl,omitempty"`
-	MaxTTL     time.Duration `json:"max_ttl,omitempty"`
+	GrantType   string        `json:"grant_type,omitempty"`
+	Username    string        `json:"username,omitempty"`
+	Scope       string        `json:"scope"`
+	Audience    string        `json:"audience,omitempty"`
+	Description string        `json:"description,omitempty"`
+	DefaultTTL  time.Duration `json:"default_ttl,omitempty"`
+	MaxTTL      time.Duration `json:"max_ttl,omitempty"`
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {

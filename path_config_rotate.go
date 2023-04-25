@@ -10,6 +10,16 @@ import (
 func (b *backend) pathConfigRotate() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/rotate",
+		Fields: map[string]*framework.FieldSchema{
+			"username": {
+				Type:        framework.TypeString,
+				Description: "Optional. Override Artifactory token username for new admin token.",
+			},
+			"description": {
+				Type:        framework.TypeString,
+				Description: "Optional. Set Artifactory token description on new admin token.",
+			},
+		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigRotateWrite,
@@ -18,7 +28,7 @@ func (b *backend) pathConfigRotate() *framework.Path {
 		},
 		HelpSynopsis: `Rotate the Artifactory Admin Token.`,
 		HelpDescription: `
-This will rotate the "access_token" used to access artifactory from this plugin, and remove the old token.
+This will rotate the "access_token" used to access artifactory from this plugin, and revoke the old admin token.
 `,
 	}
 }
@@ -44,10 +54,14 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("error parsing existing AccessToken: " + err.Error()), err
 	}
 
-	if len(token.Username) == 0 {
-		token.Username = "admin" // default username to admin if not found, not sure if this is needed
+	// Check for submitted username
+	if val, ok := data.GetOk("username"); ok {
+		token.Username = val.(string)
 	}
-	b.Logger().Debug("oldToken ID: " + token.TokenID)
+
+	if len(token.Username) == 0 {
+		token.Username = "admin-vault-secrets-artifactory" // default username if empty
+	}
 
 	// Create admin role for the new token
 	role := &artifactoryRole{
@@ -55,12 +69,18 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 		Scope:    token.Scope,
 	}
 
+	// Check for new description
+	if val, ok := data.GetOk("description"); ok {
+		role.Description = val.(string)
+	} else {
+		role.Description = "Rotated Admin token for artifactory-secrets plugin in Vault"
+	}
+
 	// Create a new token
 	resp, err := b.CreateToken(*config, *role)
 	if err != nil {
 		return logical.ErrorResponse("error creating new token"), err
 	}
-	b.Logger().Debug("newTokenID: " + resp.TokenId)
 
 	// Set new token
 	config.AccessToken = resp.AccessToken

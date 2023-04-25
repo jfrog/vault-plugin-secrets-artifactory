@@ -83,10 +83,11 @@ type CreateTokenRequest struct {
 
 func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
 	request := CreateTokenRequest{
-		GrantType: role.GrantType,
-		Username:  role.Username,
-		Scope:     role.Scope,
-		Audience:  role.Audience,
+		GrantType:   role.GrantType,
+		Username:    role.Username,
+		Scope:       role.Scope,
+		Audience:    role.Audience,
+		Description: role.Description,
 	}
 
 	if len(request.Username) == 0 {

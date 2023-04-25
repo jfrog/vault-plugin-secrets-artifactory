@@ -25,6 +25,8 @@ type accTestEnv struct {
 	Storage logical.Storage
 }
 
+type testData map[string]interface{}
+
 // createNewTestToken creates a new scoped token using the one from test environment
 // so that the original token won't be revoked by the path config rotate test
 func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
@@ -77,14 +79,19 @@ func (e *accTestEnv) revokeTestToken(t *testing.T, accessToken string, tokenID s
 }
 
 func (e *accTestEnv) UpdatePathConfig(t *testing.T) {
-	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+	e.UpdateConfigAdmin(t, testData{
+		"access_token": e.AccessToken,
+		"url":          e.URL,
+	})
+}
+
+// UpdateConfigAdmin will send a POST/PUT to the /config/admin endpoint with testData (vault write artifactory/config/admin)
+func (e *accTestEnv) UpdateConfigAdmin(t *testing.T, data testData) {
+	resp, err := e.Backend.HandleRequest(e.Context, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/admin",
 		Storage:   e.Storage,
-		Data: map[string]interface{}{
-			"access_token": e.AccessToken,
-			"url":          e.URL,
-		},
+		Data:      data,
 	})
 
 	assert.NoError(t, err)
@@ -92,7 +99,12 @@ func (e *accTestEnv) UpdatePathConfig(t *testing.T) {
 }
 
 func (e *accTestEnv) ReadPathConfig(t *testing.T) {
-	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+	_ = e.ReadConfigAdmin(t)
+}
+
+// ReadConfigAdmin will send a GET to the /config/admin endpoint (vault read artifactory/config/admin)
+func (e *accTestEnv) ReadConfigAdmin(t *testing.T) testData {
+	resp, err := e.Backend.HandleRequest(e.Context, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "config/admin",
 		Storage:   e.Storage,
@@ -101,10 +113,16 @@ func (e *accTestEnv) ReadPathConfig(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.NotEmpty(t, resp.Data["access_token_sha256"])
+	return resp.Data
 }
 
 func (e *accTestEnv) DeletePathConfig(t *testing.T) {
-	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+	e.DeleteConfigAdmin(t)
+}
+
+// DeleteConfigAdmin will send a DELETE to the /config/admin endpoint (vault delete artifactory/config/admin)
+func (e *accTestEnv) DeleteConfigAdmin(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(e.Context, &logical.Request{
 		Operation: logical.DeleteOperation,
 		Path:      "config/admin",
 		Storage:   e.Storage,
@@ -114,71 +132,17 @@ func (e *accTestEnv) DeletePathConfig(t *testing.T) {
 	assert.Nil(t, resp)
 }
 
-func (e *accTestEnv) RotatePathConfig(t *testing.T) {
-	// create new test token
-	tokenID, accessToken := e.createNewTestToken(t)
-
-	// setup new path configuration
-	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config/admin",
-		Storage:   e.Storage,
-		Data: map[string]interface{}{
-			"access_token": accessToken,
-			"url":          e.URL,
-		},
-	})
-
-	assert.NoError(t, err)
-	assert.Nil(t, resp)
-
-	// read back the path configuration and save the access token hash for comparison later
-	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "config/admin",
-		Storage:   e.Storage,
-	})
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-	assert.NotEmpty(t, resp.Data["access_token_sha256"])
-
-	accessTokenHash := resp.Data["access_token_sha256"]
-
-	// rotate the path config
-	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
+// UpdateConfigRotate will send a POST/PUT to the /config/rotate endpoint with testData (vault write artifactory/config/rotate)
+func (e *accTestEnv) UpdateConfigRotate(t *testing.T, data testData) {
+	resp, err := e.Backend.HandleRequest(e.Context, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/rotate",
 		Storage:   e.Storage,
+		Data:      data,
 	})
 
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
-
-	// read back the path configuration and assert access token hash is now different
-	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "config/admin",
-		Storage:   e.Storage,
-	})
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-	assert.NotEmpty(t, resp.Data["access_token_sha256"])
-	assert.NotEqual(t, accessTokenHash, resp.Data["access_token_sha256"])
-
-	// clean up path config
-	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.DeleteOperation,
-		Path:      "config/admin",
-		Storage:   e.Storage,
-	})
-
-	assert.NoError(t, err)
-	assert.Nil(t, resp)
-
-	// revoke the test token
-	e.revokeTestToken(t, accessToken, tokenID)
 }
 
 func (e *accTestEnv) CreatePathRole(t *testing.T) {
@@ -246,6 +210,15 @@ func (e *accTestEnv) CreatePathToken(t *testing.T) {
 	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
 }
 
+// Cleanup will delete the admin configuration and revoke the token
+func (e *accTestEnv) Cleanup(t *testing.T) {
+	data := e.ReadConfigAdmin(t)
+	e.DeleteConfigAdmin(t)
+
+	// revoke the test token
+	e.revokeTestToken(t, e.AccessToken, data["token_id"].(string))
+}
+
 func newAcceptanceTestEnv() (*accTestEnv, error) {
 	ctx := context.Background()
 
@@ -264,6 +237,25 @@ func newAcceptanceTestEnv() (*accTestEnv, error) {
 		Context:     ctx,
 		Storage:     &logical.InmemStorage{},
 	}, nil
+}
+
+// NewConfiguredAcceptanceTestEnv will return an *accTestEnv that is already configured (entry point for most tests)
+func NewConfiguredAcceptanceTestEnv(t *testing.T) (e *accTestEnv) {
+	e, err := newAcceptanceTestEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create new test token
+	_, accessToken := e.createNewTestToken(t)
+
+	// setup new path configuration
+	e.UpdateConfigAdmin(t, testData{
+		"access_token": accessToken,
+		"url":          e.URL,
+	})
+
+	return
 }
 
 const rootCert string = `MIIDHzCCAgegAwIBAgIQHC4IERZbTl67GGjV8KH04jANBgkqhkiG9w0BAQ` +
