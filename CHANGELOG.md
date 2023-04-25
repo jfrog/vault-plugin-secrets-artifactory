@@ -1,3 +1,13 @@
+## 0.2.17 (April 25, 2023)
+
+IMPROVEMENTS:
+- Add support for optional `username` and `description` to token rotation. PR: [#85](https://github.com/jfrog/artifactory-secrets-plugin/pull/85)
+
+BUG FIXES:
+- Fix premature export of `JFROG_ACCESS_TOKEN` env var in makefile. PR: [#77](https://github.com/jfrog/artifactory-secrets-plugin/pull/77)
+- Fix parsing of admin usernames with `/`. PR: [#78](https://github.com/jfrog/artifactory-secrets-plugin/pull/78)
+- Additional makefile fixes. PR: [#79](https://github.com/jfrog/artifactory-secrets-plugin/pull/79)
+
 ## 0.2.16 (April 20, 2023)
 
 IMPROVEMENTS:
