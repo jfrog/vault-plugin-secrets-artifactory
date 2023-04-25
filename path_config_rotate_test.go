@@ -18,6 +18,7 @@ func TestAcceptanceBackend_PathRotate(t *testing.T) {
 
 	assert.NotEmpty(t, after["access_token_sha256"])
 	assert.NotEqual(t, before["access_token_sha256sum"], after["access_token_sha256"])
+	e.Cleanup(t)
 }
 
 func TestAcceptanceBackend_PathRotateWithDetails(t *testing.T) {
