@@ -56,15 +56,12 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 
 	// Check for submitted username
 	if val, ok := data.GetOk("username"); ok {
-		b.Logger().Debug("old username: " + token.Username)
 		token.Username = val.(string)
-		b.Logger().Debug("new username: " + token.Username)
 	}
 
 	if len(token.Username) == 0 {
 		token.Username = "admin-vault-secrets-artifactory" // default username if empty
 	}
-	b.Logger().Debug("oldToken ID: " + token.TokenID)
 
 	// Create admin role for the new token
 	role := &artifactoryRole{
@@ -82,7 +79,6 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	if err != nil {
 		return logical.ErrorResponse("error creating new token"), err
 	}
-	b.Logger().Debug("newTokenID: " + resp.TokenId)
 
 	// Set new token
 	config.AccessToken = resp.AccessToken
