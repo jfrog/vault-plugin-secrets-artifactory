@@ -16,3 +16,16 @@ func TestAcceptanceBackend_PathRotate(t *testing.T) {
 
 	accTestEnv.RotatePathConfig(t)
 }
+
+func TestAcceptanceBackend_PathRotateWithDetails(t *testing.T) {
+	if !runAcceptanceTests {
+		t.SkipNow()
+	}
+
+	accTestEnv, err := newAcceptanceTestEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	accTestEnv.RotatePathConfigWithDetails(t)
+}

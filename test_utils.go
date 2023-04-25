@@ -181,6 +181,81 @@ func (e *accTestEnv) RotatePathConfig(t *testing.T) {
 	e.revokeTestToken(t, accessToken, tokenID)
 }
 
+func (e *accTestEnv) RotatePathConfigWithDetails(t *testing.T) {
+	// create new test token
+	tokenID, accessToken := e.createNewTestToken(t)
+
+	// setup new path configuration
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/admin",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"access_token": accessToken,
+			"url":          e.URL,
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+
+	// read back the path configuration and save the access token hash for comparison later
+	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config/admin",
+		Storage:   e.Storage,
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotEmpty(t, resp.Data["access_token_sha256"])
+
+	accessTokenHash := resp.Data["access_token_sha256"]
+
+	// rotate the token with a username and description
+	var newUsername = "new-vault-admin-user"
+	var description = "Artifactory Secrets Engine Admin Token"
+	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/rotate",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"username":    newUsername,
+			"description": description,
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+
+	// read back the path configuration and assert access token hash is now different
+	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config/admin",
+		Storage:   e.Storage,
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotEmpty(t, resp.Data["access_token_sha256"])
+	assert.NotEqual(t, accessTokenHash, resp.Data["access_token_sha256"])
+	assert.Equal(t, newUsername, resp.Data["username"])
+	// Not testing description because it is not in the token, but it could be queried from the access API
+
+	// clean up path config
+	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "config/admin",
+		Storage:   e.Storage,
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+
+	// revoke the test token
+	e.revokeTestToken(t, accessToken, tokenID)
+}
+
 func (e *accTestEnv) CreatePathRole(t *testing.T) {
 	roleData := map[string]interface{}{
 		"role":        "test-role",
