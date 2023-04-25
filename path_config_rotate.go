@@ -28,11 +28,7 @@ func (b *backend) pathConfigRotate() *framework.Path {
 		},
 		HelpSynopsis: `Rotate the Artifactory Admin Token.`,
 		HelpDescription: `
-This will rotate the "access_token" used to access artifactory from this plugin, and remove the old token.
-
-An optional "username" parameter will override the current username when generating the new admin token.
-
-An optional "description" parameter will set the description when generating the new admin token.
+This will rotate the "access_token" used to access artifactory from this plugin, and revoke the old admin token.
 `,
 	}
 }
@@ -58,8 +54,11 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("error parsing existing AccessToken: " + err.Error()), err
 	}
 
+	// Check for submitted username
 	if val, ok := data.GetOk("username"); ok {
+		b.Logger().Debug("old username: " + token.Username)
 		token.Username = val.(string)
+		b.Logger().Debug("new username: " + token.Username)
 	}
 
 	if len(token.Username) == 0 {
