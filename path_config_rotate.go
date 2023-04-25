@@ -72,6 +72,8 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	// Check for new description
 	if val, ok := data.GetOk("description"); ok {
 		role.Description = val.(string)
+	} else {
+		role.Description = "Rotated Admin token for artifactory-secrets plugin in Vault"
 	}
 
 	// Create a new token
