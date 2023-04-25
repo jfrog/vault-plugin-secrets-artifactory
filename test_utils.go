@@ -282,8 +282,9 @@ func NewConfiguredAcceptanceTestEnv(t *testing.T) (e *accTestEnv) {
 
 	// setup new path configuration
 	e.UpdateConfigAdmin(t, testData{
-		"access_token": accessToken,
-		"url":          e.URL,
+		"access_token":                        accessToken,
+		"url":                                 e.URL,
+		"bypass_artifactory_tls_verification": false,
 	})
 
 	return

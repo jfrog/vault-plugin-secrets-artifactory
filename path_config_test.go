@@ -24,11 +24,11 @@ func TestAcceptanceBackend_PathConfig(t *testing.T) {
 	t.Run("update", accTestEnv.UpdatePathConfig)
 	t.Run("read", accTestEnv.ReadPathConfig)
 	t.Run("expiringTokens", accTestEnv.PathConfigUpdateExpiringTokens)
+	t.Run("expiringTokens", accTestEnv.PathConfigUpdateBypassArtifactoryTLSVerification)
 	t.Run("usernameTemplate", accTestEnv.PathConfigUpdateUsernameTemplate)
 	t.Run("delete", accTestEnv.DeletePathConfig)
 	t.Run("errors", accTestEnv.PathConfigUpdateErrors)
 	t.Run("badAccessToken", accTestEnv.PathConfigReadBadAccessToken)
-
 }
 
 func (e *accTestEnv) PathConfigReadUnconfigured(t *testing.T) {
@@ -38,31 +38,43 @@ func (e *accTestEnv) PathConfigReadUnconfigured(t *testing.T) {
 }
 
 func (e *accTestEnv) PathConfigUpdateExpiringTokens(t *testing.T) {
+	e.pathConfigUpdateBooleanField(t, "use_expiring_tokens")
+}
+
+func (e *accTestEnv) PathConfigUpdateBypassArtifactoryTLSVerification(t *testing.T) {
+	e.pathConfigUpdateBooleanField(t, "bypass_artifactory_tls_verification")
+}
+
+func (e *accTestEnv) pathConfigUpdateBooleanField(t *testing.T, fieldName string) {
 	// Boolean
 	e.UpdateConfigAdmin(t, testData{
-		"use_expiring_tokens": true,
+		fieldName: true,
 	})
 	data := e.ReadConfigAdmin(t)
-	assert.Equal(t, data["use_expiring_tokens"], true)
+	assert.Equal(t, data[fieldName], true)
+
 	e.UpdateConfigAdmin(t, testData{
-		"use_expiring_tokens": false,
+		fieldName: false,
 	})
 	data = e.ReadConfigAdmin(t)
-	assert.Equal(t, data["use_expiring_tokens"], false)
+	assert.Equal(t, data[fieldName], false)
+
 	// String
 	e.UpdateConfigAdmin(t, testData{
-		"use_expiring_tokens": "true",
+		fieldName: "true",
 	})
 	data = e.ReadConfigAdmin(t)
-	assert.Equal(t, data["use_expiring_tokens"], true)
+	assert.Equal(t, data[fieldName], true)
+
 	e.UpdateConfigAdmin(t, testData{
-		"use_expiring_tokens": "false",
+		fieldName: "false",
 	})
 	data = e.ReadConfigAdmin(t)
-	assert.Equal(t, data["use_expiring_tokens"], false)
+	assert.Equal(t, data[fieldName], false)
+
 	// Fail Tests
 	resp, err := e.update("config/admin", testData{
-		"use_expiring_tokens": "Sure, why not",
+		fieldName: "Sure, why not",
 	})
 	assert.NotNil(t, resp)
 	assert.Regexp(t, regexp.MustCompile("Field validation failed: error converting input .* strconv.ParseBool: parsing .*: invalid syntax"), resp.Data["error"])

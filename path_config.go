@@ -32,6 +32,11 @@ func (b *backend) pathConfig() *framework.Path {
 				Type:        framework.TypeBool,
 				Description: "Optional. If Artifactory version >= 7.50.3, set expires_in to max_ttl and force_revocable.",
 			},
+			"bypass_artifactory_tls_verification": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "Optional. Bypass certification verification for TLS connection with Artifactory. Default to `false`.",
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -50,7 +55,7 @@ func (b *backend) pathConfig() *framework.Path {
 		HelpSynopsis: `Interact with the Artifactory secrets configuration.`,
 		HelpDescription: `
 Configure the parameters used to connect to the Artifactory server integrated with this backend. The two main
-parameters are "url" which is the absolute URL to the Artifactory server. Note that "/api" is prepended by the
+parameters are "url" which is the absolute URL to the Artifactory server. Note that "/artifactory/api" is prepended by the
 individual calls, so do not include it in the URL here.
 
 The second is "access_token" which must be an access token powerful enough to generate the other access tokens you'll
@@ -61,16 +66,19 @@ additional information such as jfrog_token_id, username and scope.
 An optional "username_template" parameter will override the built-in default username_template for dynamically generating
 usernames if a static one is not provided.
 
+An optional "bypass_artifactory_tls_verification" parameter will enable bypassing the TLS connection verification with Artifactory.
+
 No renewals or new tokens will be issued if the backend configuration (config/admin) is deleted.
 `,
 	}
 }
 
 type adminConfiguration struct {
-	AccessToken       string `json:"access_token"`
-	ArtifactoryURL    string `json:"artifactory_url"`
-	UsernameTemplate  string `json:"username_template,omitempty"`
-	UseExpiringTokens bool   `json:"use_expiring_tokens,omitempty"`
+	AccessToken                      string `json:"access_token"`
+	ArtifactoryURL                   string `json:"artifactory_url"`
+	UsernameTemplate                 string `json:"username_template,omitempty"`
+	UseExpiringTokens                bool   `json:"use_expiring_tokens,omitempty"`
+	BypassArtifactoryTLSVerification bool   `json:"bypass_artifactory_tls_verification,omitempty"`
 }
 
 func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -90,9 +98,11 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		config.ArtifactoryURL = val.(string)
 		config.AccessToken = "" // clear access token if URL changes, requires setting access_token and url together for security reasons
 	}
+
 	if val, ok := data.GetOk("access_token"); ok {
 		config.AccessToken = val.(string)
 	}
+
 	if val, ok := data.GetOk("username_template"); ok {
 		config.UsernameTemplate = val.(string)
 		up, err := testUsernameTemplate(config.UsernameTemplate)
@@ -106,6 +116,10 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		config.UseExpiringTokens = val.(bool)
 	}
 
+	if val, ok := data.GetOk("bypass_artifactory_tls_verification"); ok {
+		config.BypassArtifactoryTLSVerification = val.(bool)
+	}
+
 	if config.AccessToken == "" {
 		return logical.ErrorResponse("access_token is required"), nil
 	}
@@ -114,11 +128,13 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("url is required"), nil
 	}
 
+	b.InitializeHttpClient(config)
+
 	go b.sendUsage(*config, "pathConfigRotateUpdate")
 
 	err = b.getVersion(*config)
 	if err != nil {
-		return logical.ErrorResponse("Unable to get Artifactory Version, check url and access_token."), err
+		return logical.ErrorResponse("Unable to get Artifactory Version. Check url and access_token fields. TLS connection verification with Artifactory can be skipped by setting bypass_artifactory_tls_verification field to 'true'"), err
 	}
 
 	entry, err := logical.StorageEntryJSON("config/admin", config)

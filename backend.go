@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"strings"
@@ -49,9 +50,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 }
 
 func Backend(_ *logical.BackendConfig) (*backend, error) {
-	b := &backend{
-		httpClient: http.DefaultClient,
-	}
+	b := &backend{}
 
 	up, err := testUsernameTemplate(defaultUserNameTemplate)
 	if err != nil {
@@ -69,6 +68,7 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 
 		BackendType:    logical.TypeLogical,
 		InitializeFunc: b.initialize,
+		Invalidate:     b.invalidate,
 	}
 	b.Backend.Secrets = append(b.Backend.Secrets, b.secretAccessToken())
 	b.Backend.Paths = append(b.Backend.Paths,
@@ -92,6 +92,8 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 		return nil
 	}
 
+	b.InitializeHttpClient(config)
+
 	err = b.getVersion(*config)
 	if err != nil {
 		return err
@@ -106,6 +108,29 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 	}
 
 	return nil
+}
+
+func (b *backend) InitializeHttpClient(config *adminConfiguration) {
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: config.BypassArtifactoryTLSVerification,
+		},
+	}
+
+	b.httpClient = &http.Client{Transport: tr}
+}
+
+func (b *backend) invalidate(ctx context.Context, key string) {
+	if key == "config" {
+		b.reset()
+	}
+}
+
+func (b *backend) reset() {
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
+	b.httpClient = nil
 }
 
 // fetchAdminConfiguration will return nil,nil if there's no configuration
