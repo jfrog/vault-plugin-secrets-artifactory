@@ -3,6 +3,9 @@ changelog:
     labels:
       - ignore-for-release
   categories:
+    - title: Breaking Changes 🛠
+      labels:
+        - breaking-change
     - title: Improvements/Enhancements 🎉
       labels:
         - enhancement
