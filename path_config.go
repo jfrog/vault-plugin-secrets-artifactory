@@ -104,7 +104,6 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 	}
 
 	if val, ok := data.GetOk("use_expiring_tokens"); ok {
-		b.Logger().Warn("config update use_expiring_tokens", "use_expiring_tokens", val)
 		switch exp := val.(type) {
 		case bool:
 			config.UseExpiringTokens = exp

@@ -114,13 +114,7 @@ func (e *accTestEnv) UpdatePathConfig(t *testing.T) {
 
 // UpdateConfigAdmin will send a POST/PUT to the /config/admin endpoint with testData (vault write artifactory/config/admin)
 func (e *accTestEnv) UpdateConfigAdmin(t *testing.T, data testData) {
-	resp, err := e.Backend.HandleRequest(e.Context, &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config/admin",
-		Storage:   e.Storage,
-		Data:      data,
-	})
-
+	resp, err := e.update("config/admin", data)
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
 }
@@ -131,11 +125,7 @@ func (e *accTestEnv) ReadPathConfig(t *testing.T) {
 
 // ReadConfigAdmin will send a GET to the /config/admin endpoint (vault read artifactory/config/admin)
 func (e *accTestEnv) ReadConfigAdmin(t *testing.T) testData {
-	resp, err := e.Backend.HandleRequest(e.Context, &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "config/admin",
-		Storage:   e.Storage,
-	})
+	resp, err := e.read("config/admin")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -166,7 +156,16 @@ func (e *accTestEnv) UpdateConfigRotate(t *testing.T, data testData) {
 	assert.Nil(t, resp)
 }
 
-// update will send a POST.Put to "path" with testData
+// read will send a GET  to "path"
+func (e *accTestEnv) read(path string) (*logical.Response, error) {
+	return e.Backend.HandleRequest(e.Context, &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config/admin",
+		Storage:   e.Storage,
+	})
+}
+
+// update will send a POST/PUT to "path" with testData
 func (e *accTestEnv) update(path string, data testData) (*logical.Response, error) {
 	return e.Backend.HandleRequest(e.Context, &logical.Request{
 		Operation: logical.UpdateOperation,
