@@ -397,7 +397,7 @@ func (b *backend) performArtifactoryGet(config adminConfiguration, path string) 
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", "art-secrets-plugin")
+	req.Header.Set("User-Agent", productId)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
@@ -419,6 +419,7 @@ func (b *backend) performArtifactoryPost(config adminConfiguration, path string,
 		return nil, err
 	}
 
+	req.Header.Set("User-Agent", productId)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
@@ -441,6 +442,7 @@ func (b *backend) performArtifactoryPostWithJSON(config adminConfiguration, path
 		return nil, err
 	}
 
+	req.Header.Set("User-Agent", productId)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/json")
 
@@ -465,7 +467,7 @@ func (b *backend) performArtifactoryDelete(config adminConfiguration, path strin
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", "art-secrets-plugin")
+	req.Header.Set("User-Agent", productId)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
