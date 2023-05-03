@@ -106,7 +106,6 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data 
 	defer b.rolesMutex.Unlock()
 
 	config, err := b.fetchAdminConfiguration(ctx, req.Storage)
-
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +113,8 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data 
 	if config == nil {
 		return logical.ErrorResponse("backend not configured"), nil
 	}
+
+	go b.callHome(*config, "pathRoleWrite")
 
 	roleName := data.Get("role").(string)
 
@@ -178,7 +179,20 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data 
 
 func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.rolesMutex.RLock()
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
 	defer b.rolesMutex.RUnlock()
+
+	config, err := b.fetchAdminConfiguration(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	if config == nil {
+		return logical.ErrorResponse("backend not configured"), nil
+	}
+
+	go b.callHome(*config, "pathRoleRead")
 
 	roleName := data.Get("role").(string)
 
@@ -243,9 +257,22 @@ func (b *backend) roleToMap(roleName string, role artifactoryRole) (roleMap map[
 
 func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.rolesMutex.Lock()
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
 	defer b.rolesMutex.Unlock()
 
-	err := req.Storage.Delete(ctx, "roles/"+data.Get("role").(string))
+	config, err := b.fetchAdminConfiguration(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	if config == nil {
+		return logical.ErrorResponse("backend not configured"), nil
+	}
+
+	go b.callHome(*config, "pathRoleDelete")
+
+	err = req.Storage.Delete(ctx, "roles/"+data.Get("role").(string))
 	if err != nil {
 		return nil, err
 	}

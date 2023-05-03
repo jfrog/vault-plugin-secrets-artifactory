@@ -17,10 +17,7 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder(
-		"GET",
-		"http://myserver.com:80/artifactory/api/system/version",
-		httpmock.NewStringResponder(200, artVersion))
+	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
 		"POST",
@@ -75,10 +72,7 @@ func TestBackend_CreateTokenArtifactoryUnavailable(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder(
-		"GET",
-		"http://myserver.com:80/artifactory/api/system/version",
-		httpmock.NewStringResponder(200, artVersion))
+	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
 		"POST",
@@ -124,10 +118,7 @@ func TestBackend_CreateTokenUnauthorized(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder(
-		"GET",
-		"http://myserver.com:80/artifactory/api/system/version",
-		httpmock.NewStringResponder(200, artVersion))
+	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
 		"POST",
@@ -175,10 +166,7 @@ func TestBackend_CreateTokenArtifactoryMisconfigured(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder(
-		"GET",
-		"http://myserver.com:80/artifactory/api/system/version",
-		httpmock.NewStringResponder(200, artVersion))
+	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
 		"POST",
@@ -224,10 +212,7 @@ func TestBackend_RevokeToken(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder(
-		"GET",
-		"http://myserver.com:80/artifactory/api/system/version",
-		httpmock.NewStringResponder(200, artVersion))
+	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
 		"POST",
@@ -289,10 +274,7 @@ func TestBackend_RotateAdminToken(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder(
-		"GET",
-		"http://myserver.com:80/artifactory/api/system/version",
-		httpmock.NewStringResponder(200, `{"version" : "7.33.8", "revision" : "73308900"}`))
+	mockArtifactoryUsageVersionRequests(`{"version" : "7.33.8", "revision" : "73308900"}`)
 
 	httpmock.RegisterResponder(
 		"GET",

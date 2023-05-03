@@ -18,10 +18,7 @@ func TestBackend_NoRoleMaxTTLUsesSystemMaxTTL(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder(
-		"GET",
-		"http://myserver.com:80/artifactory/api/system/version",
-		httpmock.NewStringResponder(200, artVersion))
+	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
 		"POST",
@@ -75,10 +72,7 @@ func TestBackend_WorkingWithBothMaxTTLs(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder(
-		"GET",
-		"http://myserver.com:80/artifactory/api/system/version",
-		httpmock.NewStringResponder(200, artVersion))
+	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
 		"POST",

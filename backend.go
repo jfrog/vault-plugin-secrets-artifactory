@@ -13,6 +13,7 @@ import (
 )
 
 var Version = "v1.0.0"
+var productId = "vault-plugin-secrets-artifactory/" + Version[1:] // don't need the 'v' prefix in productId
 
 type backend struct {
 	*framework.Backend

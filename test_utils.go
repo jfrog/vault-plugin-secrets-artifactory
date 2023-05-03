@@ -9,6 +9,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -338,4 +339,21 @@ func configuredBackend(t *testing.T, adminConfig map[string]interface{}) (*backe
 	assert.NoError(t, err)
 
 	return b, config
+}
+
+func mockArtifactoryUsageVersionRequests(version string) {
+	versionString := version
+	if len(version) == 0 {
+		versionString = artVersion
+	}
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com:80/artifactory/api/system/usage",
+		httpmock.NewStringResponder(200, ""))
+	httpmock.RegisterResponder(
+		"GET",
+		"http://myserver.com:80/artifactory/api/system/version",
+		httpmock.NewStringResponder(200, versionString))
+
 }

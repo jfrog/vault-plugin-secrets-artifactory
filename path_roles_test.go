@@ -70,10 +70,7 @@ func TestBackend_PathRoleList_AddRole(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder(
-		"GET",
-		"http://myserver.com:80/artifactory/api/system/version",
-		httpmock.NewStringResponder(200, artVersion))
+	mockArtifactoryUsageVersionRequests("")
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
@@ -102,10 +99,7 @@ func TestBackend_PathRoleListReturnsRole(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder(
-		"GET",
-		"http://myserver.com:80/artifactory/api/system/version",
-		httpmock.NewStringResponder(200, artVersion))
+	mockArtifactoryUsageVersionRequests("")
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
@@ -145,10 +139,7 @@ func TestBackend_PathRoleWriteThenRead(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder(
-		"GET",
-		"http://myserver.com:80/artifactory/api/system/version",
-		httpmock.NewStringResponder(200, artVersion))
+	mockArtifactoryUsageVersionRequests("")
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
