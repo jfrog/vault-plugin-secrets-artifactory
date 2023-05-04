@@ -46,7 +46,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.callHome(*config, "pathConfigRotateWrite")
+	go b.sendUsage(*config, "pathConfigRotateWrite")
 
 	oldAccessToken := config.AccessToken
 

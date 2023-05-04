@@ -355,7 +355,7 @@ type Usage struct {
 	Features  []Feature `json:"features"`
 }
 
-func (b *backend) callHome(config adminConfiguration, featureId string) {
+func (b *backend) sendUsage(config adminConfiguration, featureId string) {
 	features := []Feature{
 		{
 			FeatureId: featureId,

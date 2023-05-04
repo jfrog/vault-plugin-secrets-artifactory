@@ -124,7 +124,7 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("url is required"), nil
 	}
 
-	go b.callHome(*config, "pathConfigRotateUpdate")
+	go b.sendUsage(*config, "pathConfigRotateUpdate")
 
 	err = b.getVersion(*config)
 	if err != nil {
@@ -157,7 +157,7 @@ func (b *backend) pathConfigDelete(ctx context.Context, req *logical.Request, _ 
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.callHome(*config, "pathConfigDelete")
+	go b.sendUsage(*config, "pathConfigDelete")
 
 	if err := req.Storage.Delete(ctx, "config/admin"); err != nil {
 		return nil, err
@@ -179,7 +179,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.callHome(*config, "pathConfigRead")
+	go b.sendUsage(*config, "pathConfigRead")
 
 	// I'm not sure if I should be returning the access token, so I'll hash it.
 	accessTokenHash := sha256.Sum256([]byte(config.AccessToken))
