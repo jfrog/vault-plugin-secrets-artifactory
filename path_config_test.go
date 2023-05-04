@@ -19,9 +19,115 @@ func TestAcceptanceBackend_PathConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	t.Run("notConfigured", accTestEnv.PathConfigReadUnconfigured)
 	t.Run("update", accTestEnv.UpdatePathConfig)
 	t.Run("read", accTestEnv.ReadPathConfig)
+	t.Run("expiringTokens", accTestEnv.PathConfigUpdateExpiringTokens)
+	t.Run("usernameTemplate", accTestEnv.PathConfigUpdateUsernameTemplate)
 	t.Run("delete", accTestEnv.DeletePathConfig)
+	t.Run("errors", accTestEnv.PathConfigUpdateErrors)
+	t.Run("badAccessToken", accTestEnv.PathConfigReadBadAccessToken)
+
+}
+
+func (e *accTestEnv) PathConfigReadUnconfigured(t *testing.T) {
+	resp, err := e.read("config/admin")
+	assert.Contains(t, resp.Data["error"], "backend not configured")
+	assert.NoError(t, err)
+}
+
+func (e *accTestEnv) PathConfigUpdateExpiringTokens(t *testing.T) {
+	// Boolean (not working as expected)
+	e.UpdateConfigAdmin(t, testData{
+		"use_expiring_tokens": true,
+	})
+	data := e.ReadConfigAdmin(t)
+	assert.Equal(t, data["use_expiring_tokens"], true)
+	e.UpdateConfigAdmin(t, testData{
+		"use_expiring_tokens": false,
+	})
+	data = e.ReadConfigAdmin(t)
+	assert.Equal(t, data["use_expiring_tokens"], false)
+	// String
+	e.UpdateConfigAdmin(t, testData{
+		"use_expiring_tokens": "true",
+	})
+	data = e.ReadConfigAdmin(t)
+	assert.Equal(t, data["use_expiring_tokens"], true)
+	e.UpdateConfigAdmin(t, testData{
+		"use_expiring_tokens": "false",
+	})
+	data = e.ReadConfigAdmin(t)
+	assert.Equal(t, data["use_expiring_tokens"], false)
+	// Fail Tests
+	resp, err := e.update("config/admin", testData{
+		"use_expiring_tokens": "Sure, why not",
+	})
+	assert.NotNil(t, resp)
+	assert.Contains(t, resp.Data["error"], "error parsing use_expired_tokens string to bool")
+	assert.ErrorContains(t, err, "strconv.ParseBool")
+}
+
+func (e *accTestEnv) PathConfigUpdateUsernameTemplate(t *testing.T) {
+	usernameTemplate := "v_{{.DisplayName}}_{{.RoleName}}_{{random 10}}_{{unix_time}}"
+	e.UpdateConfigAdmin(t, testData{
+		"username_template": usernameTemplate,
+	})
+	data := e.ReadConfigAdmin(t)
+	assert.Equal(t, data["username_template"], usernameTemplate)
+
+	// Bad Template
+	resp, err := e.update("config/admin", testData{
+		"username_template": "bad_{{ .somethingInvalid }}_testing {{",
+	})
+	assert.NotNil(t, resp)
+	assert.Contains(t, resp.Data["error"], "username_template error")
+	assert.ErrorContains(t, err, "username_template")
+}
+
+// most of these were covered by unit tests, but we want test coverage for acceptance
+func (e *accTestEnv) PathConfigUpdateErrors(t *testing.T) {
+	// Access Token Required
+	resp, err := e.update("config/admin", testData{
+		"url": e.URL,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.True(t, resp.IsError())
+	assert.Contains(t, resp.Error().Error(), "access_token")
+	// URL Required
+	resp, err = e.update("config/admin", testData{
+		"access_token": "test-access-token",
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.True(t, resp.IsError())
+	assert.Contains(t, resp.Error().Error(), "url")
+	// Bad Token
+	resp, err = e.update("config/admin", testData{
+		"access_token": "test-access-token",
+		"url":          e.URL,
+	})
+	assert.NotNil(t, resp)
+	assert.True(t, resp.IsError())
+	assert.Contains(t, resp.Error().Error(), "Unable to get Artifactory Version")
+	assert.ErrorContains(t, err, "could not get the system version")
+}
+
+func (e *accTestEnv) PathConfigReadBadAccessToken(t *testing.T) {
+	// Forcibly set a bad token
+	entry, err := logical.StorageEntryJSON("config/admin", adminConfiguration{
+		AccessToken:    "bogus.token",
+		ArtifactoryURL: e.URL,
+	})
+	assert.NoError(t, err)
+	err = e.Storage.Put(e.Context, entry)
+	assert.NoError(t, err)
+	resp, err := e.read("config/admin")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	// Otherwise success, we don't need to re-test for this
 }
 
 func TestBackend_AccessTokenRequired(t *testing.T) {
