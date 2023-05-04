@@ -4,4 +4,4 @@
 
 .DS_Store
 dist/
-coverage.txt
+/coverage.*
