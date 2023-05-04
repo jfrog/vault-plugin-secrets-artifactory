@@ -57,6 +57,11 @@ acceptance:
 	export JFROG_ACCESS_TOKEN=$(JFROG_ACCESS_TOKEN) && \
 		go test -run TestAcceptance -cover -coverprofile=coverage.txt -v -p 1 -timeout 5m ./...
 
+alltests:
+	export VAULT_ACC=true && \
+	export JFROG_ACCESS_TOKEN=$(JFROG_ACCESS_TOKEN) && \
+		go test -cover -coverprofile=coverage.out -v -p 1 -timeout 5m ./...
+
 clean:
 	rm -f $(PLUGIN_DIR)/$(PLUGIN_FILE)
 

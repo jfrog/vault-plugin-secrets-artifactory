@@ -55,6 +55,33 @@ func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
 	return resp.TokenId, resp.AccessToken
 }
 
+// createNewNonAdminTestToken creates a new "user" token using the one from test environment
+// primarily used to fail tests
+func (e *accTestEnv) createNewNonAdminTestToken(t *testing.T) (string, string) {
+	config := adminConfiguration{
+		AccessToken:    e.AccessToken,
+		ArtifactoryURL: e.URL,
+	}
+
+	role := artifactoryRole{
+		GrantType: "client_credentials",
+		Username:  "notTheAdmin",
+		Scope:     "applied-permissions/groups:readers",
+	}
+
+	err := e.Backend.(*backend).getVersion(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := e.Backend.(*backend).CreateToken(config, role)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return resp.TokenId, resp.AccessToken
+}
+
 func (e *accTestEnv) revokeTestToken(t *testing.T, accessToken string, tokenID string) {
 	config := adminConfiguration{
 		AccessToken:    e.AccessToken,
@@ -88,13 +115,7 @@ func (e *accTestEnv) UpdatePathConfig(t *testing.T) {
 
 // UpdateConfigAdmin will send a POST/PUT to the /config/admin endpoint with testData (vault write artifactory/config/admin)
 func (e *accTestEnv) UpdateConfigAdmin(t *testing.T, data testData) {
-	resp, err := e.Backend.HandleRequest(e.Context, &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config/admin",
-		Storage:   e.Storage,
-		Data:      data,
-	})
-
+	resp, err := e.update("config/admin", data)
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
 }
@@ -105,11 +126,7 @@ func (e *accTestEnv) ReadPathConfig(t *testing.T) {
 
 // ReadConfigAdmin will send a GET to the /config/admin endpoint (vault read artifactory/config/admin)
 func (e *accTestEnv) ReadConfigAdmin(t *testing.T) testData {
-	resp, err := e.Backend.HandleRequest(e.Context, &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "config/admin",
-		Storage:   e.Storage,
-	})
+	resp, err := e.read("config/admin")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -133,17 +150,30 @@ func (e *accTestEnv) DeleteConfigAdmin(t *testing.T) {
 	assert.Nil(t, resp)
 }
 
-// UpdateConfigRotate will send a POST/PUT to the /config/rotate endpoint with testData (vault write artifactory/config/rotate)
+// UpdateConfigRotate will send a POST/PUT to the /config/rotate endpoint with testData (vault write artifactory/config/rotate) and test for errors
 func (e *accTestEnv) UpdateConfigRotate(t *testing.T, data testData) {
-	resp, err := e.Backend.HandleRequest(e.Context, &logical.Request{
+	resp, err := e.update("config/rotate", data)
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+}
+
+// read will send a GET  to "path"
+func (e *accTestEnv) read(path string) (*logical.Response, error) {
+	return e.Backend.HandleRequest(e.Context, &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config/admin",
+		Storage:   e.Storage,
+	})
+}
+
+// update will send a POST/PUT to "path" with testData
+func (e *accTestEnv) update(path string, data testData) (*logical.Response, error) {
+	return e.Backend.HandleRequest(e.Context, &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/rotate",
+		Path:      path,
 		Storage:   e.Storage,
 		Data:      data,
 	})
-
-	assert.NoError(t, err)
-	assert.Nil(t, resp)
 }
 
 func (e *accTestEnv) CreatePathRole(t *testing.T) {
