@@ -356,7 +356,6 @@ type Usage struct {
 }
 
 func (b *backend) callHome(config adminConfiguration, featureId string) {
-	b.Backend.Logger().Debug("callHome")
 	features := []Feature{
 		{
 			FeatureId: featureId,
