@@ -14,7 +14,7 @@ if [ $ARTIFACTORY_VERSION == "latest" ]; then
   REPO_HOST=$(echo $ARTIFACTORY_REPO | cut -d/ -f1)
   REPO_PATH=$(echo $ARTIFACTORY_REPO | cut -d/ -f2-)
   ARTIFACTORY_VERSION=$(curl -u anonymous: -sS "https://${REPO_HOST}/v2/${REPO_PATH}/${ARTIFACTORY_IMAGE}/tags/list" \
-    | jq -er '.tags | map(select(. | index("latest") | not)) | sort_by(values | split(".") | map(tonumber)) | last')
+    | jq -er '.tags | map(select(. | test("^[0-9.]+"))) | sort_by(values | split(".") | map(tonumber)) | last')
 fi
 
 echo "ARTIFACTORY_IMAGE=${ARTIFACTORY_IMAGE}" > /dev/stderr
