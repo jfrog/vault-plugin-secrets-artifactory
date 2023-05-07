@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 ## Heavily borrowed from: https://github.com/jfrog/terraform-provider-artifactory/tree/master/scripts
-set -eo pipefail
+set -euo pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" > /dev/null && pwd )"
 source "${SCRIPT_DIR}/wait-for-rt.sh"
 
-ARTIFACTORY_REPO="${ARTIFACTORY_REPO:-releases-docker.jfrog.io/jfrog}"
-ARTIFACTORY_IMAGE="${ARTIFACTORY_IMAGE:-artifactory-jcr}"
-ARTIFACTORY_VERSION=${ARTIFACTORY_VERSION:-$(awk -F: '/FROM/ {print $2}' ${SCRIPT_DIR}/Dockerfile)}
+: "${ARTIFACTORY_REPO:=releases-docker.jfrog.io/jfrog}"
+: "${ARTIFACTORY_IMAGE:=artifactory-jcr}"
+: "${ARTIFACTORY_VERSION:=$(awk -F: '/FROM/ {print $2}' ${SCRIPT_DIR}/Dockerfile)}"
+
+# workaround for issue with artifactory-jcr on arm64
+if test `uname -m` = "arm64" && test "${ARTIFACTORY_IMAGE}" = "artifactory-jcr"; then
+  echo "Switching ARTIFACTORY_IMAGE to oss due to known issue on Apple Silicon and jcr" > /dev/stderr
+  ARTIFACTORY_IMAGE="artifactory-oss"
+fi
 
 # Get actual version for latest
 if [ $ARTIFACTORY_VERSION == "latest" ]; then
