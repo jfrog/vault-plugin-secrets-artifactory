@@ -123,6 +123,8 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("url is required"), nil
 	}
 
+	go b.sendUsage(*config, "pathConfigRotateUpdate")
+
 	err = b.getVersion(*config)
 	if err != nil {
 		return logical.ErrorResponse("Unable to get Artifactory Version, check url and access_token."), err
@@ -145,6 +147,17 @@ func (b *backend) pathConfigDelete(ctx context.Context, req *logical.Request, _ 
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
+	config, err := b.fetchAdminConfiguration(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	if config == nil {
+		return logical.ErrorResponse("backend not configured"), nil
+	}
+
+	go b.sendUsage(*config, "pathConfigDelete")
+
 	if err := req.Storage.Delete(ctx, "config/admin"); err != nil {
 		return nil, err
 	}
@@ -164,6 +177,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 	if config == nil {
 		return logical.ErrorResponse("backend not configured"), nil
 	}
+
+	go b.sendUsage(*config, "pathConfigRead")
 
 	// I'm not sure if I should be returning the access token, so I'll hash it.
 	accessTokenHash := sha256.Sum256([]byte(config.AccessToken))

@@ -179,10 +179,8 @@ func TestBackend_AccessTokenAsSHA256(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder(
-		"GET",
-		"http://myserver.com:80/artifactory/api/system/version",
-		httpmock.NewStringResponder(200, artVersion))
+	mockArtifactoryUsageVersionRequests("")
+
 	httpmock.RegisterResponder(
 		"GET",
 		"http://myserver.com:80/access/api/v1/cert/root",

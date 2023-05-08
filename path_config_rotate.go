@@ -46,6 +46,8 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
+	go b.sendUsage(*config, "pathConfigRotateWrite")
+
 	oldAccessToken := config.AccessToken
 
 	// Parse Current Token (to get tokenID/scope)

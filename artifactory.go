@@ -26,7 +26,6 @@ const (
 var ErrIncompatibleVersion = errors.New("incompatible version")
 
 func (b *backend) RevokeToken(config adminConfiguration, secret logical.Secret) error {
-
 	accessToken := secret.InternalData["access_token"].(string)
 	tokenId := secret.InternalData["token_id"].(string)
 
@@ -347,6 +346,43 @@ func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate
 	return
 }
 
+type Feature struct {
+	FeatureId string `json:"featureId"`
+}
+
+type Usage struct {
+	ProductId string    `json:"productId"`
+	Features  []Feature `json:"features"`
+}
+
+func (b *backend) sendUsage(config adminConfiguration, featureId string) {
+	features := []Feature{
+		{
+			FeatureId: featureId,
+		},
+	}
+
+	usage := Usage{
+		productId,
+		features,
+	}
+
+	jsonReq, err := json.Marshal(usage)
+	if err != nil {
+		b.Backend.Logger().Info("error marshalling call home request", "err", err)
+		return
+	}
+
+	resp, err := b.performArtifactoryPostWithJSON(config, "artifactory/api/system/usage", jsonReq)
+	if err != nil {
+		b.Backend.Logger().Info("error making call home request", "response", resp, "err", err)
+		return
+	}
+
+	//noinspection GoUnhandledErrorResult
+	defer resp.Body.Close()
+}
+
 func (b *backend) performArtifactoryGet(config adminConfiguration, path string) (*http.Response, error) {
 	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
 	if err != nil {
@@ -360,7 +396,7 @@ func (b *backend) performArtifactoryGet(config adminConfiguration, path string) 
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", "art-secrets-plugin")
+	req.Header.Set("User-Agent", productId)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
@@ -382,6 +418,7 @@ func (b *backend) performArtifactoryPost(config adminConfiguration, path string,
 		return nil, err
 	}
 
+	req.Header.Set("User-Agent", productId)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
@@ -404,6 +441,7 @@ func (b *backend) performArtifactoryPostWithJSON(config adminConfiguration, path
 		return nil, err
 	}
 
+	req.Header.Set("User-Agent", productId)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/json")
 
@@ -428,7 +466,7 @@ func (b *backend) performArtifactoryDelete(config adminConfiguration, path strin
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", "art-secrets-plugin")
+	req.Header.Set("User-Agent", productId)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 

@@ -62,6 +62,8 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
+	go b.sendUsage(*config, "pathTokenCreatePerform")
+
 	// Read in the requested role
 	roleName := data.Get("role").(string)
 
