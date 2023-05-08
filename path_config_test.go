@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -37,7 +38,7 @@ func (e *accTestEnv) PathConfigReadUnconfigured(t *testing.T) {
 }
 
 func (e *accTestEnv) PathConfigUpdateExpiringTokens(t *testing.T) {
-	// Boolean (not working as expected)
+	// Boolean
 	e.UpdateConfigAdmin(t, testData{
 		"use_expiring_tokens": true,
 	})
@@ -64,8 +65,8 @@ func (e *accTestEnv) PathConfigUpdateExpiringTokens(t *testing.T) {
 		"use_expiring_tokens": "Sure, why not",
 	})
 	assert.NotNil(t, resp)
-	assert.Contains(t, resp.Data["error"], "error parsing use_expired_tokens string to bool")
-	assert.ErrorContains(t, err, "strconv.ParseBool")
+	assert.Regexp(t, regexp.MustCompile("Field validation failed: error converting input .* strconv.ParseBool: parsing .*: invalid syntax"), resp.Data["error"])
+	assert.Nil(t, err)
 }
 
 func (e *accTestEnv) PathConfigUpdateUsernameTemplate(t *testing.T) {

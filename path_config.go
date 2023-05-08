@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -30,7 +29,7 @@ func (b *backend) pathConfig() *framework.Path {
 				Description: "Optional. Vault Username Template for dynamically generating usernames.",
 			},
 			"use_expiring_tokens": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeBool,
 				Description: "Optional. If Artifactory version >= 7.50.3, set expires_in to max_ttl and force_revocable.",
 			},
 		},
@@ -104,15 +103,7 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 	}
 
 	if val, ok := data.GetOk("use_expiring_tokens"); ok {
-		switch exp := val.(type) {
-		case bool:
-			config.UseExpiringTokens = exp
-		case string:
-			config.UseExpiringTokens, err = strconv.ParseBool(exp)
-			if err != nil {
-				return logical.ErrorResponse("error parsing use_expired_tokens string to bool"), err
-			}
-		}
+		config.UseExpiringTokens = val.(bool)
 	}
 
 	if config.AccessToken == "" {
