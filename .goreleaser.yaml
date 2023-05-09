@@ -32,8 +32,7 @@ builds:
 snapshot:
   name_template: '{{ .Version }}'
 archives:
-  - format: zip
-    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+  - format: binary
 signs:
   - artifacts: checksum
     args:
