@@ -1,20 +1,37 @@
 #!/usr/bin/env bash
 ## Heavily borrowed from: https://github.com/jfrog/terraform-provider-artifactory/tree/master/scripts
-set -eo pipefail
+set -euo pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" > /dev/null && pwd )"
 source "${SCRIPT_DIR}/wait-for-rt.sh"
 
-ARTIFACTORY_REPO="${ARTIFACTORY_REPO:-releases-docker.jfrog.io/jfrog}"
-ARTIFACTORY_IMAGE="${ARTIFACTORY_IMAGE:-artifactory-jcr}"
-ARTIFACTORY_VERSION=${ARTIFACTORY_VERSION:-$(awk -F: '/FROM/ {print $2}' ${SCRIPT_DIR}/Dockerfile)}
+: "${ARTIFACTORY_REPO:=releases-docker.jfrog.io/jfrog}"
+: "${ARTIFACTORY_IMAGE:=artifactory-jcr}"
+: "${ARTIFACTORY_VERSION:=$(awk -F: '/FROM/ {print $2}' ${SCRIPT_DIR}/Dockerfile)}"
+
+# workaround for issue with artifactory-jcr on arm64
+if test `uname -m` = "arm64" && test "${ARTIFACTORY_IMAGE}" = "artifactory-jcr"; then
+  echo "Switching ARTIFACTORY_IMAGE to oss due to known issue on Apple Silicon and jcr" > /dev/stderr
+  ARTIFACTORY_IMAGE="artifactory-oss"
+fi
 
 # Get actual version for latest
 if [ $ARTIFACTORY_VERSION == "latest" ]; then
-  REPO_HOST=$(echo $ARTIFACTORY_REPO | cut -d/ -f1)
-  REPO_PATH=$(echo $ARTIFACTORY_REPO | cut -d/ -f2-)
-  ARTIFACTORY_VERSION=$(curl -u anonymous: -sS "https://${REPO_HOST}/v2/${REPO_PATH}/${ARTIFACTORY_IMAGE}/tags/list" \
-    | jq -er '.tags | map(select(. | index("latest") | not)) | sort_by(values | split(".") | map(tonumber)) | last')
+  # The code below should work, but JFrog's docker repo is not reporting all the tags properly
+  # REPO_HOST=$(echo $ARTIFACTORY_REPO | cut -d/ -f1)
+  # REPO_PATH=$(echo $ARTIFACTORY_REPO | cut -d/ -f2-)
+  # curl -u anonymous: -sS "https://${REPO_HOST}/v2/${REPO_PATH}/${ARTIFACTORY_IMAGE}/tags/list?page_size=1000"
+  # exit 1
+  # ARTIFACTORY_VERSION=$(curl -u anonymous: -sS "https://${REPO_HOST}/v2/${REPO_PATH}/${ARTIFACTORY_IMAGE}/tags/list?page_size=1000" \
+  #   | jq -er '.tags | map(select(. | test("^[0-9.]+"))) | sort_by(values | split(".") | map(tonumber)) | last')
+  
+  # Instead, lets parse the response from artifactory
+  # Set the URL of the JFrog Artifactory self-hosted repository
+  URL="https://releases.jfrog.io/artifactory/artifactory-pro/org/artifactory/pro/docker/jfrog-artifactory-pro/"
+  # Get the list of available versions
+  VERSIONS=$(curl -s ${URL} | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+  # Get the latest version
+  ARTIFACTORY_VERSION=$(echo "${VERSIONS}" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1)
 fi
 
 echo "ARTIFACTORY_IMAGE=${ARTIFACTORY_IMAGE}" > /dev/stderr
