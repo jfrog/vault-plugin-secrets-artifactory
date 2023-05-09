@@ -1,3 +1,8 @@
+## 0.3.0 (May 10, 2023)
+
+IMPROVEMENTS:
+- Update release process to publish the binaries directly (without zipping). The checksums file now contain checksums for the binaries (vs the zip file). Issue: [#81](https://github.com/jfrog/artifactory-secrets-plugin/issues/81) PR: [#99](https://github.com/jfrog/artifactory-secrets-plugin/pull/99)
+
 ## 0.2.17 (April 25, 2023)
 
 IMPROVEMENTS:
@@ -57,13 +62,13 @@ IMPROVEMENTS:
 - Switch to using POSTing JSON (instead of form) when creating token.
 - `expires_in` and `force_revocable` fields are now opt-in.
 
-Issue: [#50](https://github.com/jfrog/artifactory-secrets-plugin/pull/50) PR: [#52](https://github.com/jfrog/artifactory-secrets-plugin/pull/52)
+Issue: [#50](https://github.com/jfrog/artifactory-secrets-plugin/issues/50) PR: [#52](https://github.com/jfrog/artifactory-secrets-plugin/pull/52)
 
 ## 0.2.10 (March 13, 2023)
 
 BUG FIXES:
 
-- Temporarily disable `force_revocable` due to revoke token failing. Issue: [#50](https://github.com/jfrog/artifactory-secrets-plugin/pull/50) PR: [#51](https://github.com/jfrog/artifactory-secrets-plugin/pull/51)
+- Temporarily disable `force_revocable` due to revoke token failing. Issue: [#50](https://github.com/jfrog/artifactory-secrets-plugin/issues/50) PR: [#51](https://github.com/jfrog/artifactory-secrets-plugin/pull/51)
 
 ## 0.2.9 (March 13, 2023)
 
