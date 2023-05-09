@@ -96,7 +96,7 @@ vault write -f artifactory/config/admin
 
 ### Using pre-built releases
 
-You can find pre-built releases of the plugin [here][artreleases]. Once you have downloaded the latest archive corresponding to your target OS, unzip it to retrieve the `artifactory-secrets-plugin` binary file.
+You can find pre-built releases of the plugin [here][artreleases] and download the latest binary file corresponding to your target OS.
 
 ### From Sources
 
@@ -129,16 +129,42 @@ vault plugin register \
   secret artifactory
 ```
 
-* NOTE: you may need to also add arguments to the registration like `-args="-ca-cert ca.pem` or something insecure like: `-args="-tls-skip-verify"` depending on your environment. (see `./path/to/plugins/artifactory -help` for all the options)
+> **Note**
+> you may need to also add arguments to the registration like `-args="-ca-cert ca.pem` or something insecure like: `-args="-tls-skip-verify"` depending on your environment. (see `./path/to/plugins/artifactory -help` for all the options)
 
 > **Note**
-> This inline checksum calculation above is provided for illustration purpose and does not validate your binary. It should **not** be used for production environment. At minimum, you should use the checksum provided as [part of the release](https://github.com/jfrog/artifactory-secrets-plugin/releases).
+> This inline checksum calculation above is provided for illustration purpose and does not validate your binary. It should **not** be used for production environment. Instead you should use the checksum provided as [part of the release](https://github.com/jfrog/artifactory-secrets-plugin/releases). See [How to verify binary checksums](#how-to-verify-binary-checksums) section.
 
 You can now enable the Artifactory secrets plugin:
 
 ```sh
 vault secrets enable artifactory
 ```
+
+### How to verify binary checksums
+
+Checksums for each binary are provided in the `artifactory-secrets-plugin_<version>_checksums.txt` file. It is signed with the public key `artifactory-secrets-plugin-public-key.asc` which creates the signature file `artifactory-secrets-plugin_<version>_checksums.txt.sig`.
+
+If the public key is not in your GPG keychain, import it:
+```sh
+gpg --import artifactory-secrets-plugin-public-key.asc
+```
+
+Then verify the checksums file signature:
+
+```sh
+gpg --verify artifactory-secrets-plugin_<version>_checksums.txt.sig
+```
+
+You should see something like the following:
+```sh
+gpg: assuming signed data in 'artifactory-secrets-plugin_0.2.17_checksums.txt'
+gpg: Signature made Mon May  8 14:22:12 2023 PDT
+gpg:                using RSA key ED4FF1CD6C2318B470A33A1659FE1520A4A355CD
+gpg: Good signature from "Alex Hung <alexh@jfrog.com>" [ultimate]
+```
+
+With the checksums file verified, you can now safely use the SHA256 checkum inside as part of the Vault plugin registration (vs calling `sha256sum`).
 
 ### Artifactory
 
