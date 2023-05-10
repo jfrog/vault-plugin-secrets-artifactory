@@ -111,22 +111,29 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 }
 
 func (b *backend) InitializeHttpClient(config *adminConfiguration) {
+	if config.BypassArtifactoryTLSVerification {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: config.BypassArtifactoryTLSVerification,
+			},
+		}
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: config.BypassArtifactoryTLSVerification,
-		},
+		b.httpClient = &http.Client{Transport: tr}
+	} else {
+		b.httpClient = http.DefaultClient
 	}
-
-	b.httpClient = &http.Client{Transport: tr}
 }
 
+// invalidate clears an existing client configuration in
+// the backend
 func (b *backend) invalidate(ctx context.Context, key string) {
 	if key == "config" {
 		b.reset()
 	}
 }
 
+// reset clears any client configuration for a new
+// backend to be configured
 func (b *backend) reset() {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()

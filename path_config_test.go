@@ -24,7 +24,7 @@ func TestAcceptanceBackend_PathConfig(t *testing.T) {
 	t.Run("update", accTestEnv.UpdatePathConfig)
 	t.Run("read", accTestEnv.ReadPathConfig)
 	t.Run("expiringTokens", accTestEnv.PathConfigUpdateExpiringTokens)
-	t.Run("expiringTokens", accTestEnv.PathConfigUpdateBypassArtifactoryTLSVerification)
+	t.Run("bypassArtifactoryTLSVerification", accTestEnv.PathConfigUpdateBypassArtifactoryTLSVerification)
 	t.Run("usernameTemplate", accTestEnv.PathConfigUpdateUsernameTemplate)
 	t.Run("delete", accTestEnv.DeletePathConfig)
 	t.Run("errors", accTestEnv.PathConfigUpdateErrors)
@@ -51,26 +51,26 @@ func (e *accTestEnv) pathConfigUpdateBooleanField(t *testing.T, fieldName string
 		fieldName: true,
 	})
 	data := e.ReadConfigAdmin(t)
-	assert.Equal(t, data[fieldName], true)
+	assert.Equal(t, true, data[fieldName])
 
 	e.UpdateConfigAdmin(t, testData{
 		fieldName: false,
 	})
 	data = e.ReadConfigAdmin(t)
-	assert.Equal(t, data[fieldName], false)
+	assert.Equal(t, false, data[fieldName])
 
 	// String
 	e.UpdateConfigAdmin(t, testData{
 		fieldName: "true",
 	})
 	data = e.ReadConfigAdmin(t)
-	assert.Equal(t, data[fieldName], true)
+	assert.Equal(t, true, data[fieldName])
 
 	e.UpdateConfigAdmin(t, testData{
 		fieldName: "false",
 	})
 	data = e.ReadConfigAdmin(t)
-	assert.Equal(t, data[fieldName], false)
+	assert.Equal(t, false, data[fieldName])
 
 	// Fail Tests
 	resp, err := e.update("config/admin", testData{

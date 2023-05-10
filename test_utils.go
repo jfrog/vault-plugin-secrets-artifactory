@@ -42,6 +42,8 @@ func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
 		Scope:     "applied-permissions/admin",
 	}
 
+	e.Backend.(*backend).InitializeHttpClient(&config)
+
 	err := e.Backend.(*backend).getVersion(config)
 	if err != nil {
 		t.Fatal(err)

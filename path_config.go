@@ -191,9 +191,10 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 	accessTokenHash := sha256.Sum256([]byte(config.AccessToken))
 
 	configMap := map[string]interface{}{
-		"access_token_sha256": fmt.Sprintf("%x", accessTokenHash[:]),
-		"url":                 config.ArtifactoryURL,
-		"version":             b.version,
+		"access_token_sha256":                 fmt.Sprintf("%x", accessTokenHash[:]),
+		"url":                                 config.ArtifactoryURL,
+		"version":                             b.version,
+		"bypass_artifactory_tls_verification": config.BypassArtifactoryTLSVerification,
 	}
 
 	// Optionally include username_template
