@@ -42,6 +42,8 @@ func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
 		Scope:     "applied-permissions/admin",
 	}
 
+	e.Backend.(*backend).InitializeHttpClient(&config)
+
 	err := e.Backend.(*backend).getVersion(config)
 	if err != nil {
 		t.Fatal(err)
@@ -282,8 +284,9 @@ func NewConfiguredAcceptanceTestEnv(t *testing.T) (e *accTestEnv) {
 
 	// setup new path configuration
 	e.UpdateConfigAdmin(t, testData{
-		"access_token": accessToken,
-		"url":          e.URL,
+		"access_token":                        accessToken,
+		"url":                                 e.URL,
+		"bypass_artifactory_tls_verification": false,
 	})
 
 	return

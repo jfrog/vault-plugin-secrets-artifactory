@@ -1,14 +1,23 @@
+## 0.3.1 (May 11, 2023)
+
+IMPROVEMENTS:
+
+- Add new, optional, field `bypass_artifactory_tls_verification` to `config/admin` path. This allows bypassing TLS connection verification with Artifactory instance. PR: [#100](https://github.com/jfrog/artifactory-secrets-plugin/pull/100)
+
 ## 0.3.0 (May 10, 2023)
 
 IMPROVEMENTS:
+
 - Update release process to publish the binaries directly (without zipping). The checksums file now contain checksums for the binaries (vs the zip file). Issue: [#81](https://github.com/jfrog/artifactory-secrets-plugin/issues/81) PR: [#99](https://github.com/jfrog/artifactory-secrets-plugin/pull/99)
 
 ## 0.2.17 (April 25, 2023)
 
 IMPROVEMENTS:
+
 - Add support for optional `username` and `description` to token rotation. PR: [#85](https://github.com/jfrog/artifactory-secrets-plugin/pull/85)
 
 BUG FIXES:
+
 - Fix premature export of `JFROG_ACCESS_TOKEN` env var in makefile. PR: [#77](https://github.com/jfrog/artifactory-secrets-plugin/pull/77)
 - Fix parsing of admin usernames with `/`. PR: [#78](https://github.com/jfrog/artifactory-secrets-plugin/pull/78)
 - Additional makefile fixes. PR: [#79](https://github.com/jfrog/artifactory-secrets-plugin/pull/79)

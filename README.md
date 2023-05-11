@@ -198,7 +198,7 @@ vault write artifactory/config/admin \
     access_token=$TOKEN
 ```
 
-* OPTIONAL, but recommended: Rotate the admin token, so that only vault knows it.
+* OPTIONAL, but recommended: Rotate the admin token, so that only Vault knows it.
 
 ```sh
 vault write -f artifactory/config/rotate
@@ -209,7 +209,20 @@ vault write -f artifactory/config/rotate
 **ALSO** If you want to change the username for the admin token (tired of it just being "admin"?) or set a "Description" on the token, those parameters are optionally
 available on the `artifactory/config/rotate` endpoint.
 
-> `vault write artifactory/config/rotate username="new-username" description="A token used by vault-secrets-engine on our vault server"`
+```sh
+vault write artifactory/config/rotate username="new-username" description="A token used by vault-secrets-engine on our vault server"`
+```
+
+#### Bypass TLS connection verification with Artifactory
+
+To bypass TLS connection verification with Artifactory, set `bypass_artifactory_tls_verification` to `true`, e.g.
+
+```sh
+vault write artifactory/config/admin \
+    url=https://artifactory.example.org \
+    access_token=$TOKEN \
+    bypass_artifactory_tls_verification=true
+```
 
 * OPTIONAL: Check the results:
 
@@ -220,15 +233,16 @@ vault read artifactory/config/admin
 Example output:
 
 ```console
-Key                    Value
----                    -----
-access_token_sha256    74834a86b2082750201e2a1e520f21f7bfc7d4026e5bd2b075ca2d0699b7c4e3
-scope                  applied-permissions/admin
-token_id               db0002b0-af08-486c-bbad-b255a3cc7b31
-url                    http://localhost:8082
-use_expiring_tokens    false
-username               vault-admin
-version                7.55.6
+Key                                 Value
+---                                 -----
+access_token_sha256                 74834a86b2082750201e2a1e520f21f7bfc7d4026e5bd2b075ca2d0699b7c4e3
+bypass_artifactory_tls_verification false
+scope                               applied-permissions/admin
+token_id                            db0002b0-af08-486c-bbad-b255a3cc7b31
+url                                 http://localhost:8082
+use_expiring_tokens                 false
+username                            vault-admin
+version                             7.55.6
 ```
 
 ## Usage
