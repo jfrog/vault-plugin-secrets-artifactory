@@ -1,4 +1,4 @@
-module github.com/jfrog/artifactory-secrets-plugin
+module github.com/jfrog/vault-plugin-secrets-artifactory
 
 go 1.18
 

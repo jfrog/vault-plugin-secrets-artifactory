@@ -104,7 +104,7 @@ If you prefer to build the plugin from sources, clone the GitHub repository loca
 
 See [Local Development Prerequisites](#local-development-prerequisites) section for pre-requisites.
 
-Upon successful compilation, the resulting `artifactory-secrets-plugin` binary is stored in the `dist/artifactory-secrets-plugin_<OS architecture>` directory.
+Upon successful compilation, the resulting `artifactory-secrets-plugin` binary is stored in the `dist/vault-plugin-secrets-artifactory_<OS architecture>` directory.
 
 ## Configuration
 
@@ -133,7 +133,7 @@ vault plugin register \
 > you may need to also add arguments to the registration like `-args="-ca-cert ca.pem` or something insecure like: `-args="-tls-skip-verify"` depending on your environment. (see `./path/to/plugins/artifactory -help` for all the options)
 
 > **Note**
-> This inline checksum calculation above is provided for illustration purpose and does not validate your binary. It should **not** be used for production environment. Instead you should use the checksum provided as [part of the release](https://github.com/jfrog/artifactory-secrets-plugin/releases). See [How to verify binary checksums](#how-to-verify-binary-checksums) section.
+> This inline checksum calculation above is provided for illustration purpose and does not validate your binary. It should **not** be used for production environment. Instead you should use the checksum provided as [part of the release](https://github.com/jfrog/vault-plugin-secrets-artifactory/releases). See [How to verify binary checksums](#how-to-verify-binary-checksums) section.
 
 You can now enable the Artifactory secrets plugin:
 
@@ -143,7 +143,7 @@ vault secrets enable artifactory
 
 ### How to verify binary checksums
 
-Checksums for each binary are provided in the `artifactory-secrets-plugin_<version>_checksums.txt` file. It is signed with the public key `artifactory-secrets-plugin-public-key.asc` which creates the signature file `artifactory-secrets-plugin_<version>_checksums.txt.sig`.
+Checksums for each binary are provided in the `artifactory-secrets-plugin_<version>_checksums.txt` file. It is signed with the public key `vault-plugin-secrets-artifactory-public-key.asc` which creates the signature file `artifactory-secrets-plugin_<version>_checksums.txt.sig`.
 
 If the public key is not in your GPG keychain, import it:
 ```sh
@@ -171,7 +171,7 @@ With the checksums file verified, you can now safely use the SHA256 checkum insi
 1. Log into the Artifactory UI as an "admin".
 1. Create the Access Token that Vault will use to interact with Artifactory. In Artifactory 7.x this can be done in the UI Administration (gear) -> User Management -> Access Tokens -> Generate Token.
     * Token Type: `Scoped Token`
-    * Description: (optional) `Vault-artifactory-secrets-plugin` (NOTE: This will be lost on admin token rotation, because it is not part of the token)
+    * Description: (optional) `vault-plugin-secrets-artifactory` (NOTE: This will be lost on admin token rotation, because it is not part of the token)
     * Token Scope: `Admin` **(IMPORTANT)**
     * User name: `vault-admin` (for example)
     * Service: `Artifactory` (or you can leave it on "All")
@@ -511,7 +511,7 @@ Copyright (c) 2023 JFrog.
 Apache 2.0 licensed, see [LICENSE][LICENSE] file.
 
 [LICENSE]: ./LICENSE
-[artreleases]: https://github.com/jfrog/artifactory-secrets-plugin/releases
+[artreleases]: https://github.com/jfrog/vault-plugin-secrets-artifactory/releases
 [vaultdocplugindir]: https://www.vaultproject.io/docs/configuration/index.html#plugin_directory
 [vaultdocplugincatalog]: https://www.vaultproject.io/docs/internals/plugins.html#plugin-catalog
 [artifactory-create-token]: https://www.jfrog.com/confluence/display/JFROG/JFrog+Platform+REST+API#JFrogPlatformRESTAPI-CreateToken

@@ -3,7 +3,7 @@ resources:
     type: GitRepo
     configuration:
       gitProvider: partnership_github
-      path: jfrog/artifactory-secrets-plugin # if path is modified, change the name as well, per Pipelines doc
+      path: {{.jfrog-pipelines.sourceRepository}}
       branches:
         include: master
       buildOn:
