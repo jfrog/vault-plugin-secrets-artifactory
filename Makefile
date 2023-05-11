@@ -10,7 +10,7 @@ GIT_SHORT_HASH := $(shell git rev-parse --short HEAD)
 CURRENT_VERSION := $(shell git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
 NEXT_VERSION := $(shell echo $(CURRENT_VERSION) | awk -F '.' '{print $$1 "." $$2 "." $$3 +1}')-dev+$(GIT_SHORT_HASH)
 
-PLUGIN_DIR := dist/artifactory-secrets-plugin_$(GORELEASER_ARCH)
+PLUGIN_DIR := dist/vault-plugin-secrets-artifactory_$(GORELEASER_ARCH)
 PLUGIN_FILE := artifactory-secrets-plugin
 PLUGIN_NAME ?= artifactory
 PLUGIN_VAULT_PATH ?= artifactory

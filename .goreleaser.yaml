@@ -14,7 +14,7 @@ builds:
       - -trimpath
     ldflags:
       # use 'go tool nm <path_to_binary> | grep Version' to find the Version variable path
-      - '-s -w -X github.com/jfrog/artifactory-secrets-plugin.Version=v{{ .Version }}'
+      - '-s -w -X github.com/jfrog/vault-plugin-secrets-artifactory.Version=v{{ .Version }}'
     goos:
       - freebsd
       - windows
@@ -28,11 +28,13 @@ builds:
     ignore:
       - goos: darwin
         goarch: '386'
-    binary: '{{ .ProjectName }}'
+    binary: artifactory-secrets-plugin
 snapshot:
   name_template: '{{ .Version }}'
 archives:
   - format: binary
+checksum:
+  name_template: 'artifactory-secrets-plugin_{{ .Version }}.checksums.txt'
 signs:
   - artifacts: checksum
     args:
@@ -47,7 +49,7 @@ signs:
       - "${artifact}"
 release:
   extra_files:
-    - glob: './artifactory-secrets-plugin-public-key.asc'
+    - glob: './vault-plugin-secrets-artifactory-public-key.asc'
   # If you want to manually examine the release before its live, uncomment this line:
   # draft: true
 changelog:
