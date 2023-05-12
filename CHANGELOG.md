@@ -1,3 +1,9 @@
+## 1.0.0 (May 12, 2023)
+
+BREAKING CHANGES:
+
+- GitHub repository renamed to 'vault-plugin-secrets-artifactory'. Issue: [#80](https://github.com/jfrog/artifactory-secrets-plugin/issues/80) PR: [#101](https://github.com/jfrog/artifactory-secrets-plugin/pull/101)
+
 ## 0.3.1 (May 11, 2023)
 
 IMPROVEMENTS:

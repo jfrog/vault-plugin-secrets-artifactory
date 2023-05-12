@@ -1,6 +1,8 @@
 # Vault Artifactory Secrets Plugin
 
-This plugin is now being actively maintained by JFrog Inc.Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and create github issues to ask for support
+This plugin is actively maintained by JFrog Inc. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and create GitHub issues to ask for feature requests and support.
+
+Contact [JFrog Support](https://jfrog.com/support/) for urgent, time sensitive issues.
 
 ----------------------------------------------------------------
 
@@ -31,7 +33,7 @@ This backend creates access tokens in Artifactory using the admin credentials pr
 
 Previous versions of this plugin required a static `username` associated to the roles. This is still supported for backwards compatibility, but you can now use a dynamically generated username, based on [Vault Username Templates][vault-username-templating]. The generated tokens will be associated to a username generated from the template `v-{{.RoleName}}-{{Random 8}})` (`v-jenkins-x4mohTA8`), by default. You can change this template by specifying a `username_template=` option to the `/artifactory/config/admin` endpoint. The "scope" in the role should be `applied-permissions/groups:(list-of-groups)`, since `applied-permissions/user` would require the username to exist ahead of time. The user will not show in the Users list, but will be dynamically created during the scope of the token. The username still needs to be compliant with [artifactory requirements][artifactory-create-token] (less than 255 characters). It will be converted to lowercase by the API.
 
-* Example:
+Example:
 
 ```sh
 vault write artifactory/config/admin username_template="v_{{.DisplayName}}_{{.RoleName}}_{{random 10}}_{{unix_time}}"
@@ -53,7 +55,7 @@ Example:
 vault write artifactory/config/admin use_expiring_tokens=true
 ```
 
-* Example Token Output:
+Example Token Output:
 
 ```console
 $ ACCESS_TOKEN=$(vault read -field access_token artifactory/token/test)
@@ -86,7 +88,7 @@ Token claims
 Some of the functionality of this plugin requires certain versions of Artifactory. For example, as of Artifactory 7.50.3, we can optionally set the `force_revocable` flag and set the expiration of the token to `max_ttl`.
 If you have upgraded Artifactory after installing this plugin, and would like to take advantage of newer features, you can issue an empty write to the `artifactory/config/admin` endpoint to re-detect the version, or it will re-detect upon reload.
 
-* Example:
+Example:
 
 ```sh
 vault write -f artifactory/config/admin
@@ -198,7 +200,7 @@ vault write artifactory/config/admin \
     access_token=$TOKEN
 ```
 
-* OPTIONAL, but recommended: Rotate the admin token, so that only Vault knows it.
+**OPTIONAL**, but recommended: Rotate the admin token, so that only Vault knows it.
 
 ```sh
 vault write -f artifactory/config/rotate
@@ -224,7 +226,7 @@ vault write artifactory/config/admin \
     bypass_artifactory_tls_verification=true
 ```
 
-* OPTIONAL: Check the results:
+OPTIONAL: Check the results:
 
 ```sh
 vault read artifactory/config/admin
@@ -247,7 +249,7 @@ version                             7.55.6
 
 ## Usage
 
-* Create a role (scope for artifactory >= 7.21.1)
+Create a role (scope for artifactory >= 7.21.1)
 
 ```sh
 vault write artifactory/roles/jenkins \
@@ -428,6 +430,16 @@ make: Nothing to be done for `artifactory'.
 
 This simply means that "make" thinks artifactory is already running due to the existence of the `./vault/artifactory.env` file.
 If you want to run a different version, first use `make stop_artifactory`. If you stopped artifactory using other means (docker), then `rm vault/artifactory.env` manually.
+
+----------------------------------------------------------------
+
+#### Register artifactory-secrets plugin with Vault server
+
+If you didn't run `make upgrade` (i.e. just `make build`), then you need to register the newly built plugin with the Vault server.
+
+```sh
+make register
+```
 
 ----------------------------------------------------------------
 
