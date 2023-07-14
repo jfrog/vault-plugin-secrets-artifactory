@@ -308,6 +308,16 @@ token_id           06d962b2-63e2-4279-a25d-d2a9cab6507f
 username           v-jenkins-x4mohTA8
 ```
 
+### User Token Path
+
+User tokens may be obtained from the `/artifactory/user_token/<user-name>` endpoint. This is useful in conjunction with [ACL Policy Path Templating](https://developer.hashicorp.com/vault/tutorials/policies/policy-templating) to allow users authenticated to Vault to obtain API tokens in Artfactory for their own account. Be careful to ensure that Vault authentication methods & policies align with user account names in Artifactory. For example the following policy allows users authenticated to the `azure-ad-oidc` authentication mount to obtain a token for Artifactory for themselves, assuming the `upn` metadata is populated in Vault during authentication.
+
+```
+path "artifactory/user_token/{{identity.entity.aliases.azure-ad-oidc.metadata.upn}}" {
+  capabilities = [ "read" ]
+}
+```
+
 ## Development
 
 ### Local Development Prerequisites
