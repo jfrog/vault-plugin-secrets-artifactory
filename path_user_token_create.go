@@ -52,7 +52,6 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	// TODO: This isn't documented AFAIK, will this new name be recognized?
 	go b.sendUsage(*config, "pathUserTokenCreatePerform")
 
 	role := &artifactoryRole{

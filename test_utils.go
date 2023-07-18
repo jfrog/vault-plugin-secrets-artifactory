@@ -243,6 +243,21 @@ func (e *accTestEnv) CreatePathToken(t *testing.T) {
 	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
 }
 
+func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "user_token/admin",
+		Storage:   e.Storage,
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotEmpty(t, resp.Data["access_token"])
+	assert.NotEmpty(t, resp.Data["token_id"])
+	assert.Equal(t, "admin", resp.Data["username"])
+	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
+}
+
 // Cleanup will delete the admin configuration and revoke the token
 func (e *accTestEnv) Cleanup(t *testing.T) {
 	data := e.ReadConfigAdmin(t)
