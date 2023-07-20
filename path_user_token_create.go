@@ -16,10 +16,6 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 				Type:        framework.TypeString,
 				Description: `Optional. Description for the user token.`,
 			},
-			"max_ttl": {
-				Type:        framework.TypeDurationSecond,
-				Description: `Override the maximum TTL for this access token. Cannot exceed smallest (system, backend) maximum TTL.`,
-			},
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: `Override the default TTL when issuing this access token. Cannot exceed smallest (system, backend, this request) maximum TTL.`,
@@ -58,19 +54,7 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		GrantType: "client_credentials",
 		Username:  data.Get("user").(string),
 		Scope:     "applied-permissions/user",
-	}
-
-	if value, ok := data.GetOk("max_ttl"); ok {
-		role.MaxTTL = time.Duration(value.(int)) * time.Second
-	} else {
-		role.MaxTTL = config.UserTokensMaxTTL
-	}
-
-	var ttl time.Duration
-	if value, ok := data.GetOk("ttl"); ok {
-		ttl = time.Second * time.Duration(value.(int))
-	} else {
-		ttl = role.DefaultTTL
+		MaxTTL:    config.UserTokensMaxTTL,
 	}
 
 	maxLeaseTTL := b.Backend.System().MaxLeaseTTL()
@@ -79,6 +63,13 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 	// - This value will be passed to createToken and used as expires_in for versions of Artifactory 7.50.3 or higher
 	if role.MaxTTL == 0 || role.MaxTTL > maxLeaseTTL {
 		role.MaxTTL = maxLeaseTTL
+	}
+
+	var ttl time.Duration
+	if value, ok := data.GetOk("ttl"); ok {
+		ttl = time.Second * time.Duration(value.(int))
+	} else {
+		ttl = role.DefaultTTL
 	}
 
 	if role.MaxTTL > 0 && ttl > role.MaxTTL {

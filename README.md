@@ -243,6 +243,9 @@ scope                               applied-permissions/admin
 token_id                            db0002b0-af08-486c-bbad-b255a3cc7b31
 url                                 http://localhost:8082
 use_expiring_tokens                 false
+user_tokens_audience
+user_tokens_default_ttl             0
+user_tokens_max_ttl                 0
 username                            vault-admin
 version                             7.55.6
 ```
