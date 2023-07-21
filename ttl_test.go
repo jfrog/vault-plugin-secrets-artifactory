@@ -138,7 +138,6 @@ func TestBackend_NoUserTokensMaxTTLUsesSystemMaxTTL(t *testing.T) {
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
 		"url":          "http://myserver.com:80/artifactory",
-		// No user_tokens_max_ttl
 	})
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -152,42 +151,21 @@ func TestBackend_NoUserTokensMaxTTLUsesSystemMaxTTL(t *testing.T) {
 	assert.EqualValues(t, config.System.MaxLeaseTTL(), resp.Secret.MaxTTL)
 }
 
-// With a user token max_ttl not greater than the system max ttl, the max ttl for a token must
-// be the user token max_ttl.
-func TestBackend_UserTokensWorkingWithBothMaxTTLs(t *testing.T) {
-
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	mockArtifactoryUsageVersionRequests("")
-
-	httpmock.RegisterResponder(
-		"POST",
-		"http://myserver.com:80/artifactory/api/security/token",
-		httpmock.NewStringResponder(200, canonicalAccessToken))
-
-	b, config := configuredBackend(t, map[string]interface{}{
-		"access_token":        "test-access-token",
-		"url":                 "http://myserver.com:80/artifactory",
-		"user_tokens_max_ttl": 9 * time.Minute,
-	})
-
+func SetUserTokenMaxTTL(t *testing.T, b *backend, storage logical.Storage, max_ttl time.Duration) {
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "user_token/admin",
-		Storage:   config.StorageView,
+		Operation: logical.UpdateOperation,
+		Path:      "config/user_token",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"max_ttl": max_ttl,
+		},
 	})
 	assert.NoError(t, err)
-	assert.NotNil(t, resp)
 	assert.False(t, resp.IsError())
-
-	assert.EqualValues(t, 9*time.Minute, resp.Secret.MaxTTL)
 }
 
-// With a user token max_ttl greater than the system max ttl, the max ttl for a token must
-// be the system max_ttl.
-func TestBackend_UserTokensSystemMaxTTLLimit(t *testing.T) {
-
+// Use system max_ttl if: user token config max_ttl > system max_ttl
+func TestBackend_UserTokenConfigMaxTTLUseSystem(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
@@ -199,10 +177,13 @@ func TestBackend_UserTokensSystemMaxTTLLimit(t *testing.T) {
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
 	b, config := configuredBackend(t, map[string]interface{}{
-		"access_token":        "test-access-token",
-		"url":                 "http://myserver.com:80/artifactory",
-		"user_tokens_max_ttl": 24 * 365 * 100 * time.Hour,
+		"access_token": "test-access-token",
+		"url":          "http://myserver.com:80/artifactory",
 	})
+
+	backend_max_ttl := b.System().MaxLeaseTTL()
+	user_token_config_ttl := backend_max_ttl + 1*time.Minute
+	SetUserTokenMaxTTL(t, b, config.StorageView, user_token_config_ttl)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -213,5 +194,178 @@ func TestBackend_UserTokensSystemMaxTTLLimit(t *testing.T) {
 	assert.NotNil(t, resp)
 	assert.False(t, resp.IsError())
 
-	assert.EqualValues(t, config.System.MaxLeaseTTL(), resp.Secret.MaxTTL)
+	assert.EqualValues(t, backend_max_ttl, resp.Secret.MaxTTL)
+}
+
+// Use user_token config max_ttl if: user token config max_ttl < system max_ttl
+func TestBackend_UserTokenConfigMaxTTLUseConfigMaxTTL(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	mockArtifactoryUsageVersionRequests("")
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com:80/artifactory/api/security/token",
+		httpmock.NewStringResponder(200, canonicalAccessToken))
+
+	b, config := configuredBackend(t, map[string]interface{}{
+		"access_token": "test-access-token",
+		"url":          "http://myserver.com:80/artifactory",
+	})
+
+	backend_max_ttl := b.System().MaxLeaseTTL()
+	user_token_config_ttl := backend_max_ttl - 1*time.Minute
+	SetUserTokenMaxTTL(t, b, config.StorageView, user_token_config_ttl)
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "user_token/admin",
+		Storage:   config.StorageView,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.False(t, resp.IsError())
+
+	assert.EqualValues(t, user_token_config_ttl, resp.Secret.MaxTTL)
+}
+
+// Use request max_ttl if: request ttl < user token config max_ttl < system max_ttl
+func TestBackend_UserTokenMaxTTLUseRequestTTL(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	mockArtifactoryUsageVersionRequests("")
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com:80/artifactory/api/security/token",
+		httpmock.NewStringResponder(200, canonicalAccessToken))
+
+	b, config := configuredBackend(t, map[string]interface{}{
+		"access_token": "test-access-token",
+		"url":          "http://myserver.com:80/artifactory",
+	})
+
+	backend_max_ttl := b.System().MaxLeaseTTL()
+	test_max_ttl := backend_max_ttl - 1*time.Minute
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "user_token/admin",
+		Storage:   config.StorageView,
+		Data: map[string]interface{}{
+			"max_ttl": test_max_ttl,
+		},
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.False(t, resp.IsError())
+
+	assert.EqualValues(t, test_max_ttl, resp.Secret.MaxTTL)
+}
+
+func TestBackend_UserTokenMaxTTLEnforced(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	mockArtifactoryUsageVersionRequests("")
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com:80/artifactory/api/security/token",
+		httpmock.NewStringResponder(200, canonicalAccessToken))
+
+	b, config := configuredBackend(t, map[string]interface{}{
+		"access_token": "test-access-token",
+		"url":          "http://myserver.com:80/artifactory",
+	})
+
+	backend_max_ttl := b.System().MaxLeaseTTL()
+	test_max_ttl := backend_max_ttl - 1*time.Minute
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "user_token/admin",
+		Storage:   config.StorageView,
+		Data: map[string]interface{}{
+			"max_ttl": test_max_ttl,
+			"ttl":     test_max_ttl + 10*time.Minute,
+		},
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.False(t, resp.IsError())
+
+	assert.EqualValues(t, test_max_ttl, resp.Secret.TTL)
+}
+
+func TestBackend_UserTokenTTLRequest(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	mockArtifactoryUsageVersionRequests("")
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com:80/artifactory/api/security/token",
+		httpmock.NewStringResponder(200, canonicalAccessToken))
+
+	b, config := configuredBackend(t, map[string]interface{}{
+		"access_token": "test-access-token",
+		"url":          "http://myserver.com:80/artifactory",
+	})
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "user_token/admin",
+		Storage:   config.StorageView,
+		Data: map[string]interface{}{
+			"ttl": 42 * time.Minute,
+		},
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.False(t, resp.IsError())
+
+	assert.EqualValues(t, 42*time.Minute, resp.Secret.TTL)
+}
+
+func TestBackend_UserTokenDefaultTTL(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	mockArtifactoryUsageVersionRequests("")
+
+	httpmock.RegisterResponder(
+		"POST",
+		"http://myserver.com:80/artifactory/api/security/token",
+		httpmock.NewStringResponder(200, canonicalAccessToken))
+
+	b, config := configuredBackend(t, map[string]interface{}{
+		"access_token": "test-access-token",
+		"url":          "http://myserver.com:80/artifactory",
+	})
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/user_token",
+		Storage:   config.StorageView,
+		Data: map[string]interface{}{
+			"default_ttl": 42 * time.Minute,
+		},
+	})
+	assert.NoError(t, err)
+	assert.False(t, resp.IsError())
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "user_token/admin",
+		Storage:   config.StorageView,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.False(t, resp.IsError())
+
+	assert.EqualValues(t, 42*time.Minute, resp.Secret.TTL)
 }

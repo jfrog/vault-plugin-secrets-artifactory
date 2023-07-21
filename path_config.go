@@ -28,18 +28,6 @@ func (b *backend) pathConfig() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Optional. Vault Username Template for dynamically generating usernames.",
 			},
-			"user_tokens_audience": {
-				Type:        framework.TypeString,
-				Description: `Optional. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
-			},
-			"user_tokens_default_ttl": {
-				Type:        framework.TypeDurationSecond,
-				Description: `Default TTL for issued user access tokens. If unset, uses the backend's default_ttl. Cannot exceed max_ttl.`,
-			},
-			"user_tokens_max_ttl": {
-				Type:        framework.TypeDurationSecond,
-				Description: `Maximum TTL that a user access token can be renewed for. If unset, uses the backend's max_ttl. Cannot exceed backend's max_ttl.`,
-			},
 			"use_expiring_tokens": {
 				Type:        framework.TypeBool,
 				Description: "Optional. If Artifactory version >= 7.50.3, set expires_in to max_ttl and force_revocable.",
@@ -86,14 +74,11 @@ No renewals or new tokens will be issued if the backend configuration (config/ad
 }
 
 type adminConfiguration struct {
-	AccessToken                      string        `json:"access_token"`
-	ArtifactoryURL                   string        `json:"artifactory_url"`
-	UsernameTemplate                 string        `json:"username_template,omitempty"`
-	UserTokensAudience               string        `json:"user_tokens_audience,omitempty"`
-	UserTokensDefaultTTL             time.Duration `json:"user_tokens_default_ttl,omitempty"`
-	UserTokensMaxTTL                 time.Duration `json:"user_tokens_max_ttl,omitempty"`
-	UseExpiringTokens                bool          `json:"use_expiring_tokens,omitempty"`
-	BypassArtifactoryTLSVerification bool          `json:"bypass_artifactory_tls_verification,omitempty"`
+	AccessToken                      string `json:"access_token"`
+	ArtifactoryURL                   string `json:"artifactory_url"`
+	UsernameTemplate                 string `json:"username_template,omitempty"`
+	UseExpiringTokens                bool   `json:"use_expiring_tokens,omitempty"`
+	BypassArtifactoryTLSVerification bool   `json:"bypass_artifactory_tls_verification,omitempty"`
 }
 
 func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -129,18 +114,6 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 
 	if val, ok := data.GetOk("use_expiring_tokens"); ok {
 		config.UseExpiringTokens = val.(bool)
-	}
-
-	if val, ok := data.GetOk("user_tokens_audience"); ok {
-		config.UserTokensAudience = val.(string)
-	}
-
-	if val, ok := data.GetOk("user_tokens_default_ttl"); ok {
-		config.UserTokensDefaultTTL = time.Duration(val.(int)) * time.Second
-	}
-
-	if val, ok := data.GetOk("user_tokens_max_ttl"); ok {
-		config.UserTokensMaxTTL = time.Duration(val.(int)) * time.Second
 	}
 
 	if val, ok := data.GetOk("bypass_artifactory_tls_verification"); ok {
@@ -222,9 +195,6 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		"url":                                 config.ArtifactoryURL,
 		"version":                             b.version,
 		"bypass_artifactory_tls_verification": config.BypassArtifactoryTLSVerification,
-		"user_tokens_audience":                config.UserTokensAudience,
-		"user_tokens_default_ttl":             config.UserTokensDefaultTTL,
-		"user_tokens_max_ttl":                 config.UserTokensMaxTTL,
 	}
 
 	// Optionally include username_template

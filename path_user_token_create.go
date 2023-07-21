@@ -10,20 +10,24 @@ import (
 
 func (b *backend) pathUserTokenCreate() *framework.Path {
 	return &framework.Path{
-		Pattern: "user_token/" + framework.GenericNameWithAtRegex("user"),
+		Pattern: "user_token/" + framework.GenericNameWithAtRegex("username"),
 		Fields: map[string]*framework.FieldSchema{
+			"username": {
+				Type:        framework.TypeString,
+				Required:    true,
+				Description: `The username of the user.`,
+			},
 			"description": {
 				Type:        framework.TypeString,
 				Description: `Optional. Description for the user token.`,
 			},
+			"max_ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: `Optional. Override the maximum TTL for this access token. Cannot exceed smallest (system, mount, backend) maximum TTL.`,
+			},
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
-				Description: `Override the default TTL when issuing this access token. Cannot exceed smallest (system, backend, this request) maximum TTL.`,
-			},
-			"user": {
-				Type:        framework.TypeString,
-				Required:    true,
-				Description: `The name of the user.`,
+				Description: `Optional. Override the default TTL when issuing this access token. Cappaed at the smallest maximum TTL (system, mount, backend, request).`,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -50,26 +54,37 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 
 	go b.sendUsage(*config, "pathUserTokenCreatePerform")
 
-	role := &artifactoryRole{
-		GrantType: "client_credentials",
-		Username:  data.Get("user").(string),
-		Scope:     "applied-permissions/user",
-		MaxTTL:    config.UserTokensMaxTTL,
+	userTokenConfig, err := b.fetchUserTokenConfiguration(ctx, req.Storage)
+	if err != nil {
+		return nil, err
 	}
 
-	maxLeaseTTL := b.Backend.System().MaxLeaseTTL()
+	role := &artifactoryRole{
+		GrantType:   "client_credentials",
+		Username:    data.Get("username").(string),
+		Scope:       "applied-permissions/user",
+		MaxTTL:      b.Backend.System().MaxLeaseTTL(),
+		Description: userTokenConfig.DefaultDescription,
+	}
 
-	// Set the role.MaxTTL based on maxLeaseTTL
-	// - This value will be passed to createToken and used as expires_in for versions of Artifactory 7.50.3 or higher
-	if role.MaxTTL == 0 || role.MaxTTL > maxLeaseTTL {
-		role.MaxTTL = maxLeaseTTL
+	if userTokenConfig.MaxTTL != 0 && userTokenConfig.MaxTTL < role.MaxTTL {
+		role.MaxTTL = userTokenConfig.MaxTTL
+	}
+
+	if value, ok := data.GetOk("max_ttl"); ok {
+		value := time.Second * time.Duration(value.(int))
+		if value != 0 && value < role.MaxTTL {
+			role.MaxTTL = value
+		}
 	}
 
 	var ttl time.Duration
 	if value, ok := data.GetOk("ttl"); ok {
 		ttl = time.Second * time.Duration(value.(int))
+	} else if userTokenConfig.DefaultTTL != 0 {
+		ttl = userTokenConfig.DefaultTTL
 	} else {
-		ttl = role.DefaultTTL
+		ttl = b.Backend.System().DefaultLeaseTTL()
 	}
 
 	if role.MaxTTL > 0 && ttl > role.MaxTTL {
@@ -94,6 +109,7 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		"scope":        resp.Scope,
 		"token_id":     resp.TokenId,
 		"username":     role.Username,
+		"description":  role.Description,
 	}, map[string]interface{}{
 		"access_token": resp.AccessToken,
 		"token_id":     resp.TokenId,
