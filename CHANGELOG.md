@@ -1,3 +1,9 @@
+## 1.1.0 (July 25, 2023)
+
+IMPROVEMENTS:
+
+- Add the artifactory/user_token/<user-name> path to support users obtaining tokens for themselves. PR: [#113](https://github.com/jfrog/artifactory-secrets-plugin/pull/113)
+
 ## 1.0.0 (May 15, 2023)
 
 BREAKING CHANGES:
