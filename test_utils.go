@@ -122,6 +122,13 @@ func (e *accTestEnv) UpdateConfigAdmin(t *testing.T, data testData) {
 	assert.Nil(t, resp)
 }
 
+// UpdateConfigAdmin will send a POST/PUT to the /config/user_token endpoint with testData (vault write artifactory/config/user_token)
+func (e *accTestEnv) UpdateConfigUserToken(t *testing.T, data testData) {
+	resp, err := e.update("config/user_token", data)
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+}
+
 func (e *accTestEnv) ReadPathConfig(t *testing.T) {
 	_ = e.ReadConfigAdmin(t)
 }
@@ -133,6 +140,15 @@ func (e *accTestEnv) ReadConfigAdmin(t *testing.T) testData {
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.NotEmpty(t, resp.Data["access_token_sha256"])
+	return resp.Data
+}
+
+// ReadConfigUserToken will send a GET to the /config/user_token endpoint (vault read artifactory/config/user_token)
+func (e *accTestEnv) ReadConfigUserToken(t *testing.T) testData {
+	resp, err := e.read("config/user_token")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
 	return resp.Data
 }
 
@@ -163,7 +179,7 @@ func (e *accTestEnv) UpdateConfigRotate(t *testing.T, data testData) {
 func (e *accTestEnv) read(path string) (*logical.Response, error) {
 	return e.Backend.HandleRequest(e.Context, &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "config/admin",
+		Path:      path,
 		Storage:   e.Storage,
 	})
 }
@@ -241,6 +257,25 @@ func (e *accTestEnv) CreatePathToken(t *testing.T) {
 	assert.Equal(t, "admin", resp.Data["username"])
 	assert.Equal(t, "test-role", resp.Data["role"])
 	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
+}
+
+func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "user_token/admin",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"description": "buffalo",
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotEmpty(t, resp.Data["access_token"])
+	assert.NotEmpty(t, resp.Data["token_id"])
+	assert.Equal(t, "admin", resp.Data["username"])
+	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
+	assert.Equal(t, "buffalo", resp.Data["description"])
 }
 
 // Cleanup will delete the admin configuration and revoke the token
@@ -388,5 +423,4 @@ func mockArtifactoryUsageVersionRequests(version string) {
 		"GET",
 		"http://myserver.com:80/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, versionString))
-
 }

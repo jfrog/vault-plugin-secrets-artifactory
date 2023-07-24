@@ -48,7 +48,7 @@ register:
 
 deregister:
 	vault plugin deregister -version=$(NEXT_VERSION) secret $(PLUGIN_NAME)
-	
+
 upgrade: build register
 	vault plugin reload -plugin=$(PLUGIN_NAME)
 
