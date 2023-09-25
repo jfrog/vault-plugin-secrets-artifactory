@@ -73,7 +73,8 @@ func (b *backend) pathRoles() *framework.Path {
 				Summary:  `Delete the specified role.`,
 			},
 		},
-		HelpSynopsis: `Manage data related to roles used to issue Artifactory access tokens.`,
+		ExistenceCheck: b.existenceCheck,
+		HelpSynopsis:   `Manage data related to roles used to issue Artifactory access tokens.`,
 	}
 }
 
@@ -278,4 +279,9 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 	}
 
 	return nil, nil
+}
+
+func (b *backend) existenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+	resp, err := b.pathRoleRead(ctx, req, data)
+	return resp != nil && !resp.IsError(), err
 }
