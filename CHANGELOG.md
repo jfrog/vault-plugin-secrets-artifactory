@@ -1,8 +1,14 @@
-## 1.1.1 (October 12, 2023)
+## 1.1.2 (October 12, 2023)
 
 BUG FIXES:
 
 * Bump golang.org/x/net from 0.8.0 to 0.17.0 PR: [129](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/129)
+
+## 1.1.1 (September 25, 2023)
+
+BUG FIXES:
+
+* Bump github.com/hashicorp/vault/sdk from 0.9.1 to 0.10.0 PR: [128](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/128)
 
 ## 1.1.0 (July 25, 2023)
 
