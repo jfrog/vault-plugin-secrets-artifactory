@@ -1,3 +1,11 @@
+## 1.1.3 (October 30, 2023)
+
+BUG FIXES:
+
+* Bump google.golang.org/grpc from 1.57.0 to 1.57.1 PR: [131](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/131)
+* Bump jfrog/artifactory-jcr from 7.68.14 to 7.71.3 in /scripts PR: [132](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/132)
+* Bump github.com/docker/docker from 24.0.5+incompatible to 24.0.7+incompatible PR: [133](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/133)
+
 ## 1.1.2 (October 12, 2023)
 
 BUG FIXES:
