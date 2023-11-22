@@ -1,3 +1,9 @@
+## 1.1.4 (November 22, 2023)
+
+BUG FIXES:
+
+* bump github.com/go-jose/go-jose/v3 from 3.0.0 to 3.0.1 PR: [137](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/137)
+  
 ## 1.1.3 (October 30, 2023)
 
 BUG FIXES:
