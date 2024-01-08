@@ -1,6 +1,6 @@
 module github.com/jfrog/vault-plugin-secrets-artifactory
 
-go 1.18
+go 1.21
 
 require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
