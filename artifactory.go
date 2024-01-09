@@ -25,13 +25,14 @@ const (
 
 var ErrIncompatibleVersion = errors.New("incompatible version")
 
+type errorResponse struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Detail  string `json:"detail"`
+}
+
 func (b *backend) RevokeToken(config adminConfiguration, secret logical.Secret) error {
-	accessToken := secret.InternalData["access_token"].(string)
 	tokenId := secret.InternalData["token_id"].(string)
-
-	values := url.Values{}
-	values.Set("token", accessToken)
-
 	u, err := url.Parse(config.ArtifactoryURL)
 	if err != nil {
 		b.Logger().Error("could not parse artifactory url", "url", u, "err", err)
@@ -46,8 +47,11 @@ func (b *backend) RevokeToken(config adminConfiguration, secret logical.Secret) 
 			b.Logger().Error("error deleting access token", "tokenId", tokenId, "response", resp, "err", err)
 			return err
 		}
-
 	} else {
+		accessToken := secret.InternalData["access_token"].(string)
+		values := url.Values{}
+		values.Set("token", accessToken)
+
 		resp, err = b.performArtifactoryPost(config, u.Path+"/api/security/token/revoke", values)
 		if err != nil {
 			b.Logger().Error("error deleting token", "tokenId", tokenId, "response", resp, "err", err)
@@ -58,45 +62,46 @@ func (b *backend) RevokeToken(config adminConfiguration, secret logical.Secret) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= http.StatusBadRequest {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			b.Backend.Logger().Warn("revokeToken could not read bad response body", "response", resp, "err", err)
+		e := fmt.Errorf("could not revoke tokenID: %v - HTTP response %v", tokenId, resp.StatusCode)
+
+		var errResp errorResponse
+		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
+			b.Logger().Error("revokenToken could not parse error response body", "err", err)
+			return e
 		}
-		b.Backend.Logger().Warn("revokeToken got bad http status code", "statusCode", resp.StatusCode, "body", string(bodyBytes))
-		return fmt.Errorf("could not revoke tokenID: %v - HTTP response %v", tokenId, resp.StatusCode)
+		b.Logger().Error("revokeToken got bad http status code", "statusCode", resp.StatusCode, "body", errResp)
+		return fmt.Errorf("could not revoke tokenID: %v - %s", tokenId, errResp.Detail)
 	}
 
 	return nil
 }
 
 type CreateTokenRequest struct {
-	GrantType      string `json:"grant_type,omitempty"`
-	Username       string `json:"username,omitempty"`
-	Scope          string `json:"scope,omitempty"`
-	ExpiresIn      int64  `json:"expires_in"`
-	Refreshable    bool   `json:"refreshable,omitempty"`
-	Description    string `json:"description,omitempty"`
-	Audience       string `json:"audience,omitempty"`
-	ForceRevocable bool   `json:"force_revocable,omitempty"`
+	GrantType             string `json:"grant_type,omitempty"`
+	Username              string `json:"username,omitempty"`
+	Scope                 string `json:"scope,omitempty"`
+	ExpiresIn             int64  `json:"expires_in"`
+	Refreshable           bool   `json:"refreshable,omitempty"`
+	Description           string `json:"description,omitempty"`
+	Audience              string `json:"audience,omitempty"`
+	ForceRevocable        bool   `json:"force_revocable,omitempty"`
+	IncludeReferenceToken bool   `json:"include_reference_token,omitempty"`
 }
 
 func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
 	request := CreateTokenRequest{
-		GrantType:   role.GrantType,
-		Username:    role.Username,
-		Scope:       role.Scope,
-		Audience:    role.Audience,
-		Description: role.Description,
+		GrantType:             role.GrantType,
+		Username:              role.Username,
+		Scope:                 role.Scope,
+		Audience:              role.Audience,
+		Description:           role.Description,
+		Refreshable:           role.Refreshable,
+		IncludeReferenceToken: role.IncludeReferenceToken,
 	}
 
 	if len(request.Username) == 0 {
 		return nil, fmt.Errorf("empty username not allowed, possibly a template error")
 	}
-
-	// A refreshable access token gets replaced by a new access token, which is not
-	// what a consumer of tokens from this backend would be expecting; instead they'd
-	// likely just request a new token periodically.
-	request.Refreshable = false
 
 	// Artifactory will not let you revoke a token that has an expiry unless it also meets
 	// criteria that can only be set in its configuration file. The version of Artifactory
@@ -138,12 +143,15 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			b.Backend.Logger().Warn("createToken could not read bad response", "response", resp, "err", err)
+		e := fmt.Errorf("could not create access token: HTTP response %v", resp.StatusCode)
+
+		var errResp errorResponse
+		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
+			b.Logger().Error("revokenToken could not parse error response body", "err", err)
+			return nil, e
 		}
-		b.Backend.Logger().Warn("createToken got non-200 status code", "statusCode", resp.StatusCode, "body", string(bodyBytes))
-		return nil, fmt.Errorf("could not create access token: HTTP response %v", resp.StatusCode)
+		b.Logger().Error("createToken got non-200 status code", "statusCode", resp.StatusCode, "body", errResp)
+		return nil, fmt.Errorf("could not create access token: HTTP response: %s", errResp.Detail)
 	}
 
 	var createdToken createTokenResponse
@@ -196,7 +204,6 @@ func (b *backend) getVersion(config adminConfiguration) (err error) {
 // checkVersion will return a boolean and error to check compatibility before making an API call
 // -- This was formerly "checkSystemStatus" but that was hard-coded, that method now calls this one
 func (b *backend) checkVersion(ver string) (compatible bool) {
-
 	v1, err := version.NewVersion(b.version)
 	if err != nil {
 		b.Logger().Error("could not parse Artifactory system version", "ver", b.version, "err", err)
@@ -269,7 +276,7 @@ func (b *backend) getTokenInfo(config adminConfiguration, token string) (info *T
 	// Parse Current Token (to get tokenID/scope)
 	jwtToken, err := b.parseJWT(config, token)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	claims, ok := jwtToken.Claims.(jwt.MapClaims)
