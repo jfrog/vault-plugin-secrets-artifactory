@@ -34,7 +34,7 @@ func (b *backend) RevokeToken(config adminConfiguration, secret logical.Secret) 
 
 	u, err := url.Parse(config.ArtifactoryURL)
 	if err != nil {
-		b.Backend.Logger().Warn("could not parse artifactory url", "url", u, "err", err)
+		b.Logger().Error("could not parse artifactory url", "url", u, "err", err)
 		return err
 	}
 
@@ -43,14 +43,14 @@ func (b *backend) RevokeToken(config adminConfiguration, secret logical.Secret) 
 	if b.useNewAccessAPI() {
 		resp, err = b.performArtifactoryDelete(config, "/access/api/v1/tokens/"+tokenId)
 		if err != nil {
-			b.Backend.Logger().Warn("error deleting access token", "tokenId", tokenId, "response", resp, "err", err)
+			b.Logger().Error("error deleting access token", "tokenId", tokenId, "response", resp, "err", err)
 			return err
 		}
 
 	} else {
 		resp, err = b.performArtifactoryPost(config, u.Path+"/api/security/token/revoke", values)
 		if err != nil {
-			b.Backend.Logger().Warn("error deleting token", "tokenId", tokenId, "response", resp, "err", err)
+			b.Logger().Error("error deleting token", "tokenId", tokenId, "response", resp, "err", err)
 			return err
 		}
 	}
@@ -111,7 +111,7 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 
 	u, err := url.Parse(config.ArtifactoryURL)
 	if err != nil {
-		b.Backend.Logger().Warn("could not parse artifactory url", "url", u, "err", err)
+		b.Logger().Error("could not parse artifactory url", "url", u, "err", err)
 		return nil, err
 	}
 
@@ -130,7 +130,7 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 
 	resp, err := b.performArtifactoryPostWithJSON(config, path, jsonReq)
 	if err != nil {
-		b.Backend.Logger().Warn("error making token request", "response", resp, "err", err)
+		b.Logger().Error("error making token request", "response", resp, "err", err)
 		return nil, err
 	}
 
@@ -148,7 +148,7 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 
 	var createdToken createTokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&createdToken); err != nil {
-		b.Backend.Logger().Warn("could not parse response", "response", resp, "err", err)
+		b.Logger().Error("could not parse response", "response", resp, "err", err)
 		return nil, err
 	}
 
@@ -173,20 +173,20 @@ func (b *backend) useNewAccessAPI() bool {
 func (b *backend) getVersion(config adminConfiguration) (err error) {
 	resp, err := b.performArtifactoryGet(config, "/artifactory/api/system/version")
 	if err != nil {
-		b.Backend.Logger().Warn("error making system version request", "response", resp, "err", err)
+		b.Logger().Error("error making system version request", "response", resp, "err", err)
 		return
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
+		b.Logger().Error("got non-200 status code", "statusCode", resp.StatusCode)
 		return fmt.Errorf("could not get the system version: HTTP response %v", resp.StatusCode)
 	}
 
 	var systemVersion systemVersionResponse
 	if err = json.NewDecoder(resp.Body).Decode(&systemVersion); err != nil {
-		b.Backend.Logger().Warn("could not parse system version response", "response", resp, "err", err)
+		b.Logger().Error("could not parse system version response", "response", resp, "err", err)
 		return
 	}
 	b.version = systemVersion.Version
@@ -199,13 +199,13 @@ func (b *backend) checkVersion(ver string) (compatible bool) {
 
 	v1, err := version.NewVersion(b.version)
 	if err != nil {
-		b.Backend.Logger().Warn("could not parse Artifactory system version", "ver", b.version, "err", err)
+		b.Logger().Error("could not parse Artifactory system version", "ver", b.version, "err", err)
 		return
 	}
 
 	v2, err := version.NewVersion(ver)
 	if err != nil {
-		b.Backend.Logger().Warn("could not parse provided version", "ver", ver, "err", err)
+		b.Logger().Error("could not parse provided version", "ver", ver, "err", err)
 		return
 	}
 
@@ -223,7 +223,7 @@ func (b *backend) parseJWT(config adminConfiguration, token string) (jwtToken *j
 	cert, err := b.getRootCert(config)
 	if err != nil {
 		if errors.Is(err, ErrIncompatibleVersion) {
-			b.Logger().Warn("outdated artifactory, unable to retrieve root cert, skipping token validation")
+			b.Logger().Error("outdated artifactory, unable to retrieve root cert, skipping token validation")
 			validate = false
 		} else {
 			b.Logger().Error("error retrieving root cert", "err", err.Error())
@@ -294,7 +294,7 @@ func (b *backend) getTokenInfo(config adminConfiguration, token string) (info *T
 	case json.Number:
 		v, err := exp.Int64()
 		if err != nil {
-			b.Backend.Logger().Warn("error parsing token exp as json.Number", "err", err)
+			b.Logger().Error("error parsing token exp as json.Number", "err", err)
 		}
 		info.Expires = v
 	}
@@ -312,21 +312,21 @@ func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate
 
 	resp, err := b.performArtifactoryGet(config, "/access/api/v1/cert/root")
 	if err != nil {
-		b.Backend.Logger().Warn("error requesting cert/root", "response", resp, "err", err)
+		b.Logger().Error("error requesting cert/root", "response", resp, "err", err)
 		return
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
+		b.Logger().Error("got non-200 status code", "statusCode", resp.StatusCode)
 		return cert, fmt.Errorf("could not get the certificate: HTTP response %v", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	// body, err := ioutil.ReadAll(resp.Body)  Go.1.15 and earlier
 	if err != nil {
-		b.Backend.Logger().Error("error reading root cert response body", "err", err)
+		b.Logger().Error("error reading root cert response body", "err", err)
 		return
 	}
 
@@ -334,13 +334,13 @@ func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate
 	binCert := make([]byte, len(body))
 	n, err := base64.StdEncoding.Decode(binCert, body)
 	if err != nil {
-		b.Backend.Logger().Error("error decoding body", "err", err)
+		b.Logger().Error("error decoding body", "err", err)
 		return
 	}
 
 	cert, err = x509.ParseCertificate(binCert[0:n])
 	if err != nil {
-		b.Backend.Logger().Error("error parsing certificate", "err", err)
+		b.Logger().Error("error parsing certificate", "err", err)
 		return
 	}
 	return
@@ -369,13 +369,13 @@ func (b *backend) sendUsage(config adminConfiguration, featureId string) {
 
 	jsonReq, err := json.Marshal(usage)
 	if err != nil {
-		b.Backend.Logger().Info("error marshalling call home request", "err", err)
+		b.Logger().Info("error marshalling call home request", "err", err)
 		return
 	}
 
 	resp, err := b.performArtifactoryPostWithJSON(config, "artifactory/api/system/usage", jsonReq)
 	if err != nil {
-		b.Backend.Logger().Info("error making call home request", "response", resp, "err", err)
+		b.Logger().Info("error making call home request", "response", resp, "err", err)
 		return
 	}
 
