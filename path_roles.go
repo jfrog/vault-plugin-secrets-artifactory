@@ -40,11 +40,21 @@ func (b *backend) pathRoles() *framework.Path {
 			"scope": {
 				Type:        framework.TypeString,
 				Required:    true,
-				Description: `Required. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
+				Description: `Required. Space-delimited list. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
+			},
+			"refreshable": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: `Optional. Defaults to 'false'. A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to 'true' only if your usage requires this. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
 			},
 			"audience": {
 				Type:        framework.TypeString,
 				Description: `Optional. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
+			},
+			"include_reference_token": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: `Optional. Defaults to 'false'. Generate a Reference Token (alias to Access Token) in addition to the full token (available from Artifactory 7.38.10). A reference token is a shorter, 64-character string, which can be used as a bearer token, a password, or with the "X-JFrog-Art-Api" header. Note: Using the reference token might have performance implications over a full length token.`,
 			},
 			"default_ttl": {
 				Type:        framework.TypeDurationSecond,
@@ -79,13 +89,15 @@ func (b *backend) pathRoles() *framework.Path {
 }
 
 type artifactoryRole struct {
-	GrantType   string        `json:"grant_type,omitempty"`
-	Username    string        `json:"username,omitempty"`
-	Scope       string        `json:"scope"`
-	Audience    string        `json:"audience,omitempty"`
-	Description string        `json:"description,omitempty"`
-	DefaultTTL  time.Duration `json:"default_ttl,omitempty"`
-	MaxTTL      time.Duration `json:"max_ttl,omitempty"`
+	GrantType             string        `json:"grant_type,omitempty"`
+	Username              string        `json:"username,omitempty"`
+	Scope                 string        `json:"scope"`
+	Refreshable           bool          `json:"refreshable"`
+	Audience              string        `json:"audience,omitempty"`
+	Description           string        `json:"description,omitempty"`
+	IncludeReferenceToken bool          `json:"include_reference_token"`
+	DefaultTTL            time.Duration `json:"default_ttl,omitempty"`
+	MaxTTL                time.Duration `json:"max_ttl,omitempty"`
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
@@ -149,8 +161,16 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data 
 		role.Scope = value.(string)
 	}
 
+	if value, ok := data.GetOk("refreshable"); ok {
+		role.Refreshable = value.(bool)
+	}
+
 	if value, ok := data.GetOk("audience"); ok {
 		role.Audience = value.(string)
+	}
+
+	if value, ok := data.GetOk("include_reference_token"); ok {
+		role.IncludeReferenceToken = value.(bool)
 	}
 
 	// Looking at database/path_roles.go, it doesn't do any validation on these values during role creation.
@@ -236,10 +256,12 @@ func (b *backend) Role(ctx context.Context, storage logical.Storage, roleName st
 
 func (b *backend) roleToMap(roleName string, role artifactoryRole) (roleMap map[string]interface{}) {
 	roleMap = map[string]interface{}{
-		"role":        roleName,
-		"scope":       role.Scope,
-		"default_ttl": role.DefaultTTL.Seconds(),
-		"max_ttl":     role.MaxTTL.Seconds(),
+		"role":                    roleName,
+		"scope":                   role.Scope,
+		"default_ttl":             role.DefaultTTL.Seconds(),
+		"max_ttl":                 role.MaxTTL.Seconds(),
+		"refreshable":             role.Refreshable,
+		"include_reference_token": role.IncludeReferenceToken,
 	}
 
 	// Optional Attributes
