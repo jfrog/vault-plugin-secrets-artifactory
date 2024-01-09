@@ -45,7 +45,7 @@ func (b *backend) pathRoles() *framework.Path {
 			"refreshable": {
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: `Optional. Defaults to 'false'. A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to 'true' only if your usage requires this. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
+				Description: `Optional. Defaults to 'false'. A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to 'true' only if your usage requires this. See the JFrog Artifactory documentation on "Generating Refreshable Tokens" (https://jfrog.com/help/r/jfrog-platform-administration-documentation/generating-refreshable-tokens) for a full and up to date description.`,
 			},
 			"audience": {
 				Type:        framework.TypeString,

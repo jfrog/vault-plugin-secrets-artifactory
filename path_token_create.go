@@ -31,6 +31,13 @@ func (b *backend) pathTokenCreate() *framework.Path {
 			},
 		},
 		HelpSynopsis: `Create an Artifactory access token for the specified role.`,
+		HelpDescription: `
+Create an Artifactory access token using paramters from the specified role.
+
+An optional 'ttl' parameter will override the role's 'default_ttl' parameter.
+
+An optional 'max_ttl' parameter will override the role's 'max_ttl' parameter.
+`,
 	}
 }
 

@@ -27,7 +27,7 @@ func (b *backend) pathConfigRotate() *framework.Path {
 			},
 		},
 		HelpSynopsis:    `Rotate the Artifactory Access Token.`,
-		HelpDescription: `This will rotate the "access_token" used to access artifactory from this plugin, and revoke the old access token.`,
+		HelpDescription: `This will rotate the "access_token" used to access artifactory from this plugin. A new access token is created first then revokes the old access token.`,
 	}
 }
 
