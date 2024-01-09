@@ -13,23 +13,21 @@ func (b *backend) pathConfigRotate() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
-				Description: "Optional. Override Artifactory token username for new admin token.",
+				Description: "Optional. Override Artifactory token username for new access token.",
 			},
 			"description": {
 				Type:        framework.TypeString,
-				Description: "Optional. Set Artifactory token description on new admin token.",
+				Description: "Optional. Set Artifactory token description on new access token.",
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigRotateWrite,
-				Summary:  "Rotate the Artifactory Admin Token.",
+				Summary:  "Rotate the Artifactory Access Token.",
 			},
 		},
-		HelpSynopsis: `Rotate the Artifactory Admin Token.`,
-		HelpDescription: `
-This will rotate the "access_token" used to access artifactory from this plugin, and revoke the old admin token.
-`,
+		HelpSynopsis:    `Rotate the Artifactory Access Token.`,
+		HelpDescription: `This will rotate the "access_token" used to access artifactory from this plugin, and revoke the old access token.`,
 	}
 }
 
@@ -53,7 +51,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	// Parse Current Token (to get tokenID/scope)
 	token, err := b.getTokenInfo(*config, oldAccessToken)
 	if err != nil {
-		return logical.ErrorResponse("error parsing existing AccessToken: " + err.Error()), err
+		return logical.ErrorResponse("error parsing existing access token: " + err.Error()), err
 	}
 
 	// Check for submitted username
@@ -75,13 +73,13 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	if val, ok := data.GetOk("description"); ok {
 		role.Description = val.(string)
 	} else {
-		role.Description = "Rotated Admin token for artifactory-secrets plugin in Vault"
+		role.Description = "Rotated access token for artifactory-secrets plugin in Vault"
 	}
 
 	// Create a new token
 	resp, err := b.CreateToken(*config, *role)
 	if err != nil {
-		return logical.ErrorResponse("error creating new token"), err
+		return logical.ErrorResponse("error creating new access token"), err
 	}
 
 	// Set new token
@@ -107,7 +105,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	}
 	err = b.RevokeToken(*config, oldSecret)
 	if err != nil {
-		return logical.ErrorResponse("error revoking existing AccessToken"), err
+		return logical.ErrorResponse("error revoking existing access token %s", token.TokenID), err
 	}
 
 	return nil, nil
