@@ -147,12 +147,14 @@ func TestBackend_PathRoleWriteThenRead(t *testing.T) {
 	})
 
 	roleData := map[string]interface{}{
-		"role":        "test-role",
-		"username":    "test-username",
-		"scope":       "test-scope",
-		"audience":    "test-audience",
-		"default_ttl": 30 * time.Minute,
-		"max_ttl":     45 * time.Minute,
+		"role":                    "test-role",
+		"username":                "test-username",
+		"scope":                   "test-scope",
+		"audience":                "test-audience",
+		"refreshable":             true,
+		"include_reference_token": true,
+		"default_ttl":             30 * time.Minute,
+		"max_ttl":                 45 * time.Minute,
 	}
 
 	_, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -174,6 +176,8 @@ func TestBackend_PathRoleWriteThenRead(t *testing.T) {
 	assert.EqualValues(t, "test-username", resp.Data["username"])
 	assert.EqualValues(t, "test-scope", resp.Data["scope"])
 	assert.EqualValues(t, "test-audience", resp.Data["audience"])
+	assert.EqualValues(t, true, resp.Data["refreshable"])
+	assert.EqualValues(t, true, resp.Data["include_reference_token"])
 	assert.EqualValues(t, 30*time.Minute.Seconds(), resp.Data["default_ttl"])
 	assert.EqualValues(t, 45*time.Minute.Seconds(), resp.Data["max_ttl"])
 }

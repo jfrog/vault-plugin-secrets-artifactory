@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ func TestBackend_NoRoleMaxTTLUsesSystemMaxTTL(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, `
 		{
@@ -75,7 +76,7 @@ func TestBackend_WorkingWithBothMaxTTLs(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
@@ -123,7 +124,7 @@ func TestBackend_NoUserTokensMaxTTLUsesSystemMaxTTL(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, `
 		{
@@ -172,7 +173,7 @@ func TestBackend_UserTokenConfigMaxTTLUseSystem(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
@@ -205,7 +206,7 @@ func TestBackend_UserTokenConfigMaxTTLUseConfigMaxTTL(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
@@ -238,7 +239,7 @@ func TestBackend_UserTokenMaxTTLUseRequestTTL(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
@@ -272,7 +273,7 @@ func TestBackend_UserTokenMaxTTLEnforced(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
@@ -307,7 +308,7 @@ func TestBackend_UserTokenTTLRequest(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
@@ -338,7 +339,7 @@ func TestBackend_UserTokenDefaultTTL(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 

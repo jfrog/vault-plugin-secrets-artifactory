@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -196,12 +197,14 @@ func (e *accTestEnv) update(path string, data testData) (*logical.Response, erro
 
 func (e *accTestEnv) CreatePathRole(t *testing.T) {
 	roleData := map[string]interface{}{
-		"role":        "test-role",
-		"username":    "admin",
-		"scope":       "applied-permissions/user",
-		"audience":    "*@*",
-		"default_ttl": 30 * time.Minute,
-		"max_ttl":     45 * time.Minute,
+		"role":                    "test-role",
+		"username":                "admin",
+		"scope":                   "applied-permissions/user",
+		"audience":                "*@*",
+		"refreshable":             true,
+		"include_reference_token": true,
+		"default_ttl":             30 * time.Minute,
+		"max_ttl":                 45 * time.Minute,
 	}
 
 	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
@@ -228,6 +231,8 @@ func (e *accTestEnv) ReadPathRole(t *testing.T) {
 	assert.EqualValues(t, "admin", resp.Data["username"])
 	assert.EqualValues(t, "applied-permissions/user", resp.Data["scope"])
 	assert.EqualValues(t, "*@*", resp.Data["audience"])
+	assert.EqualValues(t, true, resp.Data["refreshable"])
+	assert.EqualValues(t, true, resp.Data["include_reference_token"])
 	assert.EqualValues(t, 30*time.Minute.Seconds(), resp.Data["default_ttl"])
 	assert.EqualValues(t, 45*time.Minute.Seconds(), resp.Data["max_ttl"])
 }
@@ -257,6 +262,8 @@ func (e *accTestEnv) CreatePathToken(t *testing.T) {
 	assert.Equal(t, "admin", resp.Data["username"])
 	assert.Equal(t, "test-role", resp.Data["role"])
 	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
+	assert.NotEmpty(t, resp.Data["refresh_token"])
+	assert.NotEmpty(t, resp.Data["reference_token"])
 }
 
 func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
@@ -265,7 +272,9 @@ func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 		Path:      "user_token/admin",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
-			"description": "buffalo",
+			"description":             "buffalo",
+			"refreshable":             true,
+			"include_reference_token": true,
 		},
 	})
 
@@ -276,6 +285,8 @@ func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 	assert.Equal(t, "admin", resp.Data["username"])
 	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
 	assert.Equal(t, "buffalo", resp.Data["description"])
+	assert.NotEmpty(t, resp.Data["refresh_token"])
+	assert.NotEmpty(t, resp.Data["reference_token"])
 }
 
 // Cleanup will delete the admin configuration and revoke the token
@@ -416,11 +427,11 @@ func mockArtifactoryUsageVersionRequests(version string) {
 	}
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/system/usage",
 		httpmock.NewStringResponder(200, ""))
 	httpmock.RegisterResponder(
-		"GET",
+		http.MethodGet,
 		"http://myserver.com:80/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, versionString))
 }
