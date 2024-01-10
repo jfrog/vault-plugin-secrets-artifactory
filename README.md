@@ -1,12 +1,12 @@
 # Vault Artifactory Secrets Plugin
 
-This plugin is actively maintained by JFrog Inc. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and create GitHub issues to ask for feature requests and support.
+This plugin is actively maintained by JFrog Inc. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and [create GitHub issues](https://github.com/jfrog/vault-plugin-secrets-artifactory/issues/new/choose) to ask for feature requests and support.
 
 Contact [JFrog Support](https://jfrog.com/support/) for urgent, time sensitive issues.
 
 ----------------------------------------------------------------
 
-This is a [HashiCorp Vault](https://www.vaultproject.io/) plugin which talks to JFrog Artifactory server and will
+This is a [HashiCorp Vault](https://www.vaultproject.io/) secret plugin which talks to JFrog Artifactory server and will
 dynamically provision access tokens with specified scopes. This backend can be mounted multiple times
 to provide access to multiple Artifactory servers.
 
@@ -18,6 +18,7 @@ This backend creates access tokens in Artifactory using the admin credentials pr
 
 ### Admin Token Expiration Notice
 
+> [!IMPORTANT]
 > Prior to Artifactory 7.42.1, admin access token was created with the system token expiration (default to 1 year) even when `expires_in` API field is set to `0`. In 7.42.1, admin token expiration no longer constrained by system configuration and therefore can be set to non-expiring.
 > See section ["Generate a Non-expiry Admin Token without Changing the Configuration"](https://www.jfrog.com/confluence/display/JFROG/Artifactory+Release+Notes#ArtifactoryReleaseNotes-Artifactory7.42.1Cloud) in the release note.
 >
@@ -131,10 +132,10 @@ vault plugin register \
   secret artifactory
 ```
 
-> **Note**
+> [!NOTE]
 > you may need to also add arguments to the registration like `-args="-ca-cert ca.pem` or something insecure like: `-args="-tls-skip-verify"` depending on your environment. (see `./path/to/plugins/artifactory -help` for all the options)
 
-> **Note**
+> [!CAUTION]
 > This inline checksum calculation above is provided for illustration purpose and does not validate your binary. It should **not** be used for production environment. Instead you should use the checksum provided as [part of the release](https://github.com/jfrog/vault-plugin-secrets-artifactory/releases). See [How to verify binary checksums](#how-to-verify-binary-checksums) section.
 
 You can now enable the Artifactory secrets plugin:
@@ -145,7 +146,7 @@ vault secrets enable artifactory
 
 ### How to verify binary checksums
 
-Checksums for each binary are provided in the `artifactory-secrets-plugin_<version>_checksums.txt` file. It is signed with the public key `vault-plugin-secrets-artifactory-public-key.asc` which creates the signature file `artifactory-secrets-plugin_<version>_checksums.txt.sig`.
+Checksums for each binary are provided in the `artifactory-secrets-plugin_<version>_checksums.txt` file. It is signed with the public key [`vault-plugin-secrets-artifactory-public-key.asc`](vault-plugin-secrets-artifactory-public-key.asc) which creates the signature file `artifactory-secrets-plugin_<version>_checksums.txt.sig`.
 
 If the public key is not in your GPG keychain, import it:
 ```sh
@@ -206,10 +207,10 @@ vault write artifactory/config/admin \
 vault write -f artifactory/config/rotate
 ```
 
-**NOTE** some versions of artifactory (notably `7.39.10`) fail to rotate correctly. As noted above, we recommend being on `7.42.1` or higher. The token was indeed rotated, but as the error indicates, the old token could not be revoked.
+> [!NOTE]
+> some versions of artifactory (notably `7.39.10`) fail to rotate correctly. As noted above, we recommend being on `7.42.1` or higher. The token was indeed rotated, but as the error indicates, the old token could not be revoked.
 
-**ALSO** If you want to change the username for the admin token (tired of it just being "admin"?) or set a "Description" on the token, those parameters are optionally
-available on the `artifactory/config/rotate` endpoint.
+**ALSO** If you want to change the username for the admin token (tired of it just being "admin"?) or set a "Description" on the token, those parameters are optionally available on the `artifactory/config/rotate` endpoint.
 
 ```sh
 vault write artifactory/config/rotate username="new-username" description="A token used by vault-secrets-engine on our vault server"`
@@ -259,7 +260,8 @@ vault write artifactory/roles/jenkins \
 
 Also supports `grant_type=[Optional, default: "client_credentials"]`, and `audience=[Optional, default: *@*]` see [JFrog documentation][artifactory-create-token].
 
-NOTE: By default, the username will be generated automatically using the template `v-(RoleName)-(random 8)` (i.e. `v-jenkins-x4mohTA8`). If you would prefer to have a static username (the same for every token), you can set `username=whatever-you-want`, but keep in mind that in a dynamic environment, someone or something using an old, expired token might cause a denial of service (too many failed logins) against users with the correct token.
+> [!NOTE]
+> By default, the username will be generated automatically using the template `v-(RoleName)-(random 8)` (i.e. `v-jenkins-x4mohTA8`). If you would prefer to have a static username (the same for every token), you can set `username=whatever-you-want`, but keep in mind that in a dynamic environment, someone or something using an old, expired token might cause a denial of service (too many failed logins) against users with the correct token.
 
 <details>
 <summary>CLICK for: Create a Role (scope for artifactory < 7.21.1)</summary>
@@ -273,7 +275,7 @@ vault write artifactory/roles/jenkins \
 
 </details>
 
-> **Note**
+> [!NOTE]
 > There are some changes in the **scopes** supported in artifactory request >7.21. Please refer to the JFrog documentation for the same according to the artifactory version.
 
 ```sh
@@ -283,7 +285,6 @@ vault list artifactory/roles
 Example Output:
 
 ```console
-
 Keys
 ----
 jenkins
@@ -301,7 +302,7 @@ Key                Value
 lease_id           artifactory/token/jenkins/9hHxV1NlyLzPgmNIzjssRCa9
 lease_duration     1h
 lease_renewable    true
-access_token       eyJ2ZXIiOiIyIiw....
+access_token       eyJ2ZXIiOiIyIiw...
 role               jenkins
 scope              applied-permissions/groups:automation
 token_id           06d962b2-63e2-4279-a25d-d2a9cab6507f
@@ -318,25 +319,27 @@ path "artifactory/user_token/{{identity.entity.aliases.azure-ad-oidc.metadata.up
 }
 ```
 
-Default values for the token's description, ttl, max_ttl and audience may be configured at the `/artifactory/config/admin` endpoint. TTL rules follow Vault's [general cases](https://developer.hashicorp.com/vault/docs/concepts/tokens#the-general-case) and [token hierarchy](https://developer.hashicorp.com/vault/docs/concepts/tokens#token-hierarchies-and-orphan-tokens). The desired lease TTL will be determined by the most specific TTL value specified with the request ttl parameter being highest precedence, followed by the plugin configuration, secret mount tuning, or system default ttl. The maximum TTL value allowed is limited to the lowest value of the max_ttl setting set on the system, secret mount tuning, plugin configuration, or the specific request.
+Default values for the token's `description`, `ttl`, `max_ttl`, `audience`, `refreshable`, and `include_reference_token` may be configured at the `/artifactory/config/user_token` endpoint. TTL rules follow Vault's [general cases](https://developer.hashicorp.com/vault/docs/concepts/tokens#the-general-case) and [token hierarchy](https://developer.hashicorp.com/vault/docs/concepts/tokens#token-hierarchies-and-orphan-tokens). The desired lease TTL will be determined by the most specific TTL value specified with the request ttl parameter being highest precedence, followed by the plugin configuration, secret mount tuning, or system default ttl. The maximum TTL value allowed is limited to the lowest value of the `max_ttl` setting set on the system, secret mount tuning, plugin configuration, or the specific request.
 
 Example Token Configuration:
 
-```sh
+```console
 vault write artifactory/config/user_token default_description="Generated by Vault" max_ttl=604800 default_ttl=86400
 ```
 
 ```console
 $ vault read artifactory/config/user_token
-Key                    Value
----                    -----
-audience               n/a
-default_description    Generated by Vault
-default_ttl            24h
-max_ttl                168h
-scope                  applied-permissions/admin
-token_id               8df5dd21-31ae-4062-bbe5-580a607f5645
-username               vault-admin
+Key                        Value
+---                        -----
+audience                   n/a
+default_description        Generated by Vault
+default_ttl                24h
+include_reference_token    true
+max_ttl                    168h
+refreshable                true
+scope                      applied-permissions/user
+token_id                   8df5dd21-31ae-4062-bbe5-580a607f5645
+username                   vault-admin
 ```
 
 Example Usage:
@@ -347,8 +350,10 @@ Key                Value
 lease_id           artifactory/user_token/admin/4UhTThCwctPGX0TYXeoyoVEt
 lease_duration     24h
 lease_renewable    true
-access_token       eyJ2Z424242424.....
+access_token       eyJ2Z424242424...
 description        Dev Desktop
+reference_token    cmVmdGtu...
+refresh_token      629299be-...
 scope              applied-permissions/user
 token_id           3c6b2e63-87dc-4d26-9698-ffdfb282a6ee
 username           admin
@@ -373,7 +378,7 @@ username           admin
 
 ### Testing Locally
 
-If you're compiling this yourself and want to test locally, you will need a working docker environment. You will also need vault and golang installed, then you can follow the steps below.
+If you're compiling this yourself and want to test locally, you will need a working Docker environment. You will also need Vault cli and Golang installed, then you can follow the steps below.
 
 * In first terminal, build the plugin and start the local dev server:
 
@@ -387,12 +392,18 @@ make
 make artifactory
 ```
 
-* In the same terminal, setup artifactory-secrets-engine in vault with values:
+* In the same terminal, setup `artifactory-secrets-engine` in vault with values:
 
 ```sh
 export VAULT_ADDR=http://localhost:8200
 export VAULT_TOKEN=root
 make setup
+```
+
+* In the same terminal, you can configure and generate an admin access token:
+
+```sh
+make admin
 ```
 
 NOTE: Each time you rebuild (`make`), vault will restart, so you will need to run `make setup` again, since vault is in dev mode.
@@ -417,15 +428,11 @@ brew tap hashicorp/tap
 brew install hashicorp/tap/vault
 ```
 
-----------------------------------------------------------------
-
 #### Start Vault dev server
 
 ```sh
 make start
 ```
-
-----------------------------------------------------------------
 
 #### Export Vault url and token
 
@@ -434,15 +441,11 @@ export VAULT_ADDR='http://127.0.0.1:8200'
 export VAULT_TOKEN=root
 ```
 
-----------------------------------------------------------------
-
 #### Build plugin binary
 
 ```sh
 make build
 ```
-
-----------------------------------------------------------------
 
 #### Upgrade plugin binary
 
@@ -451,8 +454,6 @@ To build and upgrade the plugin without having to reconfigure it...
 ```sh
 make upgrade
 ```
-
-----------------------------------------------------------------
 
 #### Create Test Artifactory
 
@@ -468,16 +469,17 @@ Example:
 make artifactory ARTIFACTORY_VERSION=7.49.10
 ```
 
-NOTE: If you get a message like:
+> [!NOTE]
+> If you get a message like:
+>
+>```console
+>make: Nothing to be done for `artifactory'.
+>```
+>
+>This simply means that "make" thinks artifactory is >already running due to the existence of the `./vault/>artifactory.env` file.
+>
+>If you want to run a different version, first use `make >stop_artifactory`. If you stopped artifactory using other >means (docker), then `rm vault/artifactory.env` manually.
 
-```console
-make: Nothing to be done for `artifactory'.
-```
-
-This simply means that "make" thinks artifactory is already running due to the existence of the `./vault/artifactory.env` file.
-If you want to run a different version, first use `make stop_artifactory`. If you stopped artifactory using other means (docker), then `rm vault/artifactory.env` manually.
-
-----------------------------------------------------------------
 
 #### Register artifactory-secrets plugin with Vault server
 
@@ -487,15 +489,11 @@ If you didn't run `make upgrade` (i.e. just `make build`), then you need to regi
 make register
 ```
 
-----------------------------------------------------------------
-
 #### Enable artifactory-secrets plugin
 
 ```sh
 make enable
 ```
-
-----------------------------------------------------------------
 
 #### Disable plugin (unmount from vault)
 
@@ -503,9 +501,8 @@ make enable
 make disable
 ```
 
-NOTE: This is a good idea before stopping artifactory, especially if you plan to change versions of artifactory. Alternatively, just exit vault (Ctrl+c), and it will go back to default state.
-
-----------------------------------------------------------------
+> [!NOTE]
+> This is a good idea before stopping artifactory, especially if you plan to change versions of artifactory. Alternatively, just exit vault (Ctrl+c), and it will go back to default state.
 
 #### Get ADMIN Artifactory token and write it to vault
 
@@ -525,7 +522,7 @@ For example:
 JFROG_URL=https://artifactory.example.org ARTIFACTORY_USERNAME=tommy ARTIFACTORY_PASSWORD='SuperSecret' make admin
 ```
 
-If you already have a JFROG_ACCESS_TOKEN, you can skip straight to that too:
+If you already have a `JFROG_ACCESS_TOKEN``, you can skip straight to that too:
 
 ```sh
 export JFROG_URL=https://artifactory.example.com
@@ -533,15 +530,11 @@ export JFROG_ACCESS_TOKEN=(PASTE YOUR JFROG ADMIN TOKEN)
 make admin
 ```
 
-----------------------------------------------------------------
-
 * Setup a "test" role, bound to the "readers" group
 
 ```sh
 make testrole
 ```
-
-----------------------------------------------------------------
 
 #### Run Acceptance Tests
 
@@ -564,7 +557,7 @@ See the [contribution guide](./CONTRIBUTING.md).
 
 ## License
 
-Copyright (c) 2023 JFrog.
+Copyright (c) 2024 JFrog.
 
 Apache 2.0 licensed, see [LICENSE][LICENSE] file.
 
