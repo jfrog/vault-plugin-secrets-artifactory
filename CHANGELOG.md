@@ -1,3 +1,15 @@
+## 1.2.0 (January 10, 2023)
+
+IMPROVEMENTS:
+
+* Add `refreshable` and `include_reference_token` parameters to both `roles/<role name>` and `user_token/<username>` paths. PR: [144](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/144)
+* Bump jfrog/artifactory-jcr from 7.71.8 to 7.71.9 in /scripts PR: [143](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/143)
+* Bump golang.org/x/crypto from 0.14.0 to 0.17.0 PR: [142](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/142)
+* Bump github.com/hashicorp/go-hclog from 1.6.1 to 1.6.2 PR: [141](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/141)
+* Bump jfrog/artifactory-jcr from 7.71.5 to 7.71.8 in /scripts PR: [140](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/140)
+* Bump github.com/hashicorp/go-hclog from 1.5.0 to 1.6.1 PR: [139](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/139)
+* Bump jfrog/artifactory-jcr from 7.71.4 to 7.71.5 in /scripts PR: [138](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/138)
+
 ## 1.1.4 (November 22, 2023)
 
 BUG FIXES:
