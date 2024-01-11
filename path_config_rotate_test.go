@@ -75,7 +75,7 @@ func (e *accTestEnv) PathConfigRotateCreateTokenErr(t *testing.T) {
 	})
 	resp, err := e.update("config/rotate", testData{})
 	assert.NotNil(t, resp)
-	assert.Contains(t, resp.Data["error"], "error creating new token")
+	assert.Contains(t, resp.Data["error"], "error creating new access token")
 	assert.ErrorContains(t, err, "could not create access token")
 	e.revokeTestToken(t, e.AccessToken, tokenId)
 }

@@ -21,6 +21,16 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 				Type:        framework.TypeString,
 				Description: `Optional. Description for the user token.`,
 			},
+			"refreshable": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: `Optional. Defaults to 'false'.  A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to 'true' only if your usage requires this. See the JFrog Artifactory documentation on "Generating Refreshable Tokens" (https://jfrog.com/help/r/jfrog-platform-administration-documentation/generating-refreshable-tokens) for a full and up to date description.`,
+			},
+			"include_reference_token": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: `Optional. Defaults to 'false'. Generate a Reference Token (alias to Access Token) in addition to the full token (available from Artifactory 7.38.10). A reference token is a shorter, 64-character string, which can be used as a bearer token, a password, or with the ״X-JFrog-Art-Api״ header. Note: Using the reference token might have performance implications over a full length token.`,
+			},
 			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: `Optional. Override the maximum TTL for this access token. Cannot exceed smallest (system, mount, backend) maximum TTL.`,
@@ -35,7 +45,8 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 				Callback: b.pathUserTokenCreatePerform,
 			},
 		},
-		HelpSynopsis: `Create an Artifactory access token for the specified user.`,
+		HelpSynopsis:    `Create an Artifactory access token for the specified user.`,
+		HelpDescription: `Provides optional paramter to override default values for the user_token/<user name> path`,
 	}
 }
 
@@ -59,7 +70,7 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	role := &artifactoryRole{
+	role := artifactoryRole{
 		GrantType:   "client_credentials",
 		Username:    data.Get("username").(string),
 		Scope:       "applied-permissions/user",
@@ -91,29 +102,41 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		ttl = role.MaxTTL
 	}
 
+	if value, ok := data.GetOk("refreshable"); ok {
+		role.Refreshable = value.(bool)
+	}
+
 	if value, ok := data.GetOk("audience"); ok {
 		role.Audience = value.(string)
+	}
+
+	if value, ok := data.GetOk("include_reference_token"); ok {
+		role.IncludeReferenceToken = value.(bool)
 	}
 
 	if value, ok := data.GetOk("description"); ok {
 		role.Description = value.(string)
 	}
 
-	resp, err := b.CreateToken(*config, *role)
+	resp, err := b.CreateToken(*config, role)
 	if err != nil {
 		return nil, err
 	}
 
 	response := b.Secret(SecretArtifactoryAccessTokenType).Response(map[string]interface{}{
-		"access_token": resp.AccessToken,
-		"scope":        resp.Scope,
-		"token_id":     resp.TokenId,
-		"username":     role.Username,
-		"description":  role.Description,
+		"access_token":    resp.AccessToken,
+		"refresh_token":   resp.RefreshToken,
+		"scope":           resp.Scope,
+		"token_id":        resp.TokenId,
+		"username":        role.Username,
+		"description":     role.Description,
+		"reference_token": resp.ReferenceToken,
 	}, map[string]interface{}{
-		"access_token": resp.AccessToken,
-		"token_id":     resp.TokenId,
-		"username":     role.Username,
+		"access_token":    resp.AccessToken,
+		"refresh_token":   resp.RefreshToken,
+		"token_id":        resp.TokenId,
+		"username":        role.Username,
+		"reference_token": resp.ReferenceToken,
 	})
 
 	response.Secret.TTL = ttl

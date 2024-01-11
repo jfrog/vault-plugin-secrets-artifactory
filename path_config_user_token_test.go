@@ -14,6 +14,8 @@ func TestAcceptanceBackend_PathConfigUserToken(t *testing.T) {
 
 	t.Run("update default_description", accTestEnv.PathConfigDefaultDescriptionUpdate)
 	t.Run("update audience", accTestEnv.PathConfigAudienceUpdate)
+	t.Run("update refreshable", accTestEnv.PathConfigRefreshableUpdate)
+	t.Run("update include_reference_token", accTestEnv.PathConfigIncludeReferenceTokenUpdate)
 	t.Run("update default_ttl", accTestEnv.PathConfigDefaultTTLUpdate)
 	t.Run("update max_ttl", accTestEnv.PathConfigMaxTTLUpdate)
 }
@@ -24,6 +26,14 @@ func (e *accTestEnv) PathConfigDefaultDescriptionUpdate(t *testing.T) {
 
 func (e *accTestEnv) PathConfigAudienceUpdate(t *testing.T) {
 	e.pathConfigUserTokenUpdateStringField(t, "audience")
+}
+
+func (e *accTestEnv) PathConfigRefreshableUpdate(t *testing.T) {
+	e.pathConfigUserTokenUpdateBoolField(t, "refreshable")
+}
+
+func (e *accTestEnv) PathConfigIncludeReferenceTokenUpdate(t *testing.T) {
+	e.pathConfigUserTokenUpdateBoolField(t, "include_reference_token")
 }
 
 func (e *accTestEnv) PathConfigDefaultTTLUpdate(t *testing.T) {
@@ -46,6 +56,20 @@ func (e *accTestEnv) pathConfigUserTokenUpdateStringField(t *testing.T, fieldNam
 	})
 	data = e.ReadConfigUserToken(t)
 	assert.Equal(t, "test456", data[fieldName])
+}
+
+func (e *accTestEnv) pathConfigUserTokenUpdateBoolField(t *testing.T, fieldName string) {
+	e.UpdateConfigUserToken(t, testData{
+		fieldName: true,
+	})
+	data := e.ReadConfigUserToken(t)
+	assert.Equal(t, true, data[fieldName])
+
+	e.UpdateConfigUserToken(t, testData{
+		fieldName: false,
+	})
+	data = e.ReadConfigUserToken(t)
+	assert.Equal(t, false, data[fieldName])
 }
 
 func (e *accTestEnv) pathConfigUserTokenUpdateDurationField(t *testing.T, fieldName string) {

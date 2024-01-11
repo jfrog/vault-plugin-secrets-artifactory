@@ -31,6 +31,13 @@ func (b *backend) pathTokenCreate() *framework.Path {
 			},
 		},
 		HelpSynopsis: `Create an Artifactory access token for the specified role.`,
+		HelpDescription: `
+Create an Artifactory access token using paramters from the specified role.
+
+An optional 'ttl' parameter will override the role's 'default_ttl' parameter.
+
+An optional 'max_ttl' parameter will override the role's 'max_ttl' parameter.
+`,
 	}
 }
 
@@ -40,11 +47,13 @@ type systemVersionResponse struct {
 }
 
 type createTokenResponse struct {
-	TokenId     string `json:"token_id"`
-	AccessToken string `json:"access_token"`
-	ExpiresIn   int    `json:"expires_in"`
-	Scope       string `json:"scope"`
-	TokenType   string `json:"token_type"`
+	TokenId        string `json:"token_id"`
+	AccessToken    string `json:"access_token"`
+	RefreshToken   string `json:"refresh_token"`
+	ExpiresIn      int    `json:"expires_in"`
+	Scope          string `json:"scope"`
+	TokenType      string `json:"token_type"`
+	ReferenceToken string `json:"reference_token"`
 }
 
 func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -68,7 +77,6 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	roleName := data.Get("role").(string)
 
 	role, err := b.Role(ctx, req.Storage, roleName)
-
 	if err != nil {
 		return nil, err
 	}
@@ -113,16 +121,20 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	}
 
 	response := b.Secret(SecretArtifactoryAccessTokenType).Response(map[string]interface{}{
-		"access_token": resp.AccessToken,
-		"role":         roleName,
-		"scope":        resp.Scope,
-		"token_id":     resp.TokenId,
-		"username":     role.Username,
+		"access_token":    resp.AccessToken,
+		"refresh_token":   resp.RefreshToken,
+		"role":            roleName,
+		"scope":           resp.Scope,
+		"token_id":        resp.TokenId,
+		"username":        role.Username,
+		"reference_token": resp.ReferenceToken,
 	}, map[string]interface{}{
-		"role":         roleName,
-		"access_token": resp.AccessToken,
-		"token_id":     resp.TokenId,
-		"username":     role.Username,
+		"role":            roleName,
+		"access_token":    resp.AccessToken,
+		"refresh_token":   resp.RefreshToken,
+		"token_id":        resp.TokenId,
+		"username":        role.Username,
+		"reference_token": resp.ReferenceToken,
 	})
 
 	response.Secret.TTL = ttl

@@ -25,16 +25,17 @@ const (
 
 var ErrIncompatibleVersion = errors.New("incompatible version")
 
+type errorResponse struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Detail  string `json:"detail"`
+}
+
 func (b *backend) RevokeToken(config adminConfiguration, secret logical.Secret) error {
-	accessToken := secret.InternalData["access_token"].(string)
 	tokenId := secret.InternalData["token_id"].(string)
-
-	values := url.Values{}
-	values.Set("token", accessToken)
-
 	u, err := url.Parse(config.ArtifactoryURL)
 	if err != nil {
-		b.Backend.Logger().Warn("could not parse artifactory url", "url", u, "err", err)
+		b.Logger().Error("could not parse artifactory url", "url", u, "err", err)
 		return err
 	}
 
@@ -43,14 +44,17 @@ func (b *backend) RevokeToken(config adminConfiguration, secret logical.Secret) 
 	if b.useNewAccessAPI() {
 		resp, err = b.performArtifactoryDelete(config, "/access/api/v1/tokens/"+tokenId)
 		if err != nil {
-			b.Backend.Logger().Warn("error deleting access token", "tokenId", tokenId, "response", resp, "err", err)
+			b.Logger().Error("error deleting access token", "tokenId", tokenId, "response", resp, "err", err)
 			return err
 		}
-
 	} else {
+		accessToken := secret.InternalData["access_token"].(string)
+		values := url.Values{}
+		values.Set("token", accessToken)
+
 		resp, err = b.performArtifactoryPost(config, u.Path+"/api/security/token/revoke", values)
 		if err != nil {
-			b.Backend.Logger().Warn("error deleting token", "tokenId", tokenId, "response", resp, "err", err)
+			b.Logger().Error("error deleting token", "tokenId", tokenId, "response", resp, "err", err)
 			return err
 		}
 	}
@@ -58,45 +62,46 @@ func (b *backend) RevokeToken(config adminConfiguration, secret logical.Secret) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= http.StatusBadRequest {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			b.Backend.Logger().Warn("revokeToken could not read bad response body", "response", resp, "err", err)
+		e := fmt.Errorf("could not revoke tokenID: %v - HTTP response %v", tokenId, resp.StatusCode)
+
+		var errResp errorResponse
+		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
+			b.Logger().Error("revokenToken could not parse error response body", "err", err)
+			return e
 		}
-		b.Backend.Logger().Warn("revokeToken got bad http status code", "statusCode", resp.StatusCode, "body", string(bodyBytes))
-		return fmt.Errorf("could not revoke tokenID: %v - HTTP response %v", tokenId, resp.StatusCode)
+		b.Logger().Error("revokeToken got bad http status code", "statusCode", resp.StatusCode, "body", errResp)
+		return fmt.Errorf("could not revoke tokenID: %v - %s", tokenId, errResp.Detail)
 	}
 
 	return nil
 }
 
 type CreateTokenRequest struct {
-	GrantType      string `json:"grant_type,omitempty"`
-	Username       string `json:"username,omitempty"`
-	Scope          string `json:"scope,omitempty"`
-	ExpiresIn      int64  `json:"expires_in"`
-	Refreshable    bool   `json:"refreshable,omitempty"`
-	Description    string `json:"description,omitempty"`
-	Audience       string `json:"audience,omitempty"`
-	ForceRevocable bool   `json:"force_revocable,omitempty"`
+	GrantType             string `json:"grant_type,omitempty"`
+	Username              string `json:"username,omitempty"`
+	Scope                 string `json:"scope,omitempty"`
+	ExpiresIn             int64  `json:"expires_in"`
+	Refreshable           bool   `json:"refreshable,omitempty"`
+	Description           string `json:"description,omitempty"`
+	Audience              string `json:"audience,omitempty"`
+	ForceRevocable        bool   `json:"force_revocable,omitempty"`
+	IncludeReferenceToken bool   `json:"include_reference_token,omitempty"`
 }
 
 func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
 	request := CreateTokenRequest{
-		GrantType:   role.GrantType,
-		Username:    role.Username,
-		Scope:       role.Scope,
-		Audience:    role.Audience,
-		Description: role.Description,
+		GrantType:             role.GrantType,
+		Username:              role.Username,
+		Scope:                 role.Scope,
+		Audience:              role.Audience,
+		Description:           role.Description,
+		Refreshable:           role.Refreshable,
+		IncludeReferenceToken: role.IncludeReferenceToken,
 	}
 
 	if len(request.Username) == 0 {
 		return nil, fmt.Errorf("empty username not allowed, possibly a template error")
 	}
-
-	// A refreshable access token gets replaced by a new access token, which is not
-	// what a consumer of tokens from this backend would be expecting; instead they'd
-	// likely just request a new token periodically.
-	request.Refreshable = false
 
 	// Artifactory will not let you revoke a token that has an expiry unless it also meets
 	// criteria that can only be set in its configuration file. The version of Artifactory
@@ -111,7 +116,7 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 
 	u, err := url.Parse(config.ArtifactoryURL)
 	if err != nil {
-		b.Backend.Logger().Warn("could not parse artifactory url", "url", u, "err", err)
+		b.Logger().Error("could not parse artifactory url", "url", u, "err", err)
 		return nil, err
 	}
 
@@ -130,7 +135,7 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 
 	resp, err := b.performArtifactoryPostWithJSON(config, path, jsonReq)
 	if err != nil {
-		b.Backend.Logger().Warn("error making token request", "response", resp, "err", err)
+		b.Logger().Error("error making token request", "response", resp, "err", err)
 		return nil, err
 	}
 
@@ -138,17 +143,20 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			b.Backend.Logger().Warn("createToken could not read bad response", "response", resp, "err", err)
+		e := fmt.Errorf("could not create access token: HTTP response %v", resp.StatusCode)
+
+		var errResp errorResponse
+		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
+			b.Logger().Error("revokenToken could not parse error response body", "err", err)
+			return nil, e
 		}
-		b.Backend.Logger().Warn("createToken got non-200 status code", "statusCode", resp.StatusCode, "body", string(bodyBytes))
-		return nil, fmt.Errorf("could not create access token: HTTP response %v", resp.StatusCode)
+		b.Logger().Error("createToken got non-200 status code", "statusCode", resp.StatusCode, "body", errResp)
+		return nil, fmt.Errorf("could not create access token: HTTP response: %s", errResp.Detail)
 	}
 
 	var createdToken createTokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&createdToken); err != nil {
-		b.Backend.Logger().Warn("could not parse response", "response", resp, "err", err)
+		b.Logger().Error("could not parse response", "response", resp, "err", err)
 		return nil, err
 	}
 
@@ -173,20 +181,20 @@ func (b *backend) useNewAccessAPI() bool {
 func (b *backend) getVersion(config adminConfiguration) (err error) {
 	resp, err := b.performArtifactoryGet(config, "/artifactory/api/system/version")
 	if err != nil {
-		b.Backend.Logger().Warn("error making system version request", "response", resp, "err", err)
+		b.Logger().Error("error making system version request", "response", resp, "err", err)
 		return
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
+		b.Logger().Error("got non-200 status code", "statusCode", resp.StatusCode)
 		return fmt.Errorf("could not get the system version: HTTP response %v", resp.StatusCode)
 	}
 
 	var systemVersion systemVersionResponse
 	if err = json.NewDecoder(resp.Body).Decode(&systemVersion); err != nil {
-		b.Backend.Logger().Warn("could not parse system version response", "response", resp, "err", err)
+		b.Logger().Error("could not parse system version response", "response", resp, "err", err)
 		return
 	}
 	b.version = systemVersion.Version
@@ -196,16 +204,15 @@ func (b *backend) getVersion(config adminConfiguration) (err error) {
 // checkVersion will return a boolean and error to check compatibility before making an API call
 // -- This was formerly "checkSystemStatus" but that was hard-coded, that method now calls this one
 func (b *backend) checkVersion(ver string) (compatible bool) {
-
 	v1, err := version.NewVersion(b.version)
 	if err != nil {
-		b.Backend.Logger().Warn("could not parse Artifactory system version", "ver", b.version, "err", err)
+		b.Logger().Error("could not parse Artifactory system version", "ver", b.version, "err", err)
 		return
 	}
 
 	v2, err := version.NewVersion(ver)
 	if err != nil {
-		b.Backend.Logger().Warn("could not parse provided version", "ver", ver, "err", err)
+		b.Logger().Error("could not parse provided version", "ver", ver, "err", err)
 		return
 	}
 
@@ -223,7 +230,7 @@ func (b *backend) parseJWT(config adminConfiguration, token string) (jwtToken *j
 	cert, err := b.getRootCert(config)
 	if err != nil {
 		if errors.Is(err, ErrIncompatibleVersion) {
-			b.Logger().Warn("outdated artifactory, unable to retrieve root cert, skipping token validation")
+			b.Logger().Error("outdated artifactory, unable to retrieve root cert, skipping token validation")
 			validate = false
 		} else {
 			b.Logger().Error("error retrieving root cert", "err", err.Error())
@@ -269,7 +276,7 @@ func (b *backend) getTokenInfo(config adminConfiguration, token string) (info *T
 	// Parse Current Token (to get tokenID/scope)
 	jwtToken, err := b.parseJWT(config, token)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	claims, ok := jwtToken.Claims.(jwt.MapClaims)
@@ -294,7 +301,7 @@ func (b *backend) getTokenInfo(config adminConfiguration, token string) (info *T
 	case json.Number:
 		v, err := exp.Int64()
 		if err != nil {
-			b.Backend.Logger().Warn("error parsing token exp as json.Number", "err", err)
+			b.Logger().Error("error parsing token exp as json.Number", "err", err)
 		}
 		info.Expires = v
 	}
@@ -312,21 +319,21 @@ func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate
 
 	resp, err := b.performArtifactoryGet(config, "/access/api/v1/cert/root")
 	if err != nil {
-		b.Backend.Logger().Warn("error requesting cert/root", "response", resp, "err", err)
+		b.Logger().Error("error requesting cert/root", "response", resp, "err", err)
 		return
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b.Backend.Logger().Warn("got non-200 status code", "statusCode", resp.StatusCode)
+		b.Logger().Error("got non-200 status code", "statusCode", resp.StatusCode)
 		return cert, fmt.Errorf("could not get the certificate: HTTP response %v", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	// body, err := ioutil.ReadAll(resp.Body)  Go.1.15 and earlier
 	if err != nil {
-		b.Backend.Logger().Error("error reading root cert response body", "err", err)
+		b.Logger().Error("error reading root cert response body", "err", err)
 		return
 	}
 
@@ -334,13 +341,13 @@ func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate
 	binCert := make([]byte, len(body))
 	n, err := base64.StdEncoding.Decode(binCert, body)
 	if err != nil {
-		b.Backend.Logger().Error("error decoding body", "err", err)
+		b.Logger().Error("error decoding body", "err", err)
 		return
 	}
 
 	cert, err = x509.ParseCertificate(binCert[0:n])
 	if err != nil {
-		b.Backend.Logger().Error("error parsing certificate", "err", err)
+		b.Logger().Error("error parsing certificate", "err", err)
 		return
 	}
 	return
@@ -369,13 +376,13 @@ func (b *backend) sendUsage(config adminConfiguration, featureId string) {
 
 	jsonReq, err := json.Marshal(usage)
 	if err != nil {
-		b.Backend.Logger().Info("error marshalling call home request", "err", err)
+		b.Logger().Info("error marshalling call home request", "err", err)
 		return
 	}
 
 	resp, err := b.performArtifactoryPostWithJSON(config, "artifactory/api/system/usage", jsonReq)
 	if err != nil {
-		b.Backend.Logger().Info("error making call home request", "response", resp, "err", err)
+		b.Logger().Info("error making call home request", "response", resp, "err", err)
 		return
 	}
 

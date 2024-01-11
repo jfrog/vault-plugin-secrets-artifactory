@@ -54,9 +54,10 @@ func (b *backend) pathConfig() *framework.Path {
 		},
 		HelpSynopsis: `Interact with the Artifactory secrets configuration.`,
 		HelpDescription: `
-Configure the parameters used to connect to the Artifactory server integrated with this backend. The two main
-parameters are "url" which is the absolute URL to the Artifactory server. Note that "/artifactory/api" is prepended by the
-individual calls, so do not include it in the URL here.
+Configure the parameters used to connect to the Artifactory server integrated with this backend.
+
+The two main parameters are "url" which is the absolute URL to the Artifactory server. Note that "/artifactory/api"
+is prepended by the individual calls, so do not include it in the URL here.
 
 The second is "access_token" which must be an access token powerful enough to generate the other access tokens you'll
 be using. This value is stored seal wrapped when available. Once set, the access token cannot be retrieved, but the backend

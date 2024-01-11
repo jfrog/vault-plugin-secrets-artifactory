@@ -16,6 +16,16 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 				Type:        framework.TypeString,
 				Description: `Optional. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
 			},
+			"refreshable": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: `Optional. Defaults to 'false'. A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to 'true' only if your usage requires this. See the JFrog Artifactory documentation on "Generating Refreshable Tokens" (https://jfrog.com/help/r/jfrog-platform-administration-documentation/generating-refreshable-tokens) for a full and up to date description.`,
+			},
+			"include_reference_token": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: `Optional. Defaults to 'false'. Generate a Reference Token (alias to Access Token) in addition to the full token (available from Artifactory 7.38.10). A reference token is a shorter, 64-character string, which can be used as a bearer token, a password, or with the ״X-JFrog-Art-Api״ header. Note: Using the reference token might have performance implications over a full length token.`,
+			},
 			"default_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: `Optional. Default TTL for issued user access tokens. If unset, uses the backend's default_ttl. Cannot exceed max_ttl.`,
@@ -45,10 +55,12 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 }
 
 type userTokenConfiguration struct {
-	Audience           string        `json:"audience,omitempty"`
-	DefaultTTL         time.Duration `json:"default_ttl,omitempty"`
-	MaxTTL             time.Duration `json:"max_ttl,omitempty"`
-	DefaultDescription string        `json:"default_description,omitempty"`
+	Audience              string        `json:"audience,omitempty"`
+	Refreshable           bool          `json:"refreshable,omitempty"`
+	IncludeReferenceToken bool          `json:"include_reference_token,omitempty"`
+	DefaultTTL            time.Duration `json:"default_ttl,omitempty"`
+	MaxTTL                time.Duration `json:"max_ttl,omitempty"`
+	DefaultDescription    string        `json:"default_description,omitempty"`
 }
 
 // fetchAdminConfiguration will return nil,nil if there's no configuration
@@ -94,6 +106,14 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 
 	if val, ok := data.GetOk("audience"); ok {
 		userTokenConfig.Audience = val.(string)
+	}
+
+	if val, ok := data.GetOk("refreshable"); ok {
+		userTokenConfig.Refreshable = val.(bool)
+	}
+
+	if val, ok := data.GetOk("include_reference_token"); ok {
+		userTokenConfig.IncludeReferenceToken = val.(bool)
 	}
 
 	if val, ok := data.GetOk("default_ttl"); ok {
@@ -142,10 +162,12 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 	}
 
 	configMap := map[string]interface{}{
-		"audience":            userTokenConfig.Audience,
-		"default_ttl":         userTokenConfig.DefaultTTL.Seconds(),
-		"max_ttl":             userTokenConfig.MaxTTL.Seconds(),
-		"default_description": userTokenConfig.DefaultDescription,
+		"audience":                userTokenConfig.Audience,
+		"refreshable":             userTokenConfig.Refreshable,
+		"include_reference_token": userTokenConfig.IncludeReferenceToken,
+		"default_ttl":             userTokenConfig.DefaultTTL.Seconds(),
+		"max_ttl":                 userTokenConfig.MaxTTL.Seconds(),
+		"default_description":     userTokenConfig.DefaultDescription,
 	}
 
 	// Optionally include token info if it parses properly
