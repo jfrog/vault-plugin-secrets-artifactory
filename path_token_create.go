@@ -26,7 +26,11 @@ func (b *backend) pathTokenCreate() *framework.Path {
 			},
 			"scope": {
 				Type:        framework.TypeString,
+<<<<<<< HEAD
 				Description: `Override the scope for this access token. This is for advanced use only and should be used in conjunction with Vault policies to manage access. Please consult the Readme`,
+=======
+				Description: `Override the scope for this access token.`,
+>>>>>>> 3a8b970 (Allow for scoped down group access tokens)
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -100,11 +104,16 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	scope := data.Get("scope").(string)
-
-	//use the overridden scope rather than role default
-	if len(scope) != 0 {
-		role.Scope = scope
+	if config.AllowScopedTokens {
+		scope := data.Get("scope").(string)
+		if len(scope) != 0 {
+			match, _ := regexp.MatchString(`^applied-permissions/groups:.+$`, scope)
+			if match == false {
+				return logical.ErrorResponse("provided scope is invalid"), errors.New("provided scope is invalid")
+			}
+			//use the overridden scope rather than role default
+			role.Scope = scope
+		}
 	}
 
 	maxLeaseTTL := b.Backend.System().MaxLeaseTTL()
