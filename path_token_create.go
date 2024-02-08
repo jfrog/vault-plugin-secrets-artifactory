@@ -24,6 +24,10 @@ func (b *backend) pathTokenCreate() *framework.Path {
 				Type:        framework.TypeDurationSecond,
 				Description: `Override the maximum TTL for this access token. Cannot exceed smallest (system, backend) maximum TTL.`,
 			},
+			"scope": {
+				Type:        framework.TypeString,
+				Description: `Override the scope for this access token.`,
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -86,6 +90,13 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		if err != nil {
 			return logical.ErrorResponse("error generating username from template"), err
 		}
+	}
+
+	scope := data.Get("scope").(string)
+
+	//use the overridden scope rather than role default
+	if len(scope) != 0 {
+		role.Scope = scope
 	}
 
 	var ttl time.Duration

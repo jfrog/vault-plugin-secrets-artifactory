@@ -215,6 +215,27 @@ func (e *accTestEnv) CreatePathRole(t *testing.T) {
 	assert.Nil(t, resp)
 }
 
+func (e *accTestEnv) CreatePathAdminRole(t *testing.T) {
+	roleData := map[string]interface{}{
+		"role":        "admin-role",
+		"username":    "admin",
+		"scope":       "applied-permissions/groups:*",
+		"audience":    "*@*",
+		"default_ttl": 30 * time.Minute,
+		"max_ttl":     45 * time.Minute,
+	}
+
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/admin-role",
+		Storage:   e.Storage,
+		Data:      roleData,
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+}
+
 func (e *accTestEnv) ReadPathRole(t *testing.T) {
 	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -257,6 +278,25 @@ func (e *accTestEnv) CreatePathToken(t *testing.T) {
 	assert.Equal(t, "admin", resp.Data["username"])
 	assert.Equal(t, "test-role", resp.Data["role"])
 	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
+}
+
+func (e *accTestEnv) CreatePathScopedDownToken(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "token/admin-role",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"Scope": "applied-permissions/group:readonly",
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotEmpty(t, resp.Data["access_token"])
+	assert.NotEmpty(t, resp.Data["token_id"])
+	assert.Equal(t, "admin", resp.Data["username"])
+	assert.Equal(t, "admin-role", resp.Data["role"])
+	assert.Equal(t, "applied-permissions/groups:readonly", resp.Data["scope"])
 }
 
 func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
