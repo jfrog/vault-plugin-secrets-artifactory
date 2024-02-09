@@ -308,6 +308,55 @@ token_id           06d962b2-63e2-4279-a25d-d2a9cab6507f
 username           v-jenkins-x4mohTA8
 ```
 
+### Scoped Access Tokens
+
+In order to decouple Artifactory Group maintenance from Vault plugin configuration, you can configure a single role to request Access Tokens for specific groups. This option should be used with extreme care to ensure that your Vault policies are restricting which groups it can request tokens on behalf of.
+
+Create a role (scope for artifactory >= 7.21.1)
+
+```sh
+vault write artifactory/roles/jenkins \
+    username="jenkins-vault"
+    scope="applied-permissions/groups:admin" \
+    default_ttl=1h max_ttl=3h
+```
+
+Request Access Token for test-group
+
+```sh
+vault read artifactory/token/jenkins scope=applied-permissions/groups:test-group
+```
+
+Example output (token truncated):
+
+```console
+Key                Value
+---                -----
+lease_id           artifactory/token/jenkins/9hHxV1NlyLzPgmNIzjssRCa9
+lease_duration     1h
+lease_renewable    true
+access_token       eyJ2ZXIiOiIyIiw....
+role               jenkins
+scope              applied-permissions/groups:test-group
+token_id           06d962b2-63e2-4279-a25d-d2a9cab6507f
+username           v-jenkins-b0ftbTAG
+```
+
+Example Vault Policy
+
+```console
+path "artifactory/token/jenkins" {
+  capabilities = ["read"],
+  required_parameters = ["scope"],
+  allowed_parameters = {
+    "scope" = ["applied-permissions/groups:test-group"]
+  }
+  denied_parameters = {
+    "scope" = ["applied-permissions/groups:admin"]
+  }
+}
+```
+
 ### User Token Path
 
 User tokens may be obtained from the `/artifactory/user_token/<user-name>` endpoint. This is useful in conjunction with [ACL Policy Path Templating](https://developer.hashicorp.com/vault/tutorials/policies/policy-templating) to allow users authenticated to Vault to obtain API tokens in Artfactory for their own account. Be careful to ensure that Vault authentication methods & policies align with user account names in Artifactory. For example the following policy allows users authenticated to the `azure-ad-oidc` authentication mount to obtain a token for Artifactory for themselves, assuming the `upn` metadata is populated in Vault during authentication.

@@ -219,7 +219,7 @@ func (e *accTestEnv) CreatePathAdminRole(t *testing.T) {
 	roleData := map[string]interface{}{
 		"role":        "admin-role",
 		"username":    "admin",
-		"scope":       "applied-permissions/groups:*",
+		"scope":       "applied-permissions/groups:admin",
 		"audience":    "*@*",
 		"default_ttl": 30 * time.Minute,
 		"max_ttl":     45 * time.Minute,
@@ -286,7 +286,7 @@ func (e *accTestEnv) CreatePathScopedDownToken(t *testing.T) {
 		Path:      "token/admin-role",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
-			"Scope": "applied-permissions/group:readonly",
+			"Scope": "applied-permissions/group:test-group",
 		},
 	})
 
