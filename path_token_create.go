@@ -26,11 +26,7 @@ func (b *backend) pathTokenCreate() *framework.Path {
 			},
 			"scope": {
 				Type:        framework.TypeString,
-<<<<<<< HEAD
-				Description: `Override the scope for this access token. This is for advanced use only and should be used in conjunction with Vault policies to manage access. Please consult the Readme`,
-=======
 				Description: `Override the scope for this access token.`,
->>>>>>> 3a8b970 (Allow for scoped down group access tokens)
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{

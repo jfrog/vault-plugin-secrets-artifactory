@@ -325,11 +325,7 @@ func (e *accTestEnv) CreatePathScopedDownToken(t *testing.T) {
 		Path:      "token/admin-role",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
-<<<<<<< HEAD
-			"Scope": "applied-permissions/group:test-group",
-=======
 			"Scope": "applied-permissions/group:readonly",
->>>>>>> 3a8b970 (Allow for scoped down group access tokens)
 		},
 	})
 
