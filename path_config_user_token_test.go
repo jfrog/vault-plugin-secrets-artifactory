@@ -16,6 +16,7 @@ func TestAcceptanceBackend_PathConfigUserToken(t *testing.T) {
 	t.Run("update audience", accTestEnv.PathConfigAudienceUpdate)
 	t.Run("update refreshable", accTestEnv.PathConfigRefreshableUpdate)
 	t.Run("update include_reference_token", accTestEnv.PathConfigIncludeReferenceTokenUpdate)
+	t.Run("update use_expiring_tokens", accTestEnv.PathConfigUseExpiringTokensUpdate)
 	t.Run("update default_ttl", accTestEnv.PathConfigDefaultTTLUpdate)
 	t.Run("update max_ttl", accTestEnv.PathConfigMaxTTLUpdate)
 }
@@ -34,6 +35,10 @@ func (e *accTestEnv) PathConfigRefreshableUpdate(t *testing.T) {
 
 func (e *accTestEnv) PathConfigIncludeReferenceTokenUpdate(t *testing.T) {
 	e.pathConfigUserTokenUpdateBoolField(t, "include_reference_token")
+}
+
+func (e *accTestEnv) PathConfigUseExpiringTokensUpdate(t *testing.T) {
+	e.pathConfigUserTokenUpdateBoolField(t, "use_expiring_tokens")
 }
 
 func (e *accTestEnv) PathConfigDefaultTTLUpdate(t *testing.T) {

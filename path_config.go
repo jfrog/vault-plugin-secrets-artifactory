@@ -30,6 +30,7 @@ func (b *backend) pathConfig() *framework.Path {
 			},
 			"use_expiring_tokens": {
 				Type:        framework.TypeBool,
+				Default:     false,
 				Description: "Optional. If Artifactory version >= 7.50.3, set expires_in to max_ttl and force_revocable.",
 			},
 			"bypass_artifactory_tls_verification": {
@@ -195,6 +196,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		"access_token_sha256":                 fmt.Sprintf("%x", accessTokenHash[:]),
 		"url":                                 config.ArtifactoryURL,
 		"version":                             b.version,
+		"use_expiring_tokens":                 config.UseExpiringTokens,
 		"bypass_artifactory_tls_verification": config.BypassArtifactoryTLSVerification,
 	}
 
