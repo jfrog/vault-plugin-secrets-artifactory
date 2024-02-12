@@ -62,15 +62,13 @@ func (b *backend) RevokeToken(config adminConfiguration, secret logical.Secret) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= http.StatusBadRequest {
-		e := fmt.Errorf("could not revoke tokenID: %v - HTTP response %v", tokenId, resp.StatusCode)
-
-		var errResp errorResponse
-		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
-			b.Logger().Error("revokenToken could not parse error response body", "err", err)
-			return e
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			b.Logger().Error("revokenToken could not read error response body", "err", err)
+			return fmt.Errorf("could not parse response body. Err: %v", err)
 		}
-		b.Logger().Error("revokeToken got bad http status code", "statusCode", resp.StatusCode, "body", errResp)
-		return fmt.Errorf("could not revoke tokenID: %v - %s", tokenId, errResp.Detail)
+		b.Logger().Error("revokenToken got non-200 status code", "statusCode", resp.StatusCode, "body", string(body))
+		return fmt.Errorf("could not revoke tokenID: %v - HTTP response %v", tokenId, body)
 	}
 
 	return nil
@@ -116,7 +114,7 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 
 	u, err := url.Parse(config.ArtifactoryURL)
 	if err != nil {
-		b.Logger().Error("could not parse artifactory url", "url", u, "err", err)
+		b.Logger().Error("could not parse artifactory url", "url", config.ArtifactoryURL, "err", err)
 		return nil, err
 	}
 
@@ -145,19 +143,19 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 	if resp.StatusCode != http.StatusOK {
 		e := fmt.Errorf("could not create access token: HTTP response %v", resp.StatusCode)
 
-		var errResp errorResponse
-		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
-			b.Logger().Error("revokenToken could not parse error response body", "err", err)
-			return nil, e
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			b.Logger().Error("createToken could not read error response body", "err", err)
+			return nil, fmt.Errorf("could not parse response body. Err: %v", e)
 		}
-		b.Logger().Error("createToken got non-200 status code", "statusCode", resp.StatusCode, "body", errResp)
-		return nil, fmt.Errorf("could not create access token: HTTP response: %s", errResp.Detail)
+		b.Logger().Error("createToken got non-200 status code", "statusCode", resp.StatusCode, "body", string(body))
+		return nil, fmt.Errorf("could not create access token. HTTP response: %s", body)
 	}
 
 	var createdToken createTokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&createdToken); err != nil {
 		b.Logger().Error("could not parse response", "response", resp, "err", err)
-		return nil, err
+		return nil, fmt.Errorf("could not create access token. Err: %v", err)
 	}
 
 	return &createdToken, nil
