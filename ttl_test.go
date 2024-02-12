@@ -36,7 +36,7 @@ func TestBackend_NoRoleMaxTTLUsesSystemMaxTTL(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	// Role with no maximum TTL
@@ -82,7 +82,7 @@ func TestBackend_WorkingWithBothMaxTTLs(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 		"max_ttl":      10 * time.Minute,
 	})
 
@@ -138,7 +138,7 @@ func TestBackend_NoUserTokensMaxTTLUsesSystemMaxTTL(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -179,7 +179,7 @@ func TestBackend_UserTokenConfigMaxTTLUseSystem(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	backend_max_ttl := b.System().MaxLeaseTTL()
@@ -212,7 +212,7 @@ func TestBackend_UserTokenConfigMaxTTLUseConfigMaxTTL(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	backend_max_ttl := b.System().MaxLeaseTTL()
@@ -245,7 +245,7 @@ func TestBackend_UserTokenMaxTTLUseRequestTTL(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	backend_max_ttl := b.System().MaxLeaseTTL()
@@ -279,7 +279,7 @@ func TestBackend_UserTokenMaxTTLEnforced(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	backend_max_ttl := b.System().MaxLeaseTTL()
@@ -314,7 +314,7 @@ func TestBackend_UserTokenTTLRequest(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -345,7 +345,7 @@ func TestBackend_UserTokenDefaultTTL(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{

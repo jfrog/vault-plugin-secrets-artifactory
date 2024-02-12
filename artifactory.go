@@ -52,7 +52,7 @@ func (b *backend) RevokeToken(config adminConfiguration, secret logical.Secret) 
 		values := url.Values{}
 		values.Set("token", accessToken)
 
-		resp, err = b.performArtifactoryPost(config, u.Path+"/api/security/token/revoke", values)
+		resp, err = b.performArtifactoryPost(config, u.Path+"/artifactory/api/security/token/revoke", values)
 		if err != nil {
 			b.Logger().Error("error deleting token", "tokenId", tokenId, "response", resp, "err", err)
 			return err
@@ -125,7 +125,7 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 	if b.useNewAccessAPI() {
 		path = "/access/api/v1/tokens"
 	} else {
-		path = u.Path + "/api/security/token"
+		path = u.Path + "/artifactory/api/security/token"
 	}
 
 	jsonReq, err := json.Marshal(request)
