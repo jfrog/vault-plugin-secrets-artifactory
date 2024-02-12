@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"time"
 
@@ -13,6 +14,10 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/user_token",
 		Fields: map[string]*framework.FieldSchema{
+			"access_token": {
+				Type:        framework.TypeString,
+				Description: "User identity token to access Artifactory",
+			},
 			"audience": {
 				Type:        framework.TypeString,
 				Description: `Optional. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
@@ -61,6 +66,7 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 }
 
 type userTokenConfiguration struct {
+	AccessToken           string        `json:"access_token"`
 	Audience              string        `json:"audience,omitempty"`
 	Refreshable           bool          `json:"refreshable,omitempty"`
 	IncludeReferenceToken bool          `json:"include_reference_token,omitempty"`
@@ -109,6 +115,10 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 	userTokenConfig, err := b.fetchUserTokenConfiguration(ctx, req.Storage)
 	if err != nil {
 		return nil, err
+	}
+
+	if val, ok := data.GetOk("access_token"); ok {
+		userTokenConfig.AccessToken = val.(string)
 	}
 
 	if val, ok := data.GetOk("audience"); ok {
@@ -172,7 +182,10 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
+	accessTokenHash := sha256.Sum256([]byte(userTokenConfig.AccessToken))
+
 	configMap := map[string]interface{}{
+		"access_token_sha256":     fmt.Sprintf("%x", accessTokenHash[:]),
 		"audience":                userTokenConfig.Audience,
 		"refreshable":             userTokenConfig.Refreshable,
 		"include_reference_token": userTokenConfig.IncludeReferenceToken,

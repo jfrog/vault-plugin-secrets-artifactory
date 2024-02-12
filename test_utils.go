@@ -72,6 +72,8 @@ func (e *accTestEnv) createNewNonAdminTestToken(t *testing.T) (string, string) {
 		Scope:     "applied-permissions/groups:readers",
 	}
 
+	e.Backend.(*backend).InitializeHttpClient(&config)
+
 	err := e.Backend.(*backend).getVersion(config)
 	if err != nil {
 		t.Fatal(err)

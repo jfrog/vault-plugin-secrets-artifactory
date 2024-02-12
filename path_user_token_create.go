@@ -75,6 +75,10 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
+	if len(userTokenConfig.AccessToken) > 0 {
+		adminConfig.AccessToken = userTokenConfig.AccessToken
+	}
+
 	adminConfig.UseExpiringTokens = userTokenConfig.UseExpiringTokens
 	if value, ok := data.GetOk("use_expiring_tokens"); ok {
 		adminConfig.UseExpiringTokens = value.(bool)
