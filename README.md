@@ -144,7 +144,7 @@ You can now enable the Artifactory secrets plugin:
 vault secrets enable artifactory
 ```
 
-When upgrading, please refer to the [Vault documentation] (https://developer.hashicorp.com/vault/docs/upgrading/plugins) for detailed instructions.
+When upgrading, please refer to the [Vault documentation](https://developer.hashicorp.com/vault/docs/upgrading/plugins) for detailed instructions.
 
 
 ### How to verify binary checksums
