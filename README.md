@@ -144,6 +144,9 @@ You can now enable the Artifactory secrets plugin:
 vault secrets enable artifactory
 ```
 
+When upgrading, please refer to the [Vault documentation] (https://developer.hashicorp.com/vault/docs/upgrading/plugins) for detailed instructions.
+
+
 ### How to verify binary checksums
 
 Checksums for each binary are provided in the `artifactory-secrets-plugin_<version>_checksums.txt` file. It is signed with the public key [`vault-plugin-secrets-artifactory-public-key.asc`](vault-plugin-secrets-artifactory-public-key.asc) which creates the signature file `artifactory-secrets-plugin_<version>_checksums.txt.sig`.
