@@ -12,12 +12,29 @@ func TestAcceptanceBackend_PathConfigUserToken(t *testing.T) {
 	}
 	accTestEnv := NewConfiguredAcceptanceTestEnv(t)
 
+	t.Run("update access_token", accTestEnv.PathConfigAccessTokenUpdate)
 	t.Run("update default_description", accTestEnv.PathConfigDefaultDescriptionUpdate)
 	t.Run("update audience", accTestEnv.PathConfigAudienceUpdate)
 	t.Run("update refreshable", accTestEnv.PathConfigRefreshableUpdate)
 	t.Run("update include_reference_token", accTestEnv.PathConfigIncludeReferenceTokenUpdate)
+	t.Run("update use_expiring_tokens", accTestEnv.PathConfigUseExpiringTokensUpdate)
 	t.Run("update default_ttl", accTestEnv.PathConfigDefaultTTLUpdate)
 	t.Run("update max_ttl", accTestEnv.PathConfigMaxTTLUpdate)
+}
+
+func (e *accTestEnv) PathConfigAccessTokenUpdate(t *testing.T) {
+	e.UpdateConfigUserToken(t, testData{
+		"access_token": "test123",
+	})
+	data := e.ReadConfigUserToken(t)
+	accessTokenHash := data["access_token_sha256"]
+	assert.NotEmpty(t, "access_token_sha256")
+
+	e.UpdateConfigUserToken(t, testData{
+		"access_token": "test456",
+	})
+	data = e.ReadConfigUserToken(t)
+	assert.NotEqual(t, data["access_token_sha256"], accessTokenHash)
 }
 
 func (e *accTestEnv) PathConfigDefaultDescriptionUpdate(t *testing.T) {
@@ -34,6 +51,10 @@ func (e *accTestEnv) PathConfigRefreshableUpdate(t *testing.T) {
 
 func (e *accTestEnv) PathConfigIncludeReferenceTokenUpdate(t *testing.T) {
 	e.pathConfigUserTokenUpdateBoolField(t, "include_reference_token")
+}
+
+func (e *accTestEnv) PathConfigUseExpiringTokensUpdate(t *testing.T) {
+	e.pathConfigUserTokenUpdateBoolField(t, "use_expiring_tokens")
 }
 
 func (e *accTestEnv) PathConfigDefaultTTLUpdate(t *testing.T) {

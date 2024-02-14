@@ -72,6 +72,8 @@ func (e *accTestEnv) createNewNonAdminTestToken(t *testing.T) (string, string) {
 		Scope:     "applied-permissions/groups:readers",
 	}
 
+	e.Backend.(*backend).InitializeHttpClient(&config)
+
 	err := e.Backend.(*backend).getVersion(config)
 	if err != nil {
 		t.Fatal(err)
@@ -268,6 +270,52 @@ func (e *accTestEnv) CreatePathToken(t *testing.T) {
 
 func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/user_token",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"default_description":     "foo",
+			"refreshable":             true,
+			"include_reference_token": true,
+			"use_expiring_tokens":     true,
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+
+	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "user_token/admin",
+		Storage:   e.Storage,
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotEmpty(t, resp.Data["access_token"])
+	assert.NotEmpty(t, resp.Data["token_id"])
+	assert.Equal(t, "admin", resp.Data["username"])
+	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
+	assert.Equal(t, "foo", resp.Data["description"])
+	assert.NotEmpty(t, resp.Data["expires_in"])
+	assert.NotEmpty(t, resp.Data["refresh_token"])
+	assert.NotEmpty(t, resp.Data["reference_token"])
+}
+
+func (e *accTestEnv) CreatePathUserToken_overrides(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/user_token",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"default_description": "foo",
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+
+	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "user_token/admin",
 		Storage:   e.Storage,
@@ -275,6 +323,7 @@ func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 			"description":             "buffalo",
 			"refreshable":             true,
 			"include_reference_token": true,
+			"use_expiring_tokens":     true,
 		},
 	})
 
@@ -285,6 +334,7 @@ func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 	assert.Equal(t, "admin", resp.Data["username"])
 	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
 	assert.Equal(t, "buffalo", resp.Data["description"])
+	assert.NotEmpty(t, resp.Data["expires_in"])
 	assert.NotEmpty(t, resp.Data["refresh_token"])
 	assert.NotEmpty(t, resp.Data["reference_token"])
 }
@@ -302,7 +352,9 @@ func newAcceptanceTestEnv() (*accTestEnv, error) {
 	ctx := context.Background()
 
 	conf := &logical.BackendConfig{
-		System: &logical.StaticSystemView{},
+		System: &logical.StaticSystemView{
+			MaxLeaseTTLVal: time.Duration(2592000) * time.Second, // 30 days
+		},
 		Logger: logging.NewVaultLogger(log.Debug),
 	}
 	backend, err := Factory(ctx, conf)
@@ -408,6 +460,7 @@ func makeBackend(t *testing.T) (*backend, *logical.BackendConfig) {
 func configuredBackend(t *testing.T, adminConfig map[string]interface{}) (*backend, *logical.BackendConfig) {
 
 	b, config := makeBackend(t)
+	b.InitializeHttpClient(&adminConfiguration{})
 
 	_, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,

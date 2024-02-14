@@ -83,7 +83,7 @@ usertoken:
 	vault write $(PLUGIN_VAULT_PATH)/config/admin url=$(JFROG_URL) access_token=$(JFROG_ACCESS_TOKEN)
 	vault write $(PLUGIN_VAULT_PATH)/config/user_token default_description="Vault Test"
 	vault read $(PLUGIN_VAULT_PATH)/config/user_token
-	vault read $(PLUGIN_VAULT_PATH)/user_token/test refreshable=true include_reference_token=true
+	vault read $(PLUGIN_VAULT_PATH)/user_token/test refreshable=true include_reference_token=true use_expiring_tokens=true
 
 testrole:
 	vault write $(PLUGIN_VAULT_PATH)/roles/test scope="$(ARTIFACTORY_SCOPE)" max_ttl=3h default_ttl=2h

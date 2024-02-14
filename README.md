@@ -16,6 +16,8 @@ Using this plugin, you can limit the accidental exposure window of Artifactory t
 
 This backend creates access tokens in Artifactory using the admin credentials provided. Note that if you provide non-administrative credentials, then the "username" must match the username of the credential owner.
 
+Visit [JFrog Help Center](https://jfrog.com/help/r/jfrog-platform-administration-documentation/introduction-to-access-tokens) for more information on Access Tokens.
+
 ### Admin Token Expiration Notice
 
 > [!IMPORTANT]
@@ -46,8 +48,8 @@ By default, the Vault generated Artifactory tokens will not show an expiration d
 automatically revoke them. Vault will revoke the token when its lease expires due to logout or timeout (ttl/max_ttl). The reason
 for this is because of the [default Revocable/Persistency Thresholds][artifactory-token-thresholds] in Artifactory. If you would
 like the artifactory token itself to show an expiration, and you are using Artifactory v7.50.3 or higher, you can write
-`use_expiring_tokens=true` to the `/artifactory/config/admin` endpoint. This will set the `force_revocable=true` parameter and
-set `expires_in` to either max lease TTL or role max_ttl, whichever is lower, when a token is created, overriding the default
+`use_expiring_tokens=true` to the `/artifactory/config/admin` path. This will set the `force_revocable=true` parameter and
+set `expires_in` to either max lease TTL or role's `max_ttl`, whichever is lower, when a token is created, overriding the default
 thresholds mentioned above.
 
 Example:
@@ -87,6 +89,7 @@ Token claims
 ### Artifactory Version Detection
 
 Some of the functionality of this plugin requires certain versions of Artifactory. For example, as of Artifactory 7.50.3, we can optionally set the `force_revocable` flag and set the expiration of the token to `max_ttl`.
+
 If you have upgraded Artifactory after installing this plugin, and would like to take advantage of newer features, you can issue an empty write to the `artifactory/config/admin` endpoint to re-detect the version, or it will re-detect upon reload.
 
 Example:
@@ -251,6 +254,17 @@ username                            vault-admin
 version                             7.55.6
 ```
 
+#### Use expiring tokens
+
+To enable creation of token that expires using TTL (system default, system max TTL, or config overrides), set `use_expiring_tokens` to `true`, e.g.
+
+```sh
+vault write artifactory/config/admin \
+    url=https://artifactory.example.org \
+    access_token=$TOKEN \
+    use_expiring_tokens=true
+```
+
 ## Usage
 
 Create a role (scope for artifactory >= 7.21.1)
@@ -314,7 +328,9 @@ username           v-jenkins-x4mohTA8
 
 ### User Token Path
 
-User tokens may be obtained from the `/artifactory/user_token/<user-name>` endpoint. This is useful in conjunction with [ACL Policy Path Templating](https://developer.hashicorp.com/vault/tutorials/policies/policy-templating) to allow users authenticated to Vault to obtain API tokens in Artfactory for their own account. Be careful to ensure that Vault authentication methods & policies align with user account names in Artifactory. For example the following policy allows users authenticated to the `azure-ad-oidc` authentication mount to obtain a token for Artifactory for themselves, assuming the `upn` metadata is populated in Vault during authentication.
+User tokens may be obtained from the `/artifactory/user_token/<user-name>` endpoint. This is useful in conjunction with [ACL Policy Path Templating](https://developer.hashicorp.com/vault/tutorials/policies/policy-templating) to allow users authenticated to Vault to obtain API tokens in Artfactory for their own account. Be careful to ensure that Vault authentication methods & policies align with user account names in Artifactory.
+
+For example the following policy allows users authenticated to the `azure-ad-oidc` authentication mount to obtain a token for Artifactory for themselves, assuming the `upn` metadata is populated in Vault during authentication.
 
 ```
 path "artifactory/user_token/{{identity.entity.aliases.azure-ad-oidc.metadata.upn}}" {
@@ -322,7 +338,11 @@ path "artifactory/user_token/{{identity.entity.aliases.azure-ad-oidc.metadata.up
 }
 ```
 
-Default values for the token's `description`, `ttl`, `max_ttl`, `audience`, `refreshable`, and `include_reference_token` may be configured at the `/artifactory/config/user_token` endpoint. TTL rules follow Vault's [general cases](https://developer.hashicorp.com/vault/docs/concepts/tokens#the-general-case) and [token hierarchy](https://developer.hashicorp.com/vault/docs/concepts/tokens#token-hierarchies-and-orphan-tokens). The desired lease TTL will be determined by the most specific TTL value specified with the request ttl parameter being highest precedence, followed by the plugin configuration, secret mount tuning, or system default ttl. The maximum TTL value allowed is limited to the lowest value of the `max_ttl` setting set on the system, secret mount tuning, plugin configuration, or the specific request.
+Default values for the token's `access_token`, `description`, `ttl`, `max_ttl`, `audience`, `refreshable`, `include_reference_token`, and `use_expiring_tokens` may be configured at the `/artifactory/config/user_token` path.
+
+`access_token` field allows the use of user's identity token in place of the admin access token from the `/artifactory/config/admin` path, enabling creating access token scoped to that user only.
+
+TTL rules follow Vault's [general cases](https://developer.hashicorp.com/vault/docs/concepts/tokens#the-general-case) and [token hierarchy](https://developer.hashicorp.com/vault/docs/concepts/tokens#token-hierarchies-and-orphan-tokens). The desired lease TTL will be determined by the most specific TTL value specified with the request ttl parameter being highest precedence, followed by the plugin configuration, secret mount tuning, or system default ttl. The maximum TTL value allowed is limited to the lowest value of the `max_ttl` setting set on the system, secret mount tuning, plugin configuration, or the specific request.
 
 Example Token Configuration:
 
@@ -407,6 +427,12 @@ make setup
 
 ```sh
 make admin
+```
+
+Generate an user token:
+
+```sh
+make usertoken
 ```
 
 NOTE: Each time you rebuild (`make`), vault will restart, so you will need to run `make setup` again, since vault is in dev mode.

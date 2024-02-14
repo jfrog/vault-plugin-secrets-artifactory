@@ -2,6 +2,8 @@ package artifactory
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -12,6 +14,10 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/user_token",
 		Fields: map[string]*framework.FieldSchema{
+			"access_token": {
+				Type:        framework.TypeString,
+				Description: "User identity token to access Artifactory",
+			},
 			"audience": {
 				Type:        framework.TypeString,
 				Description: `Optional. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
@@ -25,6 +31,11 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: `Optional. Defaults to 'false'. Generate a Reference Token (alias to Access Token) in addition to the full token (available from Artifactory 7.38.10). A reference token is a shorter, 64-character string, which can be used as a bearer token, a password, or with the ״X-JFrog-Art-Api״ header. Note: Using the reference token might have performance implications over a full length token.`,
+			},
+			"use_expiring_tokens": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "Optional. If Artifactory version >= 7.50.3, set expires_in to max_ttl and force_revocable.",
 			},
 			"default_ttl": {
 				Type:        framework.TypeDurationSecond,
@@ -55,9 +66,11 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 }
 
 type userTokenConfiguration struct {
+	AccessToken           string        `json:"access_token"`
 	Audience              string        `json:"audience,omitempty"`
 	Refreshable           bool          `json:"refreshable,omitempty"`
 	IncludeReferenceToken bool          `json:"include_reference_token,omitempty"`
+	UseExpiringTokens     bool          `json:"use_expiring_tokens,omitempty"`
 	DefaultTTL            time.Duration `json:"default_ttl,omitempty"`
 	MaxTTL                time.Duration `json:"max_ttl,omitempty"`
 	DefaultDescription    string        `json:"default_description,omitempty"`
@@ -104,6 +117,10 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 
+	if val, ok := data.GetOk("access_token"); ok {
+		userTokenConfig.AccessToken = val.(string)
+	}
+
 	if val, ok := data.GetOk("audience"); ok {
 		userTokenConfig.Audience = val.(string)
 	}
@@ -114,6 +131,10 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 
 	if val, ok := data.GetOk("include_reference_token"); ok {
 		userTokenConfig.IncludeReferenceToken = val.(bool)
+	}
+
+	if val, ok := data.GetOk("use_expiring_tokens"); ok {
+		userTokenConfig.UseExpiringTokens = val.(bool)
 	}
 
 	if val, ok := data.GetOk("default_ttl"); ok {
@@ -145,43 +166,46 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	config, err := b.fetchAdminConfiguration(ctx, req.Storage)
+	adminConfig, err := b.fetchAdminConfiguration(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	if config == nil {
+	if adminConfig == nil {
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathConfigUserTokenRead")
+	go b.sendUsage(*adminConfig, "pathConfigUserTokenRead")
 
 	userTokenConfig, err := b.fetchUserTokenConfiguration(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
+	accessTokenHash := sha256.Sum256([]byte(userTokenConfig.AccessToken))
+
 	configMap := map[string]interface{}{
+		"access_token_sha256":     fmt.Sprintf("%x", accessTokenHash[:]),
 		"audience":                userTokenConfig.Audience,
 		"refreshable":             userTokenConfig.Refreshable,
 		"include_reference_token": userTokenConfig.IncludeReferenceToken,
+		"use_expiring_tokens":     userTokenConfig.UseExpiringTokens,
 		"default_ttl":             userTokenConfig.DefaultTTL.Seconds(),
 		"max_ttl":                 userTokenConfig.MaxTTL.Seconds(),
 		"default_description":     userTokenConfig.DefaultDescription,
 	}
 
 	// Optionally include token info if it parses properly
-	token, err := b.getTokenInfo(*config, config.AccessToken)
+	token, err := b.getTokenInfo(*adminConfig, adminConfig.AccessToken)
 	if err != nil {
-		b.Logger().Warn("Error parsing AccessToken: " + err.Error())
+		b.Logger().Warn("Error parsing AccessToken", "err", err.Error())
 	} else {
 		configMap["token_id"] = token.TokenID
 		configMap["username"] = token.Username
 		configMap["scope"] = token.Scope
 		if token.Expires > 0 {
 			configMap["exp"] = token.Expires
-			tm := time.Unix(token.Expires, 0)
-			configMap["expires"] = tm.Local()
+			configMap["expires"] = time.Unix(token.Expires, 0).Local()
 		}
 	}
 

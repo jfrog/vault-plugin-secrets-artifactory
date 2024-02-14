@@ -26,7 +26,7 @@ func TestBackend_CreateTokenSuccess(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	// Setup a role
@@ -184,7 +184,7 @@ func TestBackend_CreateTokenArtifactoryMisconfigured(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	// Setup a role
@@ -235,7 +235,7 @@ func TestBackend_RevokeToken(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	// Setup a role

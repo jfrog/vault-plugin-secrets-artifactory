@@ -31,6 +31,11 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 				Default:     false,
 				Description: `Optional. Defaults to 'false'. Generate a Reference Token (alias to Access Token) in addition to the full token (available from Artifactory 7.38.10). A reference token is a shorter, 64-character string, which can be used as a bearer token, a password, or with the ״X-JFrog-Art-Api״ header. Note: Using the reference token might have performance implications over a full length token.`,
 			},
+			"use_expiring_tokens": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "Optional. If Artifactory version >= 7.50.3, set expires_in to max_ttl and force_revocable.",
+			},
 			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: `Optional. Override the maximum TTL for this access token. Cannot exceed smallest (system, mount, backend) maximum TTL.`,
@@ -54,38 +59,52 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	config, err := b.fetchAdminConfiguration(ctx, req.Storage)
+	adminConfig, err := b.fetchAdminConfiguration(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	if config == nil {
+	if adminConfig == nil {
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathUserTokenCreatePerform")
+	go b.sendUsage(*adminConfig, "pathUserTokenCreatePerform")
 
 	userTokenConfig, err := b.fetchUserTokenConfiguration(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	role := artifactoryRole{
-		GrantType:   "client_credentials",
-		Username:    data.Get("username").(string),
-		Scope:       "applied-permissions/user",
-		MaxTTL:      b.Backend.System().MaxLeaseTTL(),
-		Description: userTokenConfig.DefaultDescription,
+	if len(userTokenConfig.AccessToken) > 0 {
+		adminConfig.AccessToken = userTokenConfig.AccessToken
 	}
+
+	adminConfig.UseExpiringTokens = userTokenConfig.UseExpiringTokens
+	if value, ok := data.GetOk("use_expiring_tokens"); ok {
+		adminConfig.UseExpiringTokens = value.(bool)
+	}
+
+	role := artifactoryRole{
+		GrantType:             "client_credentials",
+		Username:              data.Get("username").(string),
+		Scope:                 "applied-permissions/user",
+		MaxTTL:                b.Backend.System().MaxLeaseTTL(),
+		Audience:              userTokenConfig.Audience,
+		Refreshable:           userTokenConfig.Refreshable,
+		IncludeReferenceToken: userTokenConfig.IncludeReferenceToken,
+		Description:           userTokenConfig.DefaultDescription,
+	}
+
+	b.Logger().Debug("pathUserTokenCreatePerform", "role.Description", role.Description)
 
 	if userTokenConfig.MaxTTL != 0 && userTokenConfig.MaxTTL < role.MaxTTL {
 		role.MaxTTL = userTokenConfig.MaxTTL
 	}
 
 	if value, ok := data.GetOk("max_ttl"); ok {
-		value := time.Second * time.Duration(value.(int))
-		if value != 0 && value < role.MaxTTL {
-			role.MaxTTL = value
+		maxTTL := time.Second * time.Duration(value.(int))
+		if maxTTL != 0 && maxTTL < role.MaxTTL {
+			role.MaxTTL = maxTTL
 		}
 	}
 
@@ -118,7 +137,7 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		role.Description = value.(string)
 	}
 
-	resp, err := b.CreateToken(*config, role)
+	resp, err := b.CreateToken(*adminConfig, role)
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +145,7 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 	response := b.Secret(SecretArtifactoryAccessTokenType).Response(map[string]interface{}{
 		"access_token":    resp.AccessToken,
 		"refresh_token":   resp.RefreshToken,
+		"expires_in":      resp.ExpiresIn,
 		"scope":           resp.Scope,
 		"token_id":        resp.TokenId,
 		"username":        role.Username,
@@ -134,6 +154,8 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 	}, map[string]interface{}{
 		"access_token":    resp.AccessToken,
 		"refresh_token":   resp.RefreshToken,
+		"expires_in":      resp.ExpiresIn,
+		"scope":           resp.Scope,
 		"token_id":        resp.TokenId,
 		"username":        role.Username,
 		"reference_token": resp.ReferenceToken,
