@@ -138,7 +138,7 @@ func (e *accTestEnv) ReadPathConfig(t *testing.T) {
 
 // ReadConfigAdmin will send a GET to the /config/admin endpoint (vault read artifactory/config/admin)
 func (e *accTestEnv) ReadConfigAdmin(t *testing.T) testData {
-	resp, err := e.read("config/admin")
+	resp, err := e.read(configAdminPath)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -148,7 +148,7 @@ func (e *accTestEnv) ReadConfigAdmin(t *testing.T) testData {
 
 // ReadConfigUserToken will send a GET to the /config/user_token endpoint (vault read artifactory/config/user_token)
 func (e *accTestEnv) ReadConfigUserToken(t *testing.T) testData {
-	resp, err := e.read("config/user_token")
+	resp, err := e.read(configUserTokenPath)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -271,7 +271,7 @@ func (e *accTestEnv) CreatePathToken(t *testing.T) {
 func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/user_token",
+		Path:      configUserTokenPath,
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
 			"default_description":     "foo",
@@ -305,7 +305,7 @@ func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 func (e *accTestEnv) CreatePathUserToken_overrides(t *testing.T) {
 	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/user_token",
+		Path:      configUserTokenPath,
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
 			"default_description": "foo",

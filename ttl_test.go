@@ -155,7 +155,7 @@ func TestBackend_NoUserTokensMaxTTLUsesSystemMaxTTL(t *testing.T) {
 func SetUserTokenMaxTTL(t *testing.T, b *backend, storage logical.Storage, max_ttl time.Duration) {
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/user_token",
+		Path:      configUserTokenPath,
 		Storage:   storage,
 		Data: map[string]interface{}{
 			"max_ttl": max_ttl,
@@ -350,7 +350,7 @@ func TestBackend_UserTokenDefaultTTL(t *testing.T) {
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/user_token",
+		Path:      configUserTokenPath,
 		Storage:   config.StorageView,
 		Data: map[string]interface{}{
 			"default_ttl": 42 * time.Minute,

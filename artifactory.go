@@ -84,6 +84,7 @@ type CreateTokenRequest struct {
 	Audience              string `json:"audience,omitempty"`
 	ForceRevocable        bool   `json:"force_revocable,omitempty"`
 	IncludeReferenceToken bool   `json:"include_reference_token,omitempty"`
+	RefreshToken          string `json:"refresh_token,omitempty"`
 }
 
 func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
@@ -95,9 +96,10 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 		Description:           role.Description,
 		Refreshable:           role.Refreshable,
 		IncludeReferenceToken: role.IncludeReferenceToken,
+		RefreshToken:          role.RefreshToken,
 	}
 
-	if len(request.Username) == 0 {
+	if request.GrantType == "client_credentials" && len(request.Username) == 0 {
 		return nil, fmt.Errorf("empty username not allowed, possibly a template error")
 	}
 

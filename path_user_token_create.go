@@ -24,7 +24,7 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 			"refreshable": {
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: `Optional. Defaults to 'false'.  A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to 'true' only if your usage requires this. See the JFrog Artifactory documentation on "Generating Refreshable Tokens" (https://jfrog.com/help/r/jfrog-platform-administration-documentation/generating-refreshable-tokens) for a full and up to date description.`,
+				Description: `Optional. Defaults to 'false'. A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to 'true' only if your usage requires this. See the JFrog Artifactory documentation on "Generating Refreshable Tokens" (https://jfrog.com/help/r/jfrog-platform-administration-documentation/generating-refreshable-tokens) for a full and up to date description.`,
 			},
 			"include_reference_token": {
 				Type:        framework.TypeBool,
@@ -43,6 +43,10 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: `Optional. Override the default TTL when issuing this access token. Cappaed at the smallest maximum TTL (system, mount, backend, request).`,
+			},
+			"refresh_token": {
+				Type:        framework.TypeString,
+				Description: "Refresh token for an existing access token. When specified, this will be used to refresh the existing access token.",
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -70,7 +74,9 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 
 	go b.sendUsage(*adminConfig, "pathUserTokenCreatePerform")
 
-	userTokenConfig, err := b.fetchUserTokenConfiguration(ctx, req.Storage)
+	username := data.Get("username").(string)
+
+	userTokenConfig, err := b.fetchUserTokenConfiguration(ctx, req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
@@ -84,18 +90,30 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		adminConfig.UseExpiringTokens = value.(bool)
 	}
 
-	role := artifactoryRole{
-		GrantType:             "client_credentials",
-		Username:              data.Get("username").(string),
-		Scope:                 "applied-permissions/user",
-		MaxTTL:                b.Backend.System().MaxLeaseTTL(),
-		Audience:              userTokenConfig.Audience,
-		Refreshable:           userTokenConfig.Refreshable,
-		IncludeReferenceToken: userTokenConfig.IncludeReferenceToken,
-		Description:           userTokenConfig.DefaultDescription,
+	var role artifactoryRole
+
+	refreshToken := ""
+	if value, ok := data.GetOk("refresh_token"); ok {
+		refreshToken = value.(string)
 	}
 
-	b.Logger().Debug("pathUserTokenCreatePerform", "role.Description", role.Description)
+	if len(refreshToken) > 0 {
+		role = artifactoryRole{
+			GrantType:    "refresh_token",
+			RefreshToken: refreshToken,
+		}
+	} else {
+		role = artifactoryRole{
+			GrantType:             "client_credentials",
+			Username:              username,
+			Scope:                 "applied-permissions/user",
+			MaxTTL:                b.Backend.System().MaxLeaseTTL(),
+			Audience:              userTokenConfig.Audience,
+			Refreshable:           userTokenConfig.Refreshable,
+			IncludeReferenceToken: userTokenConfig.IncludeReferenceToken,
+			Description:           userTokenConfig.DefaultDescription,
+		}
+	}
 
 	if userTokenConfig.MaxTTL != 0 && userTokenConfig.MaxTTL < role.MaxTTL {
 		role.MaxTTL = userTokenConfig.MaxTTL
