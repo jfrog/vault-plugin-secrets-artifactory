@@ -32,7 +32,7 @@ func TestAcceptanceBackend_PathConfig(t *testing.T) {
 }
 
 func (e *accTestEnv) PathConfigReadUnconfigured(t *testing.T) {
-	resp, err := e.read("config/admin")
+	resp, err := e.read(configAdminPath)
 	assert.Contains(t, resp.Data["error"], "backend not configured")
 	assert.NoError(t, err)
 }
@@ -73,7 +73,7 @@ func (e *accTestEnv) pathConfigUpdateBooleanField(t *testing.T, fieldName string
 	assert.Equal(t, false, data[fieldName])
 
 	// Fail Tests
-	resp, err := e.update("config/admin", testData{
+	resp, err := e.update(configAdminPath, testData{
 		fieldName: "Sure, why not",
 	})
 	assert.NotNil(t, resp)
@@ -90,7 +90,7 @@ func (e *accTestEnv) PathConfigUpdateUsernameTemplate(t *testing.T) {
 	assert.Equal(t, data["username_template"], usernameTemplate)
 
 	// Bad Template
-	resp, err := e.update("config/admin", testData{
+	resp, err := e.update(configAdminPath, testData{
 		"username_template": "bad_{{ .somethingInvalid }}_testing {{",
 	})
 	assert.NotNil(t, resp)
@@ -101,7 +101,7 @@ func (e *accTestEnv) PathConfigUpdateUsernameTemplate(t *testing.T) {
 // most of these were covered by unit tests, but we want test coverage for acceptance
 func (e *accTestEnv) PathConfigUpdateErrors(t *testing.T) {
 	// Access Token Required
-	resp, err := e.update("config/admin", testData{
+	resp, err := e.update(configAdminPath, testData{
 		"url": e.URL,
 	})
 	assert.NoError(t, err)
@@ -109,7 +109,7 @@ func (e *accTestEnv) PathConfigUpdateErrors(t *testing.T) {
 	assert.True(t, resp.IsError())
 	assert.Contains(t, resp.Error().Error(), "access_token")
 	// URL Required
-	resp, err = e.update("config/admin", testData{
+	resp, err = e.update(configAdminPath, testData{
 		"access_token": "test-access-token",
 	})
 	assert.NoError(t, err)
@@ -117,7 +117,7 @@ func (e *accTestEnv) PathConfigUpdateErrors(t *testing.T) {
 	assert.True(t, resp.IsError())
 	assert.Contains(t, resp.Error().Error(), "url")
 	// Bad Token
-	resp, err = e.update("config/admin", testData{
+	resp, err = e.update(configAdminPath, testData{
 		"access_token": "test-access-token",
 		"url":          e.URL,
 	})
@@ -129,14 +129,14 @@ func (e *accTestEnv) PathConfigUpdateErrors(t *testing.T) {
 
 func (e *accTestEnv) PathConfigReadBadAccessToken(t *testing.T) {
 	// Forcibly set a bad token
-	entry, err := logical.StorageEntryJSON("config/admin", adminConfiguration{
+	entry, err := logical.StorageEntryJSON(configAdminPath, adminConfiguration{
 		AccessToken:    "bogus.token",
 		ArtifactoryURL: e.URL,
 	})
 	assert.NoError(t, err)
 	err = e.Storage.Put(e.Context, entry)
 	assert.NoError(t, err)
-	resp, err := e.read("config/admin")
+	resp, err := e.read(configAdminPath)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -152,7 +152,7 @@ func TestBackend_AccessTokenRequired(t *testing.T) {
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/admin",
+		Path:      configAdminPath,
 		Storage:   config.StorageView,
 		Data:      adminConfig,
 	})
@@ -172,7 +172,7 @@ func TestBackend_URLRequired(t *testing.T) {
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/admin",
+		Path:      configAdminPath,
 		Storage:   config.StorageView,
 		Data:      adminConfig,
 	})
@@ -206,7 +206,7 @@ func TestBackend_AccessTokenAsSHA256(t *testing.T) {
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "config/admin",
+		Path:      configAdminPath,
 		Storage:   config.StorageView,
 	})
 

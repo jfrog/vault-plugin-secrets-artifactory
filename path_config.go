@@ -10,9 +10,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const configAdminPath = "config/admin"
+
 func (b *backend) pathConfig() *framework.Path {
 	return &framework.Path{
-		Pattern: "config/admin",
+		Pattern: configAdminPath,
 		Fields: map[string]*framework.FieldSchema{
 			"access_token": {
 				Type:        framework.TypeString,
@@ -83,6 +85,27 @@ type adminConfiguration struct {
 	BypassArtifactoryTLSVerification bool   `json:"bypass_artifactory_tls_verification,omitempty"`
 }
 
+// fetchAdminConfiguration will return nil,nil if there's no configuration
+func (b *backend) fetchAdminConfiguration(ctx context.Context, storage logical.Storage) (*adminConfiguration, error) {
+	var config adminConfiguration
+
+	// Read in the backend configuration
+	entry, err := storage.Get(ctx, configAdminPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if entry == nil {
+		return nil, nil
+	}
+
+	if err := entry.DecodeJSON(&config); err != nil {
+		return nil, err
+	}
+
+	return &config, nil
+}
+
 func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
@@ -139,7 +162,7 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("Unable to get Artifactory Version. Check url and access_token fields. TLS connection verification with Artifactory can be skipped by setting bypass_artifactory_tls_verification field to 'true'"), err
 	}
 
-	entry, err := logical.StorageEntryJSON("config/admin", config)
+	entry, err := logical.StorageEntryJSON(configAdminPath, config)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +190,7 @@ func (b *backend) pathConfigDelete(ctx context.Context, req *logical.Request, _ 
 
 	go b.sendUsage(*config, "pathConfigDelete")
 
-	if err := req.Storage.Delete(ctx, "config/admin"); err != nil {
+	if err := req.Storage.Delete(ctx, configAdminPath); err != nil {
 		return nil, err
 	}
 

@@ -120,14 +120,14 @@ func (e *accTestEnv) UpdatePathConfig(t *testing.T) {
 
 // UpdateConfigAdmin will send a POST/PUT to the /config/admin endpoint with testData (vault write artifactory/config/admin)
 func (e *accTestEnv) UpdateConfigAdmin(t *testing.T, data testData) {
-	resp, err := e.update("config/admin", data)
+	resp, err := e.update(configAdminPath, data)
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
 }
 
 // UpdateConfigAdmin will send a POST/PUT to the /config/user_token endpoint with testData (vault write artifactory/config/user_token)
 func (e *accTestEnv) UpdateConfigUserToken(t *testing.T, data testData) {
-	resp, err := e.update("config/user_token", data)
+	resp, err := e.update(configUserTokenPath, data)
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
 }
@@ -163,7 +163,7 @@ func (e *accTestEnv) DeletePathConfig(t *testing.T) {
 func (e *accTestEnv) DeleteConfigAdmin(t *testing.T) {
 	resp, err := e.Backend.HandleRequest(e.Context, &logical.Request{
 		Operation: logical.DeleteOperation,
-		Path:      "config/admin",
+		Path:      configAdminPath,
 		Storage:   e.Storage,
 	})
 
@@ -464,7 +464,7 @@ func configuredBackend(t *testing.T, adminConfig map[string]interface{}) (*backe
 
 	_, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/admin",
+		Path:      configAdminPath,
 		Storage:   config.StorageView,
 		Data:      adminConfig,
 	})

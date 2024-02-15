@@ -310,7 +310,7 @@ func (b *backend) getTokenInfo(config adminConfiguration, token string) (info *T
 // getRootCert will return the Artifactory access root certificate's public key, for validating token signatures
 func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate, err error) {
 	// Verify Artifactory version is at 7.12.0 or higher, prior versions will not work
-	// REF: https://www.jfrog.com/confluence/display/JFROG/Artifactory+REST+API#ArtifactoryRESTAPI-GetRootCertificate
+	// REF: https://jfrog.com/help/r/jfrog-rest-apis/get-root-certificate
 	if !b.checkVersion("7.12.0") {
 		return cert, ErrIncompatibleVersion
 	}
@@ -329,7 +329,6 @@ func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate
 	}
 
 	body, err := io.ReadAll(resp.Body)
-	// body, err := ioutil.ReadAll(resp.Body)  Go.1.15 and earlier
 	if err != nil {
 		b.Logger().Error("error reading root cert response body", "err", err)
 		return

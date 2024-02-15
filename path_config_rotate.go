@@ -86,7 +86,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	config.AccessToken = resp.AccessToken
 
 	// Save new config
-	entry, err := logical.StorageEntryJSON("config/admin", config)
+	entry, err := logical.StorageEntryJSON(configAdminPath, config)
 	if err != nil {
 		return nil, err
 	}

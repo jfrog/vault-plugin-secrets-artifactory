@@ -63,7 +63,7 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 		RunningVersion: Version,
 
 		PathsSpecial: &logical.Paths{
-			SealWrapStorage: []string{"config/admin"},
+			SealWrapStorage: []string{configAdminPath},
 		},
 
 		BackendType:    logical.TypeLogical,
@@ -140,27 +140,6 @@ func (b *backend) reset() {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 	b.httpClient = nil
-}
-
-// fetchAdminConfiguration will return nil,nil if there's no configuration
-func (b *backend) fetchAdminConfiguration(ctx context.Context, storage logical.Storage) (*adminConfiguration, error) {
-	var config adminConfiguration
-
-	// Read in the backend configuration
-	entry, err := storage.Get(ctx, "config/admin")
-	if err != nil {
-		return nil, err
-	}
-
-	if entry == nil {
-		return nil, nil
-	}
-
-	if err := entry.DecodeJSON(&config); err != nil {
-		return nil, err
-	}
-
-	return &config, nil
 }
 
 const artifactoryHelp = `
