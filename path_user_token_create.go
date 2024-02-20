@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -43,10 +44,6 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: `Optional. Override the default TTL when issuing this access token. Cappaed at the smallest maximum TTL (system, mount, backend, request).`,
-			},
-			"refresh_token": {
-				Type:        framework.TypeString,
-				Description: "Refresh token for an existing access token. When specified, this will be used to refresh the existing access token.",
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -90,29 +87,16 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		adminConfig.UseExpiringTokens = value.(bool)
 	}
 
-	var role artifactoryRole
-
-	refreshToken := ""
-	if value, ok := data.GetOk("refresh_token"); ok {
-		refreshToken = value.(string)
-	}
-
-	if len(refreshToken) > 0 {
-		role = artifactoryRole{
-			GrantType:    "refresh_token",
-			RefreshToken: refreshToken,
-		}
-	} else {
-		role = artifactoryRole{
-			GrantType:             "client_credentials",
-			Username:              username,
-			Scope:                 "applied-permissions/user",
-			MaxTTL:                b.Backend.System().MaxLeaseTTL(),
-			Audience:              userTokenConfig.Audience,
-			Refreshable:           userTokenConfig.Refreshable,
-			IncludeReferenceToken: userTokenConfig.IncludeReferenceToken,
-			Description:           userTokenConfig.DefaultDescription,
-		}
+	role := artifactoryRole{
+		GrantType:             grantTypeClientCredentials,
+		Username:              username,
+		Scope:                 "applied-permissions/user",
+		MaxTTL:                b.Backend.System().MaxLeaseTTL(),
+		Audience:              userTokenConfig.Audience,
+		Refreshable:           userTokenConfig.Refreshable,
+		IncludeReferenceToken: userTokenConfig.IncludeReferenceToken,
+		Description:           userTokenConfig.DefaultDescription,
+		RefreshToken:          userTokenConfig.RefreshToken,
 	}
 
 	if userTokenConfig.MaxTTL != 0 && userTokenConfig.MaxTTL < role.MaxTTL {
@@ -157,7 +141,30 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 
 	resp, err := b.CreateToken(*adminConfig, role)
 	if err != nil {
-		return nil, err
+		if _, ok := err.(*TokenExpiredError); ok {
+			b.Logger().Info("access token expired. Attempt to refresh using the refresh token.")
+			refreshResp, err := b.RefreshToken(*adminConfig, role)
+			if err != nil {
+				return nil, fmt.Errorf("failed to refresh access token. err: %v", err)
+			}
+			b.Logger().Info("access token refresh successful")
+
+			userTokenConfig.AccessToken = refreshResp.AccessToken
+			userTokenConfig.RefreshToken = refreshResp.RefreshToken
+			b.storeUserTokenConfiguration(ctx, req, username, userTokenConfig)
+
+			adminConfig.AccessToken = userTokenConfig.AccessToken
+			role.RefreshToken = userTokenConfig.RefreshToken
+
+			// try again after token was refreshed
+			b.Logger().Info("attempt to create user token again after access token refresh")
+			resp, err = b.CreateToken(*adminConfig, role)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
 	}
 
 	response := b.Secret(SecretArtifactoryAccessTokenType).Response(map[string]interface{}{

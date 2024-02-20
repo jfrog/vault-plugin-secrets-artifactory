@@ -24,6 +24,10 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Optional. User identity token to access Artifactory. If `username` is not set then this token will be used for *all* users.",
 			},
+			"refresh_token": {
+				Type:        framework.TypeString,
+				Description: "Optional. Refresh token for the user access token. If `username` is not set then this token will be used for *all* users.",
+			},
 			"audience": {
 				Type:        framework.TypeString,
 				Description: `Optional. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
@@ -73,6 +77,7 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 
 type userTokenConfiguration struct {
 	AccessToken           string        `json:"access_token"`
+	RefreshToken          string        `json:"refresh_token"`
 	Audience              string        `json:"audience,omitempty"`
 	Refreshable           bool          `json:"refreshable,omitempty"`
 	IncludeReferenceToken bool          `json:"include_reference_token,omitempty"`
@@ -93,6 +98,7 @@ func (b *backend) fetchUserTokenConfiguration(ctx context.Context, storage logic
 	}
 
 	// Read in the backend configuration
+	b.Logger().Info("fetching user token configuration from %s", path)
 	entry, err := storage.Get(ctx, path)
 	if err != nil {
 		return nil, err
@@ -107,6 +113,27 @@ func (b *backend) fetchUserTokenConfiguration(ctx context.Context, storage logic
 	}
 
 	return &config, nil
+}
+
+func (b *backend) storeUserTokenConfiguration(ctx context.Context, req *logical.Request, username string, userTokenConfig *userTokenConfiguration) error {
+	// If username is not empty, then append to the path to fetch username specific configuration
+	path := configUserTokenPath
+	if len(username) > 0 {
+		path = fmt.Sprintf("%s/%s", path, username)
+	}
+
+	entry, err := logical.StorageEntryJSON(path, userTokenConfig)
+	if err != nil {
+		return err
+	}
+
+	b.Logger().Info("saving user token configuration to %s", path)
+	err = req.Storage.Put(ctx, entry)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -138,6 +165,10 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		userTokenConfig.AccessToken = val.(string)
 	}
 
+	if val, ok := data.GetOk("refresh_token"); ok {
+		userTokenConfig.RefreshToken = val.(string)
+	}
+
 	if val, ok := data.GetOk("audience"); ok {
 		userTokenConfig.Audience = val.(string)
 	}
@@ -166,18 +197,7 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		userTokenConfig.DefaultDescription = val.(string)
 	}
 
-	// If username is not empty, then append to the path to fetch username specific configuration
-	path := configUserTokenPath
-	if len(username) > 0 {
-		path = fmt.Sprintf("%s/%s", path, username)
-	}
-
-	entry, err := logical.StorageEntryJSON(path, userTokenConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	err = req.Storage.Put(ctx, entry)
+	err = b.storeUserTokenConfiguration(ctx, req, username, userTokenConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -211,9 +231,11 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 	}
 
 	accessTokenHash := sha256.Sum256([]byte(userTokenConfig.AccessToken))
+	refreshTokenHash := sha256.Sum256([]byte(userTokenConfig.RefreshToken))
 
 	configMap := map[string]interface{}{
 		"access_token_sha256":     fmt.Sprintf("%x", accessTokenHash[:]),
+		"refresh_token_sha256":    fmt.Sprintf("%x", refreshTokenHash[:]),
 		"audience":                userTokenConfig.Audience,
 		"refreshable":             userTokenConfig.Refreshable,
 		"include_reference_token": userTokenConfig.IncludeReferenceToken,

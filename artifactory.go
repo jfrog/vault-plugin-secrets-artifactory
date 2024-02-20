@@ -11,16 +11,21 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
+	"time"
 
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/samber/lo"
 )
 
 const (
-	defaultUserNameTemplate string = `{{ printf "v-%s-%s" (.RoleName | truncate 24) (random 8) }}` // Docs indicate max length is 256
+	defaultUserNameTemplate    string = `{{ printf "v-%s-%s" (.RoleName | truncate 24) (random 8) }}` // Docs indicate max length is 256
+	grantTypeClientCredentials string = "client_credentials"
+	grantTypeRefreshToken      string = "refresh_token"
 )
 
 var ErrIncompatibleVersion = errors.New("incompatible version")
@@ -87,6 +92,16 @@ type CreateTokenRequest struct {
 	RefreshToken          string `json:"refresh_token,omitempty"`
 }
 
+type createTokenErrorResponse struct {
+	Errors []errorResponse `json:"errors"`
+}
+
+type TokenExpiredError struct{}
+
+func (e *TokenExpiredError) Error() string {
+	return "token has expired"
+}
+
 func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
 	request := CreateTokenRequest{
 		GrantType:             role.GrantType,
@@ -99,6 +114,23 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 		RefreshToken:          role.RefreshToken,
 	}
 
+	return b.createToken(config, role.MaxTTL, request)
+}
+
+func (b *backend) RefreshToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
+	if role.RefreshToken == "" {
+		return nil, fmt.Errorf("no refresh token supplied.")
+	}
+
+	request := CreateTokenRequest{
+		GrantType:    grantTypeRefreshToken,
+		RefreshToken: role.RefreshToken,
+	}
+
+	return b.createToken(config, role.MaxTTL, request)
+}
+
+func (b *backend) createToken(config adminConfiguration, maxTTL time.Duration, request CreateTokenRequest) (*createTokenResponse, error) {
 	if request.GrantType == "client_credentials" && len(request.Username) == 0 {
 		return nil, fmt.Errorf("empty username not allowed, possibly a template error")
 	}
@@ -109,8 +141,8 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 	// but the token is still usable even after it's deleted. See RTFACT-15293.
 	request.ExpiresIn = 0 // never expires
 
-	if config.UseExpiringTokens && b.supportForceRevocable() && role.MaxTTL > 0 {
-		request.ExpiresIn = int64(role.MaxTTL.Seconds())
+	if config.UseExpiringTokens && b.supportForceRevocable() && maxTTL > 0 {
+		request.ExpiresIn = int64(maxTTL.Seconds())
 		request.ForceRevocable = true
 	}
 
@@ -144,6 +176,24 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 
 	if resp.StatusCode != http.StatusOK {
 		e := fmt.Errorf("could not create access token: HTTP response %v", resp.StatusCode)
+
+		if resp.StatusCode == http.StatusUnauthorized {
+			var errResp createTokenErrorResponse
+			err := json.NewDecoder(resp.Body).Decode(&errResp)
+			if err != nil {
+				b.Logger().Error("could not parse error response", "response", resp, "err", err)
+				return nil, fmt.Errorf("could not create access token. Err: %v", err)
+			}
+
+			errMessages := lo.Reduce(errResp.Errors, func(agg string, e errorResponse, _ int) string {
+				return fmt.Sprintf("%s, %s", agg, e.Message)
+			}, "")
+
+			expiredTokenRe := regexp.MustCompile(`.*Invalid token, expired.*`)
+			if expiredTokenRe.MatchString(errMessages) {
+				return nil, &TokenExpiredError{}
+			}
+		}
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
