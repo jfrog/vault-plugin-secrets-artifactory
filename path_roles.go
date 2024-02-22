@@ -101,6 +101,7 @@ type artifactoryRole struct {
 	DefaultTTL            time.Duration `json:"default_ttl,omitempty"`
 	MaxTTL                time.Duration `json:"max_ttl,omitempty"`
 	RefreshToken          string        `json:"-"`
+	ExpiresIn             time.Duration `json:"-"`
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {

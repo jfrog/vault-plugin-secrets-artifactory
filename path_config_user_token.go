@@ -21,10 +21,6 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 				Type:        framework.TypeString,
 				Description: `Optional. The username of the user. If not specified, the configuration will apply to *all* users.`,
 			},
-			"url": {
-				Type:        framework.TypeString,
-				Description: "Optional. Address of the Artifactory instance",
-			},
 			"access_token": {
 				Type:        framework.TypeString,
 				Description: "Optional. User identity token to access Artifactory. If `username` is not set then this token will be used for *all* users.",
@@ -64,11 +60,6 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 				Type:        framework.TypeString,
 				Description: `Optional. Default token description to set in Artifactory for issued user access tokens.`,
 			},
-			"bypass_artifactory_tls_verification": {
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: "Optional. Bypass certification verification for TLS connection with Artifactory. Default to `false`.",
-			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -107,7 +98,7 @@ func (b *backend) fetchUserTokenConfiguration(ctx context.Context, storage logic
 	}
 
 	// Read in the backend configuration
-	b.Logger().Info("fetching user token configuration from %s", path)
+	b.Logger().Info("fetching user token configuration", "path", path)
 	entry, err := storage.Get(ctx, path)
 	if err != nil {
 		return nil, err
@@ -136,7 +127,7 @@ func (b *backend) storeUserTokenConfiguration(ctx context.Context, req *logical.
 		return err
 	}
 
-	b.Logger().Info("saving user token configuration to %s", path)
+	b.Logger().Info("saving user token configuration", "path", path)
 	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return err
@@ -154,6 +145,10 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 
+	if adminConfig != nil {
+		go b.sendUsage(adminConfig.baseConfiguration, "pathConfigUserTokenUpdate")
+	}
+
 	username := ""
 	if val, ok := data.GetOk("username"); ok {
 		username = val.(string)
@@ -162,16 +157,6 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 	userTokenConfig, err := b.fetchUserTokenConfiguration(ctx, req.Storage, username)
 	if err != nil {
 		return nil, err
-	}
-
-	if adminConfig == nil {
-		adminConfig = &adminConfiguration{}
-	}
-
-	go b.sendUsage(adminConfig.baseConfiguration, "pathConfigUserTokenUpdate")
-
-	if val, ok := data.GetOk("url"); ok {
-		userTokenConfig.ArtifactoryURL = val.(string)
 	}
 
 	if val, ok := data.GetOk("access_token"); ok {
@@ -210,10 +195,6 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		userTokenConfig.DefaultDescription = val.(string)
 	}
 
-	if val, ok := data.GetOk("bypass_artifactory_tls_verification"); ok {
-		userTokenConfig.BypassArtifactoryTLSVerification = val.(bool)
-	}
-
 	err = b.storeUserTokenConfiguration(ctx, req, username, userTokenConfig)
 	if err != nil {
 		return nil, err
@@ -226,16 +207,16 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	baseConfig := baseConfiguration{}
-
 	adminConfig, err := b.fetchAdminConfiguration(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	if adminConfig != nil {
-		baseConfig = adminConfig.baseConfiguration
+	if adminConfig == nil {
+		return logical.ErrorResponse("backend not configured"), nil
 	}
+
+	go b.sendUsage(adminConfig.baseConfiguration, "pathConfigUserTokenRead")
 
 	username := ""
 	if val, ok := data.GetOk("username"); ok {
@@ -246,16 +227,6 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 	if err != nil {
 		return nil, err
 	}
-
-	if userTokenConfig.baseConfiguration.ArtifactoryURL != "" {
-		baseConfig.ArtifactoryURL = userTokenConfig.baseConfiguration.ArtifactoryURL
-	}
-
-	if userTokenConfig.baseConfiguration.AccessToken != "" {
-		baseConfig.AccessToken = userTokenConfig.baseConfiguration.AccessToken
-	}
-
-	go b.sendUsage(baseConfig, "pathConfigUserTokenRead")
 
 	accessTokenHash := sha256.Sum256([]byte(userTokenConfig.AccessToken))
 	refreshTokenHash := sha256.Sum256([]byte(userTokenConfig.RefreshToken))
@@ -273,7 +244,7 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 	}
 
 	// Optionally include token info if it parses properly
-	token, err := b.getTokenInfo(baseConfig, baseConfig.AccessToken)
+	token, err := b.getTokenInfo(adminConfig.baseConfiguration, userTokenConfig.AccessToken)
 	if err != nil {
 		b.Logger().Warn("Error parsing AccessToken", "err", err.Error())
 	} else {

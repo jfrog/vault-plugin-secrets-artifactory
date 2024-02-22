@@ -9,9 +9,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const createUserTokenPath = "user_token/"
+
 func (b *backend) pathUserTokenCreate() *framework.Path {
 	return &framework.Path{
-		Pattern: "user_token/" + framework.GenericNameWithAtRegex("username"),
+		Pattern: createUserTokenPath + framework.GenericNameWithAtRegex("username"),
 		Fields: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
@@ -67,9 +69,13 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	if adminConfig != nil {
-		baseConfig = adminConfig.baseConfiguration
+	if adminConfig == nil {
+		return logical.ErrorResponse("backend not configured"), nil
 	}
+
+	go b.sendUsage(adminConfig.baseConfiguration, "pathUserTokenCreatePerform")
+
+	baseConfig = adminConfig.baseConfiguration
 
 	username := data.Get("username").(string)
 
@@ -78,15 +84,9 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	if userTokenConfig.baseConfiguration.ArtifactoryURL != "" {
-		baseConfig.ArtifactoryURL = userTokenConfig.baseConfiguration.ArtifactoryURL
-	}
-
 	if userTokenConfig.baseConfiguration.AccessToken != "" {
 		baseConfig.AccessToken = userTokenConfig.baseConfiguration.AccessToken
 	}
-
-	go b.sendUsage(baseConfig, "pathUserTokenCreatePerform")
 
 	baseConfig.UseExpiringTokens = userTokenConfig.UseExpiringTokens
 	if value, ok := data.GetOk("use_expiring_tokens"); ok {
@@ -97,7 +97,6 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		GrantType:             grantTypeClientCredentials,
 		Username:              username,
 		Scope:                 "applied-permissions/user",
-		MaxTTL:                b.Backend.System().MaxLeaseTTL(),
 		Audience:              userTokenConfig.Audience,
 		Refreshable:           userTokenConfig.Refreshable,
 		IncludeReferenceToken: userTokenConfig.IncludeReferenceToken,
@@ -105,28 +104,43 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		RefreshToken:          userTokenConfig.RefreshToken,
 	}
 
-	if userTokenConfig.MaxTTL != 0 && userTokenConfig.MaxTTL < role.MaxTTL {
-		role.MaxTTL = userTokenConfig.MaxTTL
-	}
+	maxLeaseTTL := b.Backend.System().MaxLeaseTTL()
+	b.Logger().Debug("initialize maxLeaseTTL to system value", "maxLeaseTTL", maxLeaseTTL)
 
-	if value, ok := data.GetOk("max_ttl"); ok {
+	if value, ok := data.GetOk("max_ttl"); ok && value.(int) > 0 {
+		b.Logger().Debug("max_ttl is set", "max_ttl", value)
 		maxTTL := time.Second * time.Duration(value.(int))
-		if maxTTL != 0 && maxTTL < role.MaxTTL {
-			role.MaxTTL = maxTTL
-		}
-	}
 
-	var ttl time.Duration
-	if value, ok := data.GetOk("ttl"); ok {
+		// use override max TTL if set and is less than maxLeaseTTL
+		if maxTTL != 0 && maxTTL < maxLeaseTTL {
+			maxLeaseTTL = maxTTL
+		}
+	} else if userTokenConfig.MaxTTL > 0 && userTokenConfig.MaxTTL < maxLeaseTTL {
+		b.Logger().Debug("using user token config MaxTTL", "userTokenConfig.MaxTTL", userTokenConfig.MaxTTL)
+		// use max TTL from user config if set and is less than system max lease TTL
+		maxLeaseTTL = userTokenConfig.MaxTTL
+	}
+	b.Logger().Debug("Max lease TTL (sec)", "maxLeaseTTL", maxLeaseTTL)
+
+	ttl := b.Backend.System().DefaultLeaseTTL()
+	if value, ok := data.GetOk("ttl"); ok && value.(int) > 0 {
+		b.Logger().Debug("ttl is set", "ttl", value)
 		ttl = time.Second * time.Duration(value.(int))
 	} else if userTokenConfig.DefaultTTL != 0 {
+		b.Logger().Debug("using user config DefaultTTL", "userTokenConfig.DefaultTTL", userTokenConfig.DefaultTTL)
 		ttl = userTokenConfig.DefaultTTL
-	} else {
-		ttl = b.Backend.System().DefaultLeaseTTL()
 	}
 
-	if role.MaxTTL > 0 && ttl > role.MaxTTL {
-		ttl = role.MaxTTL
+	// cap ttl to maxLeaseTTL
+	if maxLeaseTTL > 0 && ttl > maxLeaseTTL {
+		b.Logger().Debug("ttl is longer than maxLeaseTTL", "ttl", ttl, "maxLeaseTTL", maxLeaseTTL)
+		ttl = maxLeaseTTL
+	}
+	b.Logger().Debug("TTL (sec)", "ttl", ttl)
+
+	// now ttl is determined, we set role.ExpiresIn so this value so expirable token has the correct expiration
+	if baseConfig.UseExpiringTokens {
+		role.ExpiresIn = ttl
 	}
 
 	if value, ok := data.GetOk("refreshable"); ok {
@@ -193,7 +207,7 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 	})
 
 	response.Secret.TTL = ttl
-	response.Secret.MaxTTL = role.MaxTTL
+	response.Secret.MaxTTL = maxLeaseTTL
 
 	return response, nil
 }

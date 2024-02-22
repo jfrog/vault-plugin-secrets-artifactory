@@ -228,7 +228,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 	// Optionally include token info if it parses properly
 	token, err := b.getTokenInfo(config.baseConfiguration, config.AccessToken)
 	if err != nil {
-		b.Logger().Warn("Error parsing AccessToken: " + err.Error())
+		b.Logger().Warn("Error parsing AccessToken", "err", err.Error())
 	} else {
 		configMap["token_id"] = token.TokenID
 		configMap["username"] = token.Username

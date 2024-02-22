@@ -31,8 +31,8 @@ func TestBackend_NoRoleMaxTTLUsesSystemMaxTTL(t *testing.T) {
 		   "scope":         "api:* member-of-groups:readers",
 		   "token_type":    "Bearer",
 		   "refresh_token": "fgsfgsdugh8dgu9s8gy9hsg..."
-		}
-		`))
+		}`),
+	)
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",

@@ -121,7 +121,7 @@ func (b *backend) CreateToken(config baseConfiguration, role artifactoryRole) (*
 		RefreshToken:          role.RefreshToken,
 	}
 
-	return b.createToken(config, role.MaxTTL, request)
+	return b.createToken(config, role.ExpiresIn, request)
 }
 
 func (b *backend) RefreshToken(config baseConfiguration, role artifactoryRole) (*createTokenResponse, error) {
@@ -134,10 +134,10 @@ func (b *backend) RefreshToken(config baseConfiguration, role artifactoryRole) (
 		RefreshToken: role.RefreshToken,
 	}
 
-	return b.createToken(config, role.MaxTTL, request)
+	return b.createToken(config, role.ExpiresIn, request)
 }
 
-func (b *backend) createToken(config baseConfiguration, maxTTL time.Duration, request CreateTokenRequest) (*createTokenResponse, error) {
+func (b *backend) createToken(config baseConfiguration, expiresIn time.Duration, request CreateTokenRequest) (*createTokenResponse, error) {
 	if request.GrantType == "client_credentials" && len(request.Username) == 0 {
 		return nil, fmt.Errorf("empty username not allowed, possibly a template error")
 	}
@@ -148,8 +148,8 @@ func (b *backend) createToken(config baseConfiguration, maxTTL time.Duration, re
 	// but the token is still usable even after it's deleted. See RTFACT-15293.
 	request.ExpiresIn = 0 // never expires
 
-	if config.UseExpiringTokens && b.supportForceRevocable() && maxTTL > 0 {
-		request.ExpiresIn = int64(maxTTL.Seconds())
+	if config.UseExpiringTokens && b.supportForceRevocable() && expiresIn > 0 {
+		request.ExpiresIn = int64(expiresIn.Seconds())
 		request.ForceRevocable = true
 	}
 

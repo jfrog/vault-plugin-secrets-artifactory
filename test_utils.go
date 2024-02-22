@@ -268,6 +268,32 @@ func (e *accTestEnv) CreatePathToken(t *testing.T) {
 	assert.NotEmpty(t, resp.Data["reference_token"])
 }
 
+func (e *accTestEnv) CreatePathToken_overrides(t *testing.T) {
+	e.update(configAdminPath, map[string]interface{}{
+		"use_expiring_tokens": true,
+	})
+
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "token/test-role",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"max_ttl": 60,
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotEmpty(t, resp.Data["access_token"])
+	assert.NotEmpty(t, resp.Data["token_id"])
+	assert.Equal(t, "admin", resp.Data["username"])
+	assert.Equal(t, "test-role", resp.Data["role"])
+	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
+	assert.NotEmpty(t, resp.Data["refresh_token"])
+	assert.NotEmpty(t, resp.Data["reference_token"])
+	assert.Equal(t, 60, resp.Data["expires_in"])
+}
+
 func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -278,6 +304,7 @@ func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 			"refreshable":             true,
 			"include_reference_token": true,
 			"use_expiring_tokens":     true,
+			"default_ttl":             60,
 		},
 	})
 
@@ -286,7 +313,7 @@ func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 
 	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "user_token/admin",
+		Path:      createUserTokenPath + "admin",
 		Storage:   e.Storage,
 	})
 
@@ -297,7 +324,7 @@ func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 	assert.Equal(t, "admin", resp.Data["username"])
 	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
 	assert.Equal(t, "foo", resp.Data["description"])
-	assert.NotEmpty(t, resp.Data["expires_in"])
+	assert.Equal(t, 60, resp.Data["expires_in"])
 	assert.NotEmpty(t, resp.Data["refresh_token"])
 	assert.NotEmpty(t, resp.Data["reference_token"])
 }
@@ -305,10 +332,11 @@ func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 func (e *accTestEnv) CreatePathUserToken_overrides(t *testing.T) {
 	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      configUserTokenPath,
+		Path:      configUserTokenPath + "/admin",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
 			"default_description": "foo",
+			"default_ttl":         600,
 		},
 	})
 
@@ -317,7 +345,7 @@ func (e *accTestEnv) CreatePathUserToken_overrides(t *testing.T) {
 
 	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "user_token/admin",
+		Path:      createUserTokenPath + "admin",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
 			"description":             "buffalo",
@@ -334,7 +362,7 @@ func (e *accTestEnv) CreatePathUserToken_overrides(t *testing.T) {
 	assert.Equal(t, "admin", resp.Data["username"])
 	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
 	assert.Equal(t, "buffalo", resp.Data["description"])
-	assert.NotEmpty(t, resp.Data["expires_in"])
+	assert.Equal(t, 600, resp.Data["expires_in"])
 	assert.NotEmpty(t, resp.Data["refresh_token"])
 	assert.NotEmpty(t, resp.Data["reference_token"])
 }
@@ -353,7 +381,8 @@ func newAcceptanceTestEnv() (*accTestEnv, error) {
 
 	conf := &logical.BackendConfig{
 		System: &logical.StaticSystemView{
-			MaxLeaseTTLVal: time.Duration(2592000) * time.Second, // 30 days
+			DefaultLeaseTTLVal: 24 * time.Hour,      // 1 day
+			MaxLeaseTTLVal:     30 * 24 * time.Hour, // 30 days
 		},
 		Logger: logging.NewVaultLogger(log.Debug),
 	}
@@ -460,6 +489,7 @@ func makeBackend(t *testing.T) (*backend, *logical.BackendConfig) {
 func configuredBackend(t *testing.T, adminConfig map[string]interface{}) (*backend, *logical.BackendConfig) {
 
 	b, config := makeBackend(t)
+	t.Logf("b.System().MaxLeaseTTL(): %v\n", b.System().MaxLeaseTTL())
 	b.InitializeHttpClient(&baseConfiguration{})
 
 	_, err := b.HandleRequest(context.Background(), &logical.Request{
