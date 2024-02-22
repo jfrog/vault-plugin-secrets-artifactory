@@ -89,8 +89,6 @@ type userTokenConfiguration struct {
 
 // fetchAdminConfiguration will return nil,nil if there's no configuration
 func (b *backend) fetchUserTokenConfiguration(ctx context.Context, storage logical.Storage, username string) (*userTokenConfiguration, error) {
-	var config userTokenConfiguration
-
 	// If username is not empty, then append to the path to fetch username specific configuration
 	path := configUserTokenPath
 	if len(username) > 0 && !strings.HasSuffix(path, username) {
@@ -108,6 +106,7 @@ func (b *backend) fetchUserTokenConfiguration(ctx context.Context, storage logic
 		return &userTokenConfiguration{}, nil
 	}
 
+	var config userTokenConfiguration
 	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, err
 	}
@@ -145,9 +144,11 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 
-	if adminConfig != nil {
-		go b.sendUsage(adminConfig.baseConfiguration, "pathConfigUserTokenUpdate")
+	if adminConfig == nil {
+		return logical.ErrorResponse("backend not configured"), nil
 	}
+
+	go b.sendUsage(adminConfig.baseConfiguration, "pathConfigUserTokenUpdate")
 
 	username := ""
 	if val, ok := data.GetOk("username"); ok {
@@ -159,8 +160,14 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 
+	if userTokenConfig.ArtifactoryURL == "" {
+		userTokenConfig.ArtifactoryURL = adminConfig.ArtifactoryURL
+	}
+
 	if val, ok := data.GetOk("access_token"); ok {
 		userTokenConfig.AccessToken = val.(string)
+	} else {
+		userTokenConfig.AccessToken = adminConfig.AccessToken
 	}
 
 	if val, ok := data.GetOk("refresh_token"); ok {
@@ -181,6 +188,8 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 
 	if val, ok := data.GetOk("use_expiring_tokens"); ok {
 		userTokenConfig.UseExpiringTokens = val.(bool)
+	} else {
+		userTokenConfig.UseExpiringTokens = adminConfig.UseExpiringTokens
 	}
 
 	if val, ok := data.GetOk("default_ttl"); ok {

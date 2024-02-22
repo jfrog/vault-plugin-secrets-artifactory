@@ -34,7 +34,6 @@ type baseConfiguration struct {
 	AccessToken                      string `json:"access_token"`
 	ArtifactoryURL                   string `json:"artifactory_url"`
 	UseExpiringTokens                bool   `json:"use_expiring_tokens,omitempty"`
-	BypassArtifactoryTLSVerification bool   `json:"bypass_artifactory_tls_verification,omitempty"`
 }
 
 type errorResponse struct {

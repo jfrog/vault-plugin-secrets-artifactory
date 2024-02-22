@@ -107,7 +107,7 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		if maxTTL > 0 || maxTTL < maxLeaseTTL {
 			maxLeaseTTL = maxTTL
 		}
-	} else if role.MaxTTL > 0 || role.MaxTTL < maxLeaseTTL {
+	} else if role.MaxTTL > 0 && role.MaxTTL < maxLeaseTTL {
 		b.Logger().Debug("using role MaxTTL", "role.MaxTTL", role.MaxTTL)
 		maxLeaseTTL = role.MaxTTL
 	}

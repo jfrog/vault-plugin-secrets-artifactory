@@ -79,7 +79,8 @@ No renewals or new tokens will be issued if the backend configuration (config/ad
 
 type adminConfiguration struct {
 	baseConfiguration
-	UsernameTemplate string `json:"username_template,omitempty"`
+	UsernameTemplate                 string `json:"username_template,omitempty"`
+	BypassArtifactoryTLSVerification bool   `json:"bypass_artifactory_tls_verification,omitempty"`
 }
 
 // fetchAdminConfiguration will return nil,nil if there's no configuration
@@ -150,7 +151,7 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("url is required"), nil
 	}
 
-	b.InitializeHttpClient(&config.baseConfiguration)
+	b.InitializeHttpClient(config)
 
 	go b.sendUsage(config.baseConfiguration, "pathConfigRotateUpdate")
 

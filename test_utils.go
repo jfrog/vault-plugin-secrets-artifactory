@@ -32,9 +32,11 @@ type testData map[string]interface{}
 // createNewTestToken creates a new scoped token using the one from test environment
 // so that the original token won't be revoked by the path config rotate test
 func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
-	config := baseConfiguration{
-		AccessToken:    e.AccessToken,
-		ArtifactoryURL: e.URL,
+	config := adminConfiguration{
+		baseConfiguration: baseConfiguration{
+			AccessToken:    e.AccessToken,
+			ArtifactoryURL: e.URL,
+		},
 	}
 
 	role := artifactoryRole{
@@ -45,12 +47,12 @@ func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
 
 	e.Backend.(*backend).InitializeHttpClient(&config)
 
-	err := e.Backend.(*backend).getVersion(config)
+	err := e.Backend.(*backend).getVersion(config.baseConfiguration)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, err := e.Backend.(*backend).CreateToken(config, role)
+	resp, err := e.Backend.(*backend).CreateToken(config.baseConfiguration, role)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,9 +63,11 @@ func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
 // createNewNonAdminTestToken creates a new "user" token using the one from test environment
 // primarily used to fail tests
 func (e *accTestEnv) createNewNonAdminTestToken(t *testing.T) (string, string) {
-	config := baseConfiguration{
-		AccessToken:    e.AccessToken,
-		ArtifactoryURL: e.URL,
+	config := adminConfiguration{
+		baseConfiguration: baseConfiguration{
+			AccessToken:    e.AccessToken,
+			ArtifactoryURL: e.URL,
+		},
 	}
 
 	role := artifactoryRole{
@@ -74,12 +78,12 @@ func (e *accTestEnv) createNewNonAdminTestToken(t *testing.T) (string, string) {
 
 	e.Backend.(*backend).InitializeHttpClient(&config)
 
-	err := e.Backend.(*backend).getVersion(config)
+	err := e.Backend.(*backend).getVersion(config.baseConfiguration)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, err := e.Backend.(*backend).CreateToken(config, role)
+	resp, err := e.Backend.(*backend).CreateToken(config.baseConfiguration, role)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -490,7 +494,7 @@ func configuredBackend(t *testing.T, adminConfig map[string]interface{}) (*backe
 
 	b, config := makeBackend(t)
 	t.Logf("b.System().MaxLeaseTTL(): %v\n", b.System().MaxLeaseTTL())
-	b.InitializeHttpClient(&baseConfiguration{})
+	b.InitializeHttpClient(&adminConfiguration{})
 
 	_, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
