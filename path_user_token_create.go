@@ -60,16 +60,16 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
+	baseConfig := baseConfiguration{}
+
 	adminConfig, err := b.fetchAdminConfiguration(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	if adminConfig == nil {
-		return logical.ErrorResponse("backend not configured"), nil
+	if adminConfig != nil {
+		baseConfig = adminConfig.baseConfiguration
 	}
-
-	go b.sendUsage(*adminConfig, "pathUserTokenCreatePerform")
 
 	username := data.Get("username").(string)
 
@@ -78,13 +78,19 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	if len(userTokenConfig.AccessToken) > 0 {
-		adminConfig.AccessToken = userTokenConfig.AccessToken
+	if userTokenConfig.baseConfiguration.ArtifactoryURL != "" {
+		baseConfig.ArtifactoryURL = userTokenConfig.baseConfiguration.ArtifactoryURL
 	}
 
-	adminConfig.UseExpiringTokens = userTokenConfig.UseExpiringTokens
+	if userTokenConfig.baseConfiguration.AccessToken != "" {
+		baseConfig.AccessToken = userTokenConfig.baseConfiguration.AccessToken
+	}
+
+	go b.sendUsage(baseConfig, "pathUserTokenCreatePerform")
+
+	baseConfig.UseExpiringTokens = userTokenConfig.UseExpiringTokens
 	if value, ok := data.GetOk("use_expiring_tokens"); ok {
-		adminConfig.UseExpiringTokens = value.(bool)
+		baseConfig.UseExpiringTokens = value.(bool)
 	}
 
 	role := artifactoryRole{
@@ -139,11 +145,11 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		role.Description = value.(string)
 	}
 
-	resp, err := b.CreateToken(*adminConfig, role)
+	resp, err := b.CreateToken(baseConfig, role)
 	if err != nil {
 		if _, ok := err.(*TokenExpiredError); ok {
 			b.Logger().Info("access token expired. Attempt to refresh using the refresh token.")
-			refreshResp, err := b.RefreshToken(*adminConfig, role)
+			refreshResp, err := b.RefreshToken(baseConfig, role)
 			if err != nil {
 				return nil, fmt.Errorf("failed to refresh access token. err: %v", err)
 			}
@@ -153,12 +159,12 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 			userTokenConfig.RefreshToken = refreshResp.RefreshToken
 			b.storeUserTokenConfiguration(ctx, req, username, userTokenConfig)
 
-			adminConfig.AccessToken = userTokenConfig.AccessToken
+			baseConfig.AccessToken = userTokenConfig.AccessToken
 			role.RefreshToken = userTokenConfig.RefreshToken
 
 			// try again after token was refreshed
 			b.Logger().Info("attempt to create user token again after access token refresh")
-			resp, err = b.CreateToken(*adminConfig, role)
+			resp, err = b.CreateToken(baseConfig, role)
 			if err != nil {
 				return nil, err
 			}

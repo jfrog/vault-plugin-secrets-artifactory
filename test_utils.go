@@ -32,7 +32,7 @@ type testData map[string]interface{}
 // createNewTestToken creates a new scoped token using the one from test environment
 // so that the original token won't be revoked by the path config rotate test
 func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
-	config := adminConfiguration{
+	config := baseConfiguration{
 		AccessToken:    e.AccessToken,
 		ArtifactoryURL: e.URL,
 	}
@@ -61,7 +61,7 @@ func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
 // createNewNonAdminTestToken creates a new "user" token using the one from test environment
 // primarily used to fail tests
 func (e *accTestEnv) createNewNonAdminTestToken(t *testing.T) (string, string) {
-	config := adminConfiguration{
+	config := baseConfiguration{
 		AccessToken:    e.AccessToken,
 		ArtifactoryURL: e.URL,
 	}
@@ -88,7 +88,7 @@ func (e *accTestEnv) createNewNonAdminTestToken(t *testing.T) (string, string) {
 }
 
 func (e *accTestEnv) revokeTestToken(t *testing.T, accessToken string, tokenID string) {
-	config := adminConfiguration{
+	config := baseConfiguration{
 		AccessToken:    e.AccessToken,
 		ArtifactoryURL: e.URL,
 	}
@@ -271,7 +271,7 @@ func (e *accTestEnv) CreatePathToken(t *testing.T) {
 func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      configUserTokenPath,
+		Path:      configUserTokenPath + "/admin",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
 			"default_description":     "foo",
@@ -460,7 +460,7 @@ func makeBackend(t *testing.T) (*backend, *logical.BackendConfig) {
 func configuredBackend(t *testing.T, adminConfig map[string]interface{}) (*backend, *logical.BackendConfig) {
 
 	b, config := makeBackend(t)
-	b.InitializeHttpClient(&adminConfiguration{})
+	b.InitializeHttpClient(&baseConfiguration{})
 
 	_, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,

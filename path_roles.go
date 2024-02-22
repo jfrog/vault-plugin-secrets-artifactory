@@ -130,7 +130,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data 
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathRoleWrite")
+	go b.sendUsage(config.baseConfiguration, "pathRoleWrite")
 
 	roleName := data.Get("role").(string)
 	if roleName == "" {
@@ -215,7 +215,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathRoleRead")
+	go b.sendUsage(config.baseConfiguration, "pathRoleRead")
 
 	roleName := data.Get("role").(string)
 
@@ -295,7 +295,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathRoleDelete")
+	go b.sendUsage(config.baseConfiguration, "pathRoleDelete")
 
 	err = req.Storage.Delete(ctx, rolePath+data.Get("role").(string))
 	if err != nil {

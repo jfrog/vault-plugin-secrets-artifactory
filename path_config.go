@@ -78,11 +78,8 @@ No renewals or new tokens will be issued if the backend configuration (config/ad
 }
 
 type adminConfiguration struct {
-	AccessToken                      string `json:"access_token"`
-	ArtifactoryURL                   string `json:"artifactory_url"`
-	UsernameTemplate                 string `json:"username_template,omitempty"`
-	UseExpiringTokens                bool   `json:"use_expiring_tokens,omitempty"`
-	BypassArtifactoryTLSVerification bool   `json:"bypass_artifactory_tls_verification,omitempty"`
+	baseConfiguration
+	UsernameTemplate string `json:"username_template,omitempty"`
 }
 
 // fetchAdminConfiguration will return nil,nil if there's no configuration
@@ -153,11 +150,11 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("url is required"), nil
 	}
 
-	b.InitializeHttpClient(config)
+	b.InitializeHttpClient(&config.baseConfiguration)
 
-	go b.sendUsage(*config, "pathConfigRotateUpdate")
+	go b.sendUsage(config.baseConfiguration, "pathConfigRotateUpdate")
 
-	err = b.getVersion(*config)
+	err = b.getVersion(config.baseConfiguration)
 	if err != nil {
 		return logical.ErrorResponse("Unable to get Artifactory Version. Check url and access_token fields. TLS connection verification with Artifactory can be skipped by setting bypass_artifactory_tls_verification field to 'true'"), err
 	}
@@ -188,7 +185,7 @@ func (b *backend) pathConfigDelete(ctx context.Context, req *logical.Request, _ 
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathConfigDelete")
+	go b.sendUsage(config.baseConfiguration, "pathConfigDelete")
 
 	if err := req.Storage.Delete(ctx, configAdminPath); err != nil {
 		return nil, err
@@ -210,7 +207,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathConfigRead")
+	go b.sendUsage(config.baseConfiguration, "pathConfigRead")
 
 	// I'm not sure if I should be returning the access token, so I'll hash it.
 	accessTokenHash := sha256.Sum256([]byte(config.AccessToken))
@@ -229,7 +226,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 	}
 
 	// Optionally include token info if it parses properly
-	token, err := b.getTokenInfo(*config, config.AccessToken)
+	token, err := b.getTokenInfo(config.baseConfiguration, config.AccessToken)
 	if err != nil {
 		b.Logger().Warn("Error parsing AccessToken: " + err.Error())
 	} else {

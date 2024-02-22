@@ -71,7 +71,7 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathTokenCreatePerform")
+	go b.sendUsage(config.baseConfiguration, "pathTokenCreatePerform")
 
 	// Read in the requested role
 	roleName := data.Get("role").(string)
@@ -115,7 +115,7 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		ttl = role.MaxTTL
 	}
 
-	resp, err := b.CreateToken(*config, *role)
+	resp, err := b.CreateToken(config.baseConfiguration, *role)
 	if err != nil {
 		return nil, err
 	}

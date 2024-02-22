@@ -94,9 +94,9 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 		return nil
 	}
 
-	b.InitializeHttpClient(config)
+	b.InitializeHttpClient(&config.baseConfiguration)
 
-	err = b.getVersion(*config)
+	err = b.getVersion(config.baseConfiguration)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 	return nil
 }
 
-func (b *backend) InitializeHttpClient(config *adminConfiguration) {
+func (b *backend) InitializeHttpClient(config *baseConfiguration) {
 	if config.BypassArtifactoryTLSVerification {
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{

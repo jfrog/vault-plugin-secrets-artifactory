@@ -152,10 +152,10 @@ func TestBackend_NoUserTokensMaxTTLUsesSystemMaxTTL(t *testing.T) {
 	assert.EqualValues(t, config.System.MaxLeaseTTL(), resp.Secret.MaxTTL)
 }
 
-func SetUserTokenMaxTTL(t *testing.T, b *backend, storage logical.Storage, max_ttl time.Duration) {
+func SetUserTokenMaxTTL(t *testing.T, b *backend, storage logical.Storage, path string, max_ttl time.Duration) {
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      configUserTokenPath,
+		Path:      path,
 		Storage:   storage,
 		Data: map[string]interface{}{
 			"max_ttl": max_ttl,
@@ -182,9 +182,10 @@ func TestBackend_UserTokenConfigMaxTTLUseSystem(t *testing.T) {
 		"url":          "http://myserver.com:80",
 	})
 
+	configPath := configUserTokenPath + "/admin"
 	backend_max_ttl := b.System().MaxLeaseTTL()
 	user_token_config_ttl := backend_max_ttl + 1*time.Minute
-	SetUserTokenMaxTTL(t, b, config.StorageView, user_token_config_ttl)
+	SetUserTokenMaxTTL(t, b, config.StorageView, configPath, user_token_config_ttl)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -215,9 +216,10 @@ func TestBackend_UserTokenConfigMaxTTLUseConfigMaxTTL(t *testing.T) {
 		"url":          "http://myserver.com:80",
 	})
 
+	configPath := configUserTokenPath + "/admin"
 	backend_max_ttl := b.System().MaxLeaseTTL()
 	user_token_config_ttl := backend_max_ttl - 1*time.Minute
-	SetUserTokenMaxTTL(t, b, config.StorageView, user_token_config_ttl)
+	SetUserTokenMaxTTL(t, b, config.StorageView, configPath, user_token_config_ttl)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -350,7 +352,7 @@ func TestBackend_UserTokenDefaultTTL(t *testing.T) {
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      configUserTokenPath,
+		Path:      configUserTokenPath + "/admin",
 		Storage:   config.StorageView,
 		Data: map[string]interface{}{
 			"default_ttl": 42 * time.Minute,

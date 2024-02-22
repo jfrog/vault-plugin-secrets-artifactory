@@ -30,13 +30,20 @@ const (
 
 var ErrIncompatibleVersion = errors.New("incompatible version")
 
+type baseConfiguration struct {
+	AccessToken                      string `json:"access_token"`
+	ArtifactoryURL                   string `json:"artifactory_url"`
+	UseExpiringTokens                bool   `json:"use_expiring_tokens,omitempty"`
+	BypassArtifactoryTLSVerification bool   `json:"bypass_artifactory_tls_verification,omitempty"`
+}
+
 type errorResponse struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 	Detail  string `json:"detail"`
 }
 
-func (b *backend) RevokeToken(config adminConfiguration, secret logical.Secret) error {
+func (b *backend) RevokeToken(config baseConfiguration, secret logical.Secret) error {
 	tokenId := secret.InternalData["token_id"].(string)
 	u, err := url.Parse(config.ArtifactoryURL)
 	if err != nil {
@@ -102,7 +109,7 @@ func (e *TokenExpiredError) Error() string {
 	return "token has expired"
 }
 
-func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
+func (b *backend) CreateToken(config baseConfiguration, role artifactoryRole) (*createTokenResponse, error) {
 	request := CreateTokenRequest{
 		GrantType:             role.GrantType,
 		Username:              role.Username,
@@ -117,9 +124,9 @@ func (b *backend) CreateToken(config adminConfiguration, role artifactoryRole) (
 	return b.createToken(config, role.MaxTTL, request)
 }
 
-func (b *backend) RefreshToken(config adminConfiguration, role artifactoryRole) (*createTokenResponse, error) {
+func (b *backend) RefreshToken(config baseConfiguration, role artifactoryRole) (*createTokenResponse, error) {
 	if role.RefreshToken == "" {
-		return nil, fmt.Errorf("no refresh token supplied.")
+		return nil, fmt.Errorf("no refresh token supplied")
 	}
 
 	request := CreateTokenRequest{
@@ -130,7 +137,7 @@ func (b *backend) RefreshToken(config adminConfiguration, role artifactoryRole) 
 	return b.createToken(config, role.MaxTTL, request)
 }
 
-func (b *backend) createToken(config adminConfiguration, maxTTL time.Duration, request CreateTokenRequest) (*createTokenResponse, error) {
+func (b *backend) createToken(config baseConfiguration, maxTTL time.Duration, request CreateTokenRequest) (*createTokenResponse, error) {
 	if request.GrantType == "client_credentials" && len(request.Username) == 0 {
 		return nil, fmt.Errorf("empty username not allowed, possibly a template error")
 	}
@@ -228,7 +235,7 @@ func (b *backend) useNewAccessAPI() bool {
 }
 
 // getVersion will fetch the current Artifactory version and store it in the backend
-func (b *backend) getVersion(config adminConfiguration) (err error) {
+func (b *backend) getVersion(config baseConfiguration) (err error) {
 	resp, err := b.performArtifactoryGet(config, "/artifactory/api/system/version")
 	if err != nil {
 		b.Logger().Error("error making system version request", "response", resp, "err", err)
@@ -274,7 +281,7 @@ func (b *backend) checkVersion(ver string) (compatible bool) {
 }
 
 // parseJWT will parse a JWT token string from Artifactory and return a *jwt.Token, err
-func (b *backend) parseJWT(config adminConfiguration, token string) (jwtToken *jwt.Token, err error) {
+func (b *backend) parseJWT(config baseConfiguration, token string) (jwtToken *jwt.Token, err error) {
 	validate := true
 
 	cert, err := b.getRootCert(config)
@@ -322,7 +329,7 @@ type TokenInfo struct {
 }
 
 // getTokenInfo will parse the provided token to return useful information about it
-func (b *backend) getTokenInfo(config adminConfiguration, token string) (info *TokenInfo, err error) {
+func (b *backend) getTokenInfo(config baseConfiguration, token string) (info *TokenInfo, err error) {
 	// Parse Current Token (to get tokenID/scope)
 	jwtToken, err := b.parseJWT(config, token)
 	if err != nil {
@@ -360,7 +367,7 @@ func (b *backend) getTokenInfo(config adminConfiguration, token string) (info *T
 }
 
 // getRootCert will return the Artifactory access root certificate's public key, for validating token signatures
-func (b *backend) getRootCert(config adminConfiguration) (cert *x509.Certificate, err error) {
+func (b *backend) getRootCert(config baseConfiguration) (cert *x509.Certificate, err error) {
 	// Verify Artifactory version is at 7.12.0 or higher, prior versions will not work
 	// REF: https://jfrog.com/help/r/jfrog-rest-apis/get-root-certificate
 	if !b.checkVersion("7.12.0") {
@@ -411,7 +418,7 @@ type Usage struct {
 	Features  []Feature `json:"features"`
 }
 
-func (b *backend) sendUsage(config adminConfiguration, featureId string) {
+func (b *backend) sendUsage(config baseConfiguration, featureId string) {
 	features := []Feature{
 		{
 			FeatureId: featureId,
@@ -439,7 +446,7 @@ func (b *backend) sendUsage(config adminConfiguration, featureId string) {
 	defer resp.Body.Close()
 }
 
-func (b *backend) performArtifactoryGet(config adminConfiguration, path string) (*http.Response, error) {
+func (b *backend) performArtifactoryGet(config baseConfiguration, path string) (*http.Response, error) {
 	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
 	if err != nil {
 		return nil, err
@@ -460,7 +467,7 @@ func (b *backend) performArtifactoryGet(config adminConfiguration, path string) 
 }
 
 // performArtifactoryPost will HTTP POST values to the Artifactory API.
-func (b *backend) performArtifactoryPost(config adminConfiguration, path string, values url.Values) (*http.Response, error) {
+func (b *backend) performArtifactoryPost(config baseConfiguration, path string, values url.Values) (*http.Response, error) {
 	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
 	if err != nil {
 		return nil, err
@@ -482,7 +489,7 @@ func (b *backend) performArtifactoryPost(config adminConfiguration, path string,
 }
 
 // performArtifactoryPost will HTTP POST data to the Artifactory API.
-func (b *backend) performArtifactoryPostWithJSON(config adminConfiguration, path string, postData []byte) (*http.Response, error) {
+func (b *backend) performArtifactoryPostWithJSON(config baseConfiguration, path string, postData []byte) (*http.Response, error) {
 	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
 	if err != nil {
 		return nil, err
@@ -506,7 +513,7 @@ func (b *backend) performArtifactoryPostWithJSON(config adminConfiguration, path
 
 // performArtifactoryDelete will HTTP DELETE to the Artifactory API.
 // The path will be appended to the configured configured URL Path (usually /artifactory)
-func (b *backend) performArtifactoryDelete(config adminConfiguration, path string) (*http.Response, error) {
+func (b *backend) performArtifactoryDelete(config baseConfiguration, path string) (*http.Response, error) {
 
 	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
 	if err != nil {

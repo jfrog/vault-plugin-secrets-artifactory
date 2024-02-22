@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -19,6 +20,10 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 			"username": {
 				Type:        framework.TypeString,
 				Description: `Optional. The username of the user. If not specified, the configuration will apply to *all* users.`,
+			},
+			"url": {
+				Type:        framework.TypeString,
+				Description: "Optional. Address of the Artifactory instance",
 			},
 			"access_token": {
 				Type:        framework.TypeString,
@@ -59,6 +64,11 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 				Type:        framework.TypeString,
 				Description: `Optional. Default token description to set in Artifactory for issued user access tokens.`,
 			},
+			"bypass_artifactory_tls_verification": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "Optional. Bypass certification verification for TLS connection with Artifactory. Default to `false`.",
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -76,12 +86,11 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 }
 
 type userTokenConfiguration struct {
-	AccessToken           string        `json:"access_token"`
+	baseConfiguration
 	RefreshToken          string        `json:"refresh_token"`
 	Audience              string        `json:"audience,omitempty"`
 	Refreshable           bool          `json:"refreshable,omitempty"`
 	IncludeReferenceToken bool          `json:"include_reference_token,omitempty"`
-	UseExpiringTokens     bool          `json:"use_expiring_tokens,omitempty"`
 	DefaultTTL            time.Duration `json:"default_ttl,omitempty"`
 	MaxTTL                time.Duration `json:"max_ttl,omitempty"`
 	DefaultDescription    string        `json:"default_description,omitempty"`
@@ -93,7 +102,7 @@ func (b *backend) fetchUserTokenConfiguration(ctx context.Context, storage logic
 
 	// If username is not empty, then append to the path to fetch username specific configuration
 	path := configUserTokenPath
-	if len(username) > 0 {
+	if len(username) > 0 && !strings.HasSuffix(path, username) {
 		path = fmt.Sprintf("%s/%s", path, username)
 	}
 
@@ -118,7 +127,7 @@ func (b *backend) fetchUserTokenConfiguration(ctx context.Context, storage logic
 func (b *backend) storeUserTokenConfiguration(ctx context.Context, req *logical.Request, username string, userTokenConfig *userTokenConfiguration) error {
 	// If username is not empty, then append to the path to fetch username specific configuration
 	path := configUserTokenPath
-	if len(username) > 0 {
+	if len(username) > 0 && !strings.HasSuffix(path, username) {
 		path = fmt.Sprintf("%s/%s", path, username)
 	}
 
@@ -145,12 +154,6 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 
-	if adminConfig == nil {
-		adminConfig = &adminConfiguration{}
-	}
-
-	go b.sendUsage(*adminConfig, "pathConfigUserTokenUpdate")
-
 	username := ""
 	if val, ok := data.GetOk("username"); ok {
 		username = val.(string)
@@ -159,6 +162,16 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 	userTokenConfig, err := b.fetchUserTokenConfiguration(ctx, req.Storage, username)
 	if err != nil {
 		return nil, err
+	}
+
+	if adminConfig == nil {
+		adminConfig = &adminConfiguration{}
+	}
+
+	go b.sendUsage(adminConfig.baseConfiguration, "pathConfigUserTokenUpdate")
+
+	if val, ok := data.GetOk("url"); ok {
+		userTokenConfig.ArtifactoryURL = val.(string)
 	}
 
 	if val, ok := data.GetOk("access_token"); ok {
@@ -197,6 +210,10 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		userTokenConfig.DefaultDescription = val.(string)
 	}
 
+	if val, ok := data.GetOk("bypass_artifactory_tls_verification"); ok {
+		userTokenConfig.BypassArtifactoryTLSVerification = val.(bool)
+	}
+
 	err = b.storeUserTokenConfiguration(ctx, req, username, userTokenConfig)
 	if err != nil {
 		return nil, err
@@ -209,16 +226,16 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
+	baseConfig := baseConfiguration{}
+
 	adminConfig, err := b.fetchAdminConfiguration(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	if adminConfig == nil {
-		return logical.ErrorResponse("backend not configured"), nil
+	if adminConfig != nil {
+		baseConfig = adminConfig.baseConfiguration
 	}
-
-	go b.sendUsage(*adminConfig, "pathConfigUserTokenRead")
 
 	username := ""
 	if val, ok := data.GetOk("username"); ok {
@@ -229,6 +246,16 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 	if err != nil {
 		return nil, err
 	}
+
+	if userTokenConfig.baseConfiguration.ArtifactoryURL != "" {
+		baseConfig.ArtifactoryURL = userTokenConfig.baseConfiguration.ArtifactoryURL
+	}
+
+	if userTokenConfig.baseConfiguration.AccessToken != "" {
+		baseConfig.AccessToken = userTokenConfig.baseConfiguration.AccessToken
+	}
+
+	go b.sendUsage(baseConfig, "pathConfigUserTokenRead")
 
 	accessTokenHash := sha256.Sum256([]byte(userTokenConfig.AccessToken))
 	refreshTokenHash := sha256.Sum256([]byte(userTokenConfig.RefreshToken))
@@ -245,13 +272,8 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 		"default_description":     userTokenConfig.DefaultDescription,
 	}
 
-	accessToken := adminConfig.AccessToken
-	if len(userTokenConfig.AccessToken) > 0 {
-		accessToken = userTokenConfig.AccessToken
-	}
-
 	// Optionally include token info if it parses properly
-	token, err := b.getTokenInfo(*adminConfig, accessToken)
+	token, err := b.getTokenInfo(baseConfig, baseConfig.AccessToken)
 	if err != nil {
 		b.Logger().Warn("Error parsing AccessToken", "err", err.Error())
 	} else {

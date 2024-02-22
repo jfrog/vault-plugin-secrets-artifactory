@@ -44,12 +44,12 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathConfigRotateWrite")
+	go b.sendUsage(config.baseConfiguration, "pathConfigRotateWrite")
 
 	oldAccessToken := config.AccessToken
 
 	// Parse Current Token (to get tokenID/scope)
-	token, err := b.getTokenInfo(*config, oldAccessToken)
+	token, err := b.getTokenInfo(config.baseConfiguration, oldAccessToken)
 	if err != nil {
 		return logical.ErrorResponse("error parsing existing access token: " + err.Error()), err
 	}
@@ -77,7 +77,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	}
 
 	// Create a new token
-	resp, err := b.CreateToken(*config, *role)
+	resp, err := b.CreateToken(config.baseConfiguration, *role)
 	if err != nil {
 		return logical.ErrorResponse("error creating new access token"), err
 	}
@@ -103,7 +103,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 			"token_id":     token.TokenID,
 		},
 	}
-	err = b.RevokeToken(*config, oldSecret)
+	err = b.RevokeToken(config.baseConfiguration, oldSecret)
 	if err != nil {
 		return logical.ErrorResponse("error revoking existing access token %s", token.TokenID), err
 	}
