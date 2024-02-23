@@ -31,7 +31,7 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 			},
 			"audience": {
 				Type:        framework.TypeString,
-				Description: `Optional. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
+				Description: `Optional. See the JFrog Platform REST documentation on "Create Token" for a full and up to date description.`,
 			},
 			"refreshable": {
 				Type:        framework.TypeBool,

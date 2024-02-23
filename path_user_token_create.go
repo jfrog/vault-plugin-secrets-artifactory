@@ -54,7 +54,7 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 			},
 		},
 		HelpSynopsis:    `Create an Artifactory access token for the specified user.`,
-		HelpDescription: `Provides optional paramter to override default values for the user_token/<user name> path`,
+		HelpDescription: `Provides optional parameters to override default values for the user_token/<user name> path`,
 	}
 }
 

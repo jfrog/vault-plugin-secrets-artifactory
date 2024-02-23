@@ -42,7 +42,7 @@ func (b *backend) pathRoles() *framework.Path {
 			"scope": {
 				Type:        framework.TypeString,
 				Required:    true,
-				Description: `Required. Space-delimited list. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
+				Description: `Required. Space-delimited list. See the JFrog Artifactory REST documentation on "Create Token" (https://jfrog.com/help/r/jfrog-rest-apis/create-token) for a full and up to date description.`,
 			},
 			"refreshable": {
 				Type:        framework.TypeBool,
