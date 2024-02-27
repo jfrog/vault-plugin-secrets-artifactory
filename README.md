@@ -339,8 +339,6 @@ username           v-jenkins-x4mohTA8
 
 ### Scoped Access Tokens
 
-In order to decouple Artifactory Group maintenance from Vault plugin configuration, you can configure a single role to request Access Tokens for specific groups. This option should be used with extreme care to ensure that your Vault policies are restricting which groups it can request tokens on behalf of.
-
 Create a role (scope for artifactory >= 7.21.1)
 
 ```sh
