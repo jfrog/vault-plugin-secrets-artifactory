@@ -8,9 +8,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const rolePath = "roles/"
+
 func (b *backend) pathListRoles() *framework.Path {
 	return &framework.Path{
-		Pattern: "roles/?$",
+		Pattern: rolePath + "?$",
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathRoleList,
@@ -22,7 +24,7 @@ func (b *backend) pathListRoles() *framework.Path {
 
 func (b *backend) pathRoles() *framework.Path {
 	return &framework.Path{
-		Pattern: "roles/" + framework.GenericNameWithAtRegex("role"),
+		Pattern: rolePath + framework.GenericNameWithAtRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type:        framework.TypeString,
@@ -40,7 +42,7 @@ func (b *backend) pathRoles() *framework.Path {
 			"scope": {
 				Type:        framework.TypeString,
 				Required:    true,
-				Description: `Required. Space-delimited list. See the JFrog Artifactory REST documentation on "Create Token" for a full and up to date description.`,
+				Description: `Required. Space-delimited list. See the JFrog Artifactory REST documentation on "Create Token" (https://jfrog.com/help/r/jfrog-rest-apis/create-token) for a full and up to date description.`,
 			},
 			"refreshable": {
 				Type:        framework.TypeBool,
@@ -98,13 +100,15 @@ type artifactoryRole struct {
 	IncludeReferenceToken bool          `json:"include_reference_token"`
 	DefaultTTL            time.Duration `json:"default_ttl,omitempty"`
 	MaxTTL                time.Duration `json:"max_ttl,omitempty"`
+	RefreshToken          string        `json:"-"`
+	ExpiresIn             time.Duration `json:"-"`
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	b.rolesMutex.RLock()
 	defer b.rolesMutex.RUnlock()
 
-	entries, err := req.Storage.List(ctx, "roles/")
+	entries, err := req.Storage.List(ctx, rolePath)
 	if err != nil {
 		return nil, err
 	}
@@ -127,10 +131,9 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data 
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathRoleWrite")
+	go b.sendUsage(config.baseConfiguration, "pathRoleWrite")
 
 	roleName := data.Get("role").(string)
-
 	if roleName == "" {
 		return logical.ErrorResponse("missing role"), nil
 	}
@@ -186,7 +189,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, data 
 		return logical.ErrorResponse("missing scope"), nil
 	}
 
-	entry, err := logical.StorageEntryJSON("roles/"+roleName, role)
+	entry, err := logical.StorageEntryJSON(rolePath+roleName, role)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +216,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathRoleRead")
+	go b.sendUsage(config.baseConfiguration, "pathRoleRead")
 
 	roleName := data.Get("role").(string)
 
@@ -237,7 +240,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 
 func (b *backend) Role(ctx context.Context, storage logical.Storage, roleName string) (*artifactoryRole, error) {
 
-	entry, err := storage.Get(ctx, "roles/"+roleName)
+	entry, err := storage.Get(ctx, rolePath+roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -293,9 +296,9 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathRoleDelete")
+	go b.sendUsage(config.baseConfiguration, "pathRoleDelete")
 
-	err = req.Storage.Delete(ctx, "roles/"+data.Get("role").(string))
+	err = req.Storage.Delete(ctx, rolePath+data.Get("role").(string))
 	if err != nil {
 		return nil, err
 	}

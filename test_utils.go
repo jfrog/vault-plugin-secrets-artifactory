@@ -33,8 +33,10 @@ type testData map[string]interface{}
 // so that the original token won't be revoked by the path config rotate test
 func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
 	config := adminConfiguration{
-		AccessToken:    e.AccessToken,
-		ArtifactoryURL: e.URL,
+		baseConfiguration: baseConfiguration{
+			AccessToken:    e.AccessToken,
+			ArtifactoryURL: e.URL,
+		},
 	}
 
 	role := artifactoryRole{
@@ -45,12 +47,12 @@ func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
 
 	e.Backend.(*backend).InitializeHttpClient(&config)
 
-	err := e.Backend.(*backend).getVersion(config)
+	err := e.Backend.(*backend).getVersion(config.baseConfiguration)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, err := e.Backend.(*backend).CreateToken(config, role)
+	resp, err := e.Backend.(*backend).CreateToken(config.baseConfiguration, role)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,8 +64,10 @@ func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
 // primarily used to fail tests
 func (e *accTestEnv) createNewNonAdminTestToken(t *testing.T) (string, string) {
 	config := adminConfiguration{
-		AccessToken:    e.AccessToken,
-		ArtifactoryURL: e.URL,
+		baseConfiguration: baseConfiguration{
+			AccessToken:    e.AccessToken,
+			ArtifactoryURL: e.URL,
+		},
 	}
 
 	role := artifactoryRole{
@@ -74,12 +78,12 @@ func (e *accTestEnv) createNewNonAdminTestToken(t *testing.T) (string, string) {
 
 	e.Backend.(*backend).InitializeHttpClient(&config)
 
-	err := e.Backend.(*backend).getVersion(config)
+	err := e.Backend.(*backend).getVersion(config.baseConfiguration)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, err := e.Backend.(*backend).CreateToken(config, role)
+	resp, err := e.Backend.(*backend).CreateToken(config.baseConfiguration, role)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +92,7 @@ func (e *accTestEnv) createNewNonAdminTestToken(t *testing.T) (string, string) {
 }
 
 func (e *accTestEnv) revokeTestToken(t *testing.T, accessToken string, tokenID string) {
-	config := adminConfiguration{
+	config := baseConfiguration{
 		AccessToken:    e.AccessToken,
 		ArtifactoryURL: e.URL,
 	}
@@ -120,14 +124,14 @@ func (e *accTestEnv) UpdatePathConfig(t *testing.T) {
 
 // UpdateConfigAdmin will send a POST/PUT to the /config/admin endpoint with testData (vault write artifactory/config/admin)
 func (e *accTestEnv) UpdateConfigAdmin(t *testing.T, data testData) {
-	resp, err := e.update("config/admin", data)
+	resp, err := e.update(configAdminPath, data)
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
 }
 
 // UpdateConfigAdmin will send a POST/PUT to the /config/user_token endpoint with testData (vault write artifactory/config/user_token)
 func (e *accTestEnv) UpdateConfigUserToken(t *testing.T, data testData) {
-	resp, err := e.update("config/user_token", data)
+	resp, err := e.update(configUserTokenPath, data)
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
 }
@@ -138,7 +142,7 @@ func (e *accTestEnv) ReadPathConfig(t *testing.T) {
 
 // ReadConfigAdmin will send a GET to the /config/admin endpoint (vault read artifactory/config/admin)
 func (e *accTestEnv) ReadConfigAdmin(t *testing.T) testData {
-	resp, err := e.read("config/admin")
+	resp, err := e.read(configAdminPath)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -148,7 +152,7 @@ func (e *accTestEnv) ReadConfigAdmin(t *testing.T) testData {
 
 // ReadConfigUserToken will send a GET to the /config/user_token endpoint (vault read artifactory/config/user_token)
 func (e *accTestEnv) ReadConfigUserToken(t *testing.T) testData {
-	resp, err := e.read("config/user_token")
+	resp, err := e.read(configUserTokenPath)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -163,7 +167,7 @@ func (e *accTestEnv) DeletePathConfig(t *testing.T) {
 func (e *accTestEnv) DeleteConfigAdmin(t *testing.T) {
 	resp, err := e.Backend.HandleRequest(e.Context, &logical.Request{
 		Operation: logical.DeleteOperation,
-		Path:      "config/admin",
+		Path:      configAdminPath,
 		Storage:   e.Storage,
 	})
 
@@ -268,16 +272,43 @@ func (e *accTestEnv) CreatePathToken(t *testing.T) {
 	assert.NotEmpty(t, resp.Data["reference_token"])
 }
 
+func (e *accTestEnv) CreatePathToken_overrides(t *testing.T) {
+	e.update(configAdminPath, map[string]interface{}{
+		"use_expiring_tokens": true,
+	})
+
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "token/test-role",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"max_ttl": 60,
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotEmpty(t, resp.Data["access_token"])
+	assert.NotEmpty(t, resp.Data["token_id"])
+	assert.Equal(t, "admin", resp.Data["username"])
+	assert.Equal(t, "test-role", resp.Data["role"])
+	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
+	assert.NotEmpty(t, resp.Data["refresh_token"])
+	assert.NotEmpty(t, resp.Data["reference_token"])
+	assert.Equal(t, 60, resp.Data["expires_in"])
+}
+
 func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/user_token",
+		Path:      configUserTokenPath + "/admin",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
 			"default_description":     "foo",
 			"refreshable":             true,
 			"include_reference_token": true,
 			"use_expiring_tokens":     true,
+			"default_ttl":             60,
 		},
 	})
 
@@ -286,7 +317,7 @@ func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 
 	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "user_token/admin",
+		Path:      createUserTokenPath + "admin",
 		Storage:   e.Storage,
 	})
 
@@ -297,7 +328,7 @@ func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 	assert.Equal(t, "admin", resp.Data["username"])
 	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
 	assert.Equal(t, "foo", resp.Data["description"])
-	assert.NotEmpty(t, resp.Data["expires_in"])
+	assert.Equal(t, 60, resp.Data["expires_in"])
 	assert.NotEmpty(t, resp.Data["refresh_token"])
 	assert.NotEmpty(t, resp.Data["reference_token"])
 }
@@ -305,10 +336,11 @@ func (e *accTestEnv) CreatePathUserToken(t *testing.T) {
 func (e *accTestEnv) CreatePathUserToken_overrides(t *testing.T) {
 	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/user_token",
+		Path:      configUserTokenPath + "/admin",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
 			"default_description": "foo",
+			"default_ttl":         600,
 		},
 	})
 
@@ -317,7 +349,7 @@ func (e *accTestEnv) CreatePathUserToken_overrides(t *testing.T) {
 
 	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "user_token/admin",
+		Path:      createUserTokenPath + "admin",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
 			"description":             "buffalo",
@@ -334,7 +366,7 @@ func (e *accTestEnv) CreatePathUserToken_overrides(t *testing.T) {
 	assert.Equal(t, "admin", resp.Data["username"])
 	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
 	assert.Equal(t, "buffalo", resp.Data["description"])
-	assert.NotEmpty(t, resp.Data["expires_in"])
+	assert.Equal(t, 600, resp.Data["expires_in"])
 	assert.NotEmpty(t, resp.Data["refresh_token"])
 	assert.NotEmpty(t, resp.Data["reference_token"])
 }
@@ -353,7 +385,8 @@ func newAcceptanceTestEnv() (*accTestEnv, error) {
 
 	conf := &logical.BackendConfig{
 		System: &logical.StaticSystemView{
-			MaxLeaseTTLVal: time.Duration(2592000) * time.Second, // 30 days
+			DefaultLeaseTTLVal: 24 * time.Hour,      // 1 day
+			MaxLeaseTTLVal:     30 * 24 * time.Hour, // 30 days
 		},
 		Logger: logging.NewVaultLogger(log.Debug),
 	}
@@ -460,11 +493,12 @@ func makeBackend(t *testing.T) (*backend, *logical.BackendConfig) {
 func configuredBackend(t *testing.T, adminConfig map[string]interface{}) (*backend, *logical.BackendConfig) {
 
 	b, config := makeBackend(t)
+	t.Logf("b.System().MaxLeaseTTL(): %v\n", b.System().MaxLeaseTTL())
 	b.InitializeHttpClient(&adminConfiguration{})
 
 	_, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/admin",
+		Path:      configAdminPath,
 		Storage:   config.StorageView,
 		Data:      adminConfig,
 	})

@@ -82,9 +82,11 @@ func (e *accTestEnv) PathConfigRotateCreateTokenErr(t *testing.T) {
 
 func (e *accTestEnv) PathConfigRotateBadAccessToken(t *testing.T) {
 	// Forcibly set a bad token
-	entry, err := logical.StorageEntryJSON("config/admin", adminConfiguration{
-		AccessToken:    "bogus.token",
-		ArtifactoryURL: e.URL,
+	entry, err := logical.StorageEntryJSON(configAdminPath, adminConfiguration{
+		baseConfiguration: baseConfiguration{
+			AccessToken:    "bogus.token",
+			ArtifactoryURL: e.URL,
+		},
 	})
 	assert.NoError(t, err)
 	err = e.Storage.Put(e.Context, entry)

@@ -53,12 +53,12 @@ upgrade: build register
 	vault plugin reload -plugin=$(PLUGIN_NAME)
 
 test:
-	go test -v ./...
+	go test -v -count=1 ./...
 
 acceptance:
 	export VAULT_ACC=true && \
 	export JFROG_ACCESS_TOKEN=$(JFROG_ACCESS_TOKEN) && \
-		go test -run TestAcceptance -cover -coverprofile=coverage.txt -v -p 1 -timeout 5m ./...
+		go test -run TestAcceptance -cover -coverprofile=coverage.txt -v -p 1 -count=1 -timeout 5m ./...
 
 alltests:
 	export VAULT_ACC=true && \

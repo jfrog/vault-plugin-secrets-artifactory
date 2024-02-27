@@ -10,9 +10,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const configAdminPath = "config/admin"
+
 func (b *backend) pathConfig() *framework.Path {
 	return &framework.Path{
-		Pattern: "config/admin",
+		Pattern: configAdminPath,
 		Fields: map[string]*framework.FieldSchema{
 			"access_token": {
 				Type:        framework.TypeString,
@@ -76,11 +78,30 @@ No renewals or new tokens will be issued if the backend configuration (config/ad
 }
 
 type adminConfiguration struct {
-	AccessToken                      string `json:"access_token"`
-	ArtifactoryURL                   string `json:"artifactory_url"`
+	baseConfiguration
 	UsernameTemplate                 string `json:"username_template,omitempty"`
-	UseExpiringTokens                bool   `json:"use_expiring_tokens,omitempty"`
 	BypassArtifactoryTLSVerification bool   `json:"bypass_artifactory_tls_verification,omitempty"`
+}
+
+// fetchAdminConfiguration will return nil,nil if there's no configuration
+func (b *backend) fetchAdminConfiguration(ctx context.Context, storage logical.Storage) (*adminConfiguration, error) {
+	var config adminConfiguration
+
+	// Read in the backend configuration
+	entry, err := storage.Get(ctx, configAdminPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if entry == nil {
+		return nil, nil
+	}
+
+	if err := entry.DecodeJSON(&config); err != nil {
+		return nil, err
+	}
+
+	return &config, nil
 }
 
 func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -132,14 +153,14 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 
 	b.InitializeHttpClient(config)
 
-	go b.sendUsage(*config, "pathConfigRotateUpdate")
+	go b.sendUsage(config.baseConfiguration, "pathConfigRotateUpdate")
 
-	err = b.getVersion(*config)
+	err = b.getVersion(config.baseConfiguration)
 	if err != nil {
 		return logical.ErrorResponse("Unable to get Artifactory Version. Check url and access_token fields. TLS connection verification with Artifactory can be skipped by setting bypass_artifactory_tls_verification field to 'true'"), err
 	}
 
-	entry, err := logical.StorageEntryJSON("config/admin", config)
+	entry, err := logical.StorageEntryJSON(configAdminPath, config)
 	if err != nil {
 		return nil, err
 	}
@@ -165,9 +186,9 @@ func (b *backend) pathConfigDelete(ctx context.Context, req *logical.Request, _ 
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathConfigDelete")
+	go b.sendUsage(config.baseConfiguration, "pathConfigDelete")
 
-	if err := req.Storage.Delete(ctx, "config/admin"); err != nil {
+	if err := req.Storage.Delete(ctx, configAdminPath); err != nil {
 		return nil, err
 	}
 
@@ -187,7 +208,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*config, "pathConfigRead")
+	go b.sendUsage(config.baseConfiguration, "pathConfigRead")
 
 	// I'm not sure if I should be returning the access token, so I'll hash it.
 	accessTokenHash := sha256.Sum256([]byte(config.AccessToken))
@@ -206,9 +227,9 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 	}
 
 	// Optionally include token info if it parses properly
-	token, err := b.getTokenInfo(*config, config.AccessToken)
+	token, err := b.getTokenInfo(config.baseConfiguration, config.AccessToken)
 	if err != nil {
-		b.Logger().Warn("Error parsing AccessToken: " + err.Error())
+		b.Logger().Warn("Error parsing AccessToken", "err", err.Error())
 	} else {
 		configMap["token_id"] = token.TokenID
 		configMap["username"] = token.Username

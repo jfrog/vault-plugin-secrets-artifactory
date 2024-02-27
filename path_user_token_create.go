@@ -2,15 +2,18 @@ package artifactory
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const createUserTokenPath = "user_token/"
+
 func (b *backend) pathUserTokenCreate() *framework.Path {
 	return &framework.Path{
-		Pattern: "user_token/" + framework.GenericNameWithAtRegex("username"),
+		Pattern: createUserTokenPath + framework.GenericNameWithAtRegex("username"),
 		Fields: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
@@ -24,7 +27,7 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 			"refreshable": {
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: `Optional. Defaults to 'false'.  A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to 'true' only if your usage requires this. See the JFrog Artifactory documentation on "Generating Refreshable Tokens" (https://jfrog.com/help/r/jfrog-platform-administration-documentation/generating-refreshable-tokens) for a full and up to date description.`,
+				Description: `Optional. Defaults to 'false'. A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to 'true' only if your usage requires this. See the JFrog Artifactory documentation on "Generating Refreshable Tokens" (https://jfrog.com/help/r/jfrog-platform-administration-documentation/generating-refreshable-tokens) for a full and up to date description.`,
 			},
 			"include_reference_token": {
 				Type:        framework.TypeBool,
@@ -51,13 +54,15 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 			},
 		},
 		HelpSynopsis:    `Create an Artifactory access token for the specified user.`,
-		HelpDescription: `Provides optional paramter to override default values for the user_token/<user name> path`,
+		HelpDescription: `Provides optional parameters to override default values for the user_token/<user name> path`,
 	}
 }
 
 func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
+
+	baseConfig := baseConfiguration{}
 
 	adminConfig, err := b.fetchAdminConfiguration(ctx, req.Storage)
 	if err != nil {
@@ -68,57 +73,74 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(*adminConfig, "pathUserTokenCreatePerform")
+	go b.sendUsage(adminConfig.baseConfiguration, "pathUserTokenCreatePerform")
 
-	userTokenConfig, err := b.fetchUserTokenConfiguration(ctx, req.Storage)
+	baseConfig = adminConfig.baseConfiguration
+
+	username := data.Get("username").(string)
+
+	userTokenConfig, err := b.fetchUserTokenConfiguration(ctx, req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(userTokenConfig.AccessToken) > 0 {
-		adminConfig.AccessToken = userTokenConfig.AccessToken
+	if userTokenConfig.baseConfiguration.AccessToken != "" {
+		baseConfig.AccessToken = userTokenConfig.baseConfiguration.AccessToken
 	}
 
-	adminConfig.UseExpiringTokens = userTokenConfig.UseExpiringTokens
+	baseConfig.UseExpiringTokens = userTokenConfig.UseExpiringTokens
 	if value, ok := data.GetOk("use_expiring_tokens"); ok {
-		adminConfig.UseExpiringTokens = value.(bool)
+		baseConfig.UseExpiringTokens = value.(bool)
 	}
 
 	role := artifactoryRole{
-		GrantType:             "client_credentials",
-		Username:              data.Get("username").(string),
+		GrantType:             grantTypeClientCredentials,
+		Username:              username,
 		Scope:                 "applied-permissions/user",
-		MaxTTL:                b.Backend.System().MaxLeaseTTL(),
 		Audience:              userTokenConfig.Audience,
 		Refreshable:           userTokenConfig.Refreshable,
 		IncludeReferenceToken: userTokenConfig.IncludeReferenceToken,
 		Description:           userTokenConfig.DefaultDescription,
+		RefreshToken:          userTokenConfig.RefreshToken,
 	}
 
-	b.Logger().Debug("pathUserTokenCreatePerform", "role.Description", role.Description)
+	maxLeaseTTL := b.Backend.System().MaxLeaseTTL()
+	b.Logger().Debug("initialize maxLeaseTTL to system value", "maxLeaseTTL", maxLeaseTTL)
 
-	if userTokenConfig.MaxTTL != 0 && userTokenConfig.MaxTTL < role.MaxTTL {
-		role.MaxTTL = userTokenConfig.MaxTTL
-	}
-
-	if value, ok := data.GetOk("max_ttl"); ok {
+	if value, ok := data.GetOk("max_ttl"); ok && value.(int) > 0 {
+		b.Logger().Debug("max_ttl is set", "max_ttl", value)
 		maxTTL := time.Second * time.Duration(value.(int))
-		if maxTTL != 0 && maxTTL < role.MaxTTL {
-			role.MaxTTL = maxTTL
-		}
-	}
 
-	var ttl time.Duration
-	if value, ok := data.GetOk("ttl"); ok {
+		// use override max TTL if set and is less than maxLeaseTTL
+		if maxTTL != 0 && maxTTL < maxLeaseTTL {
+			maxLeaseTTL = maxTTL
+		}
+	} else if userTokenConfig.MaxTTL > 0 && userTokenConfig.MaxTTL < maxLeaseTTL {
+		b.Logger().Debug("using user token config MaxTTL", "userTokenConfig.MaxTTL", userTokenConfig.MaxTTL)
+		// use max TTL from user config if set and is less than system max lease TTL
+		maxLeaseTTL = userTokenConfig.MaxTTL
+	}
+	b.Logger().Debug("Max lease TTL (sec)", "maxLeaseTTL", maxLeaseTTL)
+
+	ttl := b.Backend.System().DefaultLeaseTTL()
+	if value, ok := data.GetOk("ttl"); ok && value.(int) > 0 {
+		b.Logger().Debug("ttl is set", "ttl", value)
 		ttl = time.Second * time.Duration(value.(int))
 	} else if userTokenConfig.DefaultTTL != 0 {
+		b.Logger().Debug("using user config DefaultTTL", "userTokenConfig.DefaultTTL", userTokenConfig.DefaultTTL)
 		ttl = userTokenConfig.DefaultTTL
-	} else {
-		ttl = b.Backend.System().DefaultLeaseTTL()
 	}
 
-	if role.MaxTTL > 0 && ttl > role.MaxTTL {
-		ttl = role.MaxTTL
+	// cap ttl to maxLeaseTTL
+	if maxLeaseTTL > 0 && ttl > maxLeaseTTL {
+		b.Logger().Debug("ttl is longer than maxLeaseTTL", "ttl", ttl, "maxLeaseTTL", maxLeaseTTL)
+		ttl = maxLeaseTTL
+	}
+	b.Logger().Debug("TTL (sec)", "ttl", ttl)
+
+	// now ttl is determined, we set role.ExpiresIn so this value so expirable token has the correct expiration
+	if baseConfig.UseExpiringTokens {
+		role.ExpiresIn = ttl
 	}
 
 	if value, ok := data.GetOk("refreshable"); ok {
@@ -137,9 +159,32 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		role.Description = value.(string)
 	}
 
-	resp, err := b.CreateToken(*adminConfig, role)
+	resp, err := b.CreateToken(baseConfig, role)
 	if err != nil {
-		return nil, err
+		if _, ok := err.(*TokenExpiredError); ok {
+			b.Logger().Info("access token expired. Attempt to refresh using the refresh token.")
+			refreshResp, err := b.RefreshToken(baseConfig, role)
+			if err != nil {
+				return nil, fmt.Errorf("failed to refresh access token. err: %v", err)
+			}
+			b.Logger().Info("access token refresh successful")
+
+			userTokenConfig.AccessToken = refreshResp.AccessToken
+			userTokenConfig.RefreshToken = refreshResp.RefreshToken
+			b.storeUserTokenConfiguration(ctx, req, username, userTokenConfig)
+
+			baseConfig.AccessToken = userTokenConfig.AccessToken
+			role.RefreshToken = userTokenConfig.RefreshToken
+
+			// try again after token was refreshed
+			b.Logger().Info("attempt to create user token again after access token refresh")
+			resp, err = b.CreateToken(baseConfig, role)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
 	}
 
 	response := b.Secret(SecretArtifactoryAccessTokenType).Response(map[string]interface{}{
@@ -162,7 +207,7 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 	})
 
 	response.Secret.TTL = ttl
-	response.Secret.MaxTTL = role.MaxTTL
+	response.Secret.MaxTTL = maxLeaseTTL
 
 	return response, nil
 }
