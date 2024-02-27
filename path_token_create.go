@@ -100,18 +100,6 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	if config.AllowScopedTokens {
-		scope := data.Get("scope").(string)
-		if len(scope) != 0 {
-			match, _ := regexp.MatchString(`^applied-permissions/groups:.+$`, scope)
-			if match == false {
-				return logical.ErrorResponse("provided scope is invalid"), errors.New("provided scope is invalid")
-			}
-			//use the overridden scope rather than role default
-			role.Scope = scope
-		}
-	}
-
 	maxLeaseTTL := b.Backend.System().MaxLeaseTTL()
 	b.Logger().Debug("initialize maxLeaseTTL to system value", "maxLeaseTTL", maxLeaseTTL)
 
@@ -149,6 +137,18 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	// - This value will be passed to createToken and used as expires_in for versions of Artifactory 7.50.3 or higher
 	if config.UseExpiringTokens {
 		role.ExpiresIn = maxLeaseTTL
+	}
+
+	if config.AllowScopedTokens {
+	  scope := data.Get("scope").(string)
+	  if len(scope) != 0 {
+	    match, _ := regexp.MatchString(`^applied-permissions/groups:.+$`, scope)
+	    if !match {
+	      return logical.ErrorResponse("provided scope is invalid"), errors.New("provided scope is invalid")
+	    }
+	    //use the overridden scope rather than role default
+	    role.Scope = scope
+	  }
 	}
 
 	resp, err := b.CreateToken(config.baseConfiguration, *role)

@@ -40,6 +40,11 @@ func (b *backend) pathConfig() *framework.Path {
 				Default:     false,
 				Description: "Optional. Bypass certification verification for TLS connection with Artifactory. Default to `false`.",
 			},
+			"allow_scoped_tokens": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "Optional. Determine if scoped tokens should be allowed. This is an advanced configuration option. Default to `false`.",
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -72,6 +77,9 @@ usernames if a static one is not provided.
 
 An optional "bypass_artifactory_tls_verification" parameter will enable bypassing the TLS connection verification with Artifactory.
 
+An optional "allow_scoped_tokens" parameter will enable issuing scoped tokens with Artifactory. This is an advanced option that must
+have more sophisticated Vault policies. Please see README for an example.
+
 No renewals or new tokens will be issued if the backend configuration (config/admin) is deleted.
 `,
 	}
@@ -81,6 +89,7 @@ type adminConfiguration struct {
 	baseConfiguration
 	UsernameTemplate                 string `json:"username_template,omitempty"`
 	BypassArtifactoryTLSVerification bool   `json:"bypass_artifactory_tls_verification,omitempty"`
+	AllowScopedTokens                bool   `json:"allow_scoped_tokens,omitempty"`
 }
 
 // fetchAdminConfiguration will return nil,nil if there's no configuration
@@ -141,6 +150,10 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 
 	if val, ok := data.GetOk("bypass_artifactory_tls_verification"); ok {
 		config.BypassArtifactoryTLSVerification = val.(bool)
+	}
+
+	if val, ok := data.GetOk("allow_scoped_tokens"); ok {
+		config.AllowScopedTokens = val.(bool)
 	}
 
 	if config.AccessToken == "" {
@@ -219,6 +232,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		"version":                             b.version,
 		"use_expiring_tokens":                 config.UseExpiringTokens,
 		"bypass_artifactory_tls_verification": config.BypassArtifactoryTLSVerification,
+		"allow_scoped_tokens"								 : config.AllowScopedTokens,
 	}
 
 	// Optionally include username_template
