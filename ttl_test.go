@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ func TestBackend_NoRoleMaxTTLUsesSystemMaxTTL(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, `
 		{
@@ -30,12 +31,12 @@ func TestBackend_NoRoleMaxTTLUsesSystemMaxTTL(t *testing.T) {
 		   "scope":         "api:* member-of-groups:readers",
 		   "token_type":    "Bearer",
 		   "refresh_token": "fgsfgsdugh8dgu9s8gy9hsg..."
-		}
-		`))
+		}`),
+	)
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	// Role with no maximum TTL
@@ -75,13 +76,13 @@ func TestBackend_WorkingWithBothMaxTTLs(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 		"max_ttl":      10 * time.Minute,
 	})
 
@@ -123,7 +124,7 @@ func TestBackend_NoUserTokensMaxTTLUsesSystemMaxTTL(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, `
 		{
@@ -137,7 +138,7 @@ func TestBackend_NoUserTokensMaxTTLUsesSystemMaxTTL(t *testing.T) {
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -151,10 +152,10 @@ func TestBackend_NoUserTokensMaxTTLUsesSystemMaxTTL(t *testing.T) {
 	assert.EqualValues(t, config.System.MaxLeaseTTL(), resp.Secret.MaxTTL)
 }
 
-func SetUserTokenMaxTTL(t *testing.T, b *backend, storage logical.Storage, max_ttl time.Duration) {
+func SetUserTokenMaxTTL(t *testing.T, b *backend, storage logical.Storage, path string, max_ttl time.Duration) {
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/user_token",
+		Path:      path,
 		Storage:   storage,
 		Data: map[string]interface{}{
 			"max_ttl": max_ttl,
@@ -172,18 +173,19 @@ func TestBackend_UserTokenConfigMaxTTLUseSystem(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
+	configPath := configUserTokenPath + "/admin"
 	backend_max_ttl := b.System().MaxLeaseTTL()
 	user_token_config_ttl := backend_max_ttl + 1*time.Minute
-	SetUserTokenMaxTTL(t, b, config.StorageView, user_token_config_ttl)
+	SetUserTokenMaxTTL(t, b, config.StorageView, configPath, user_token_config_ttl)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -205,18 +207,19 @@ func TestBackend_UserTokenConfigMaxTTLUseConfigMaxTTL(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
+	configPath := configUserTokenPath + "/admin"
 	backend_max_ttl := b.System().MaxLeaseTTL()
 	user_token_config_ttl := backend_max_ttl - 1*time.Minute
-	SetUserTokenMaxTTL(t, b, config.StorageView, user_token_config_ttl)
+	SetUserTokenMaxTTL(t, b, config.StorageView, configPath, user_token_config_ttl)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -238,13 +241,13 @@ func TestBackend_UserTokenMaxTTLUseRequestTTL(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	backend_max_ttl := b.System().MaxLeaseTTL()
@@ -272,13 +275,13 @@ func TestBackend_UserTokenMaxTTLEnforced(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	backend_max_ttl := b.System().MaxLeaseTTL()
@@ -307,13 +310,13 @@ func TestBackend_UserTokenTTLRequest(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -338,18 +341,18 @@ func TestBackend_UserTokenDefaultTTL(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"POST",
+		http.MethodPost,
 		"http://myserver.com:80/artifactory/api/security/token",
 		httpmock.NewStringResponder(200, canonicalAccessToken))
 
 	b, config := configuredBackend(t, map[string]interface{}{
 		"access_token": "test-access-token",
-		"url":          "http://myserver.com:80/artifactory",
+		"url":          "http://myserver.com:80",
 	})
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/user_token",
+		Path:      configUserTokenPath + "/admin",
 		Storage:   config.StorageView,
 		Data: map[string]interface{}{
 			"default_ttl": 42 * time.Minute,

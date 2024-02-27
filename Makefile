@@ -53,12 +53,12 @@ upgrade: build register
 	vault plugin reload -plugin=$(PLUGIN_NAME)
 
 test:
-	go test -v ./...
+	go test -v -count=1 ./...
 
 acceptance:
 	export VAULT_ACC=true && \
 	export JFROG_ACCESS_TOKEN=$(JFROG_ACCESS_TOKEN) && \
-		go test -run TestAcceptance -cover -coverprofile=coverage.txt -v -p 1 -timeout 5m ./...
+		go test -run TestAcceptance -cover -coverprofile=coverage.txt -v -p 1 -count=1 -timeout 5m ./...
 
 alltests:
 	export VAULT_ACC=true && \
@@ -71,13 +71,19 @@ clean:
 fmt:
 	go fmt $$(go list ./...)
 
-setup: disable register enable admin testrole
+setup: disable register enable
 
 admin:
 	vault write $(PLUGIN_VAULT_PATH)/config/admin url=$(JFROG_URL) access_token=$(JFROG_ACCESS_TOKEN)
 	vault read $(PLUGIN_VAULT_PATH)/config/admin
 	vault write -f $(PLUGIN_VAULT_PATH)/config/rotate
 	vault read $(PLUGIN_VAULT_PATH)/config/admin
+
+usertoken:
+	vault write $(PLUGIN_VAULT_PATH)/config/admin url=$(JFROG_URL) access_token=$(JFROG_ACCESS_TOKEN)
+	vault write $(PLUGIN_VAULT_PATH)/config/user_token default_description="Vault Test"
+	vault read $(PLUGIN_VAULT_PATH)/config/user_token
+	vault read $(PLUGIN_VAULT_PATH)/user_token/test refreshable=true include_reference_token=true use_expiring_tokens=true
 
 testrole:
 	vault write $(PLUGIN_VAULT_PATH)/roles/test scope="$(ARTIFACTORY_SCOPE)" max_ttl=3h default_ttl=2h

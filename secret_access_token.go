@@ -84,7 +84,7 @@ func (b *backend) secretAccessTokenRevoke(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	if err := b.RevokeToken(*config, *req.Secret); err != nil {
+	if err := b.RevokeToken(config.baseConfiguration, *req.Secret); err != nil {
 		return nil, err
 	}
 
