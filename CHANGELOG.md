@@ -1,3 +1,20 @@
+## 1.3.0 (Feburary 27, 2023)
+
+IMPROVEMENTS:
+
+* Add support for username specific user token configuration path: `config/user_token/<username>`
+* Add ability to override `access_token` in `config/user_token/<username>` path.
+* Add `refresh_token` field to allow manual refreshing of access token.
+* When access token expires, plugin now attempts to get a new access token using the refresh token
+* Update README with more details documentation for all paths
+
+BUG FIXES:
+
+* Fix `refreshable` and `include_reference_token` parameters not working for user token. Issue: [#154](https://github.com/jfrog/artifactory-secrets-plugin/issues/154)
+* Fix `default_ttl`, `max_ttl`, etc. logic and applies to token expiration (when applicable).
+
+PR: [155](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/155)
+
 ## 1.2.0 (January 10, 2023)
 
 IMPROVEMENTS:
