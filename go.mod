@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/vault/sdk v0.11.0
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/samber/lo v1.39.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 )
 
 require (
