@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"net/http"
 	"regexp"
 	"testing"
 
@@ -197,7 +198,7 @@ func TestBackend_AccessTokenAsSHA256(t *testing.T) {
 	mockArtifactoryUsageVersionRequests("")
 
 	httpmock.RegisterResponder(
-		"GET",
+		http.MethodGet,
 		"http://myserver.com:80/access/api/v1/cert/root",
 		httpmock.NewStringResponder(200, rootCert))
 
@@ -215,4 +216,57 @@ func TestBackend_AccessTokenAsSHA256(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.EqualValues(t, correctSHA256, resp.Data["access_token_sha256"])
+}
+func TestBackend_RevokeOnDelete(t *testing.T) {
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	mockArtifactoryUsageVersionRequests(`{"version" : "7.33.8", "revision" : "73308900"}`)
+
+	httpmock.RegisterResponder(
+		http.MethodGet,
+		"http://myserver.com:80/access/api/v1/cert/root",
+		httpmock.NewStringResponder(200, rootCert))
+
+	b, config := configuredBackend(t, map[string]interface{}{
+		"access_token": `eyJ2ZXIiOiIyIiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYiLCJraW` +
+			`QiOiJkMUxJUFRHbmY0RHZzQ2k0MzhodU9KdWN3bi1lSTBHc0lVR2g0bGhhdE53In0.eyJ` +
+			`zdWIiOiJqZmFjQDAxaDQyNGh2d3B5dHprMWF6eGg2azgwN2U1L3VzZXJzL2FkbWluIiwi` +
+			`c2NwIjoiYXBwbGllZC1wZXJtaXNzaW9ucy9hZG1pbiIsImF1ZCI6IipAKiIsImlzcyI6I` +
+			`mpmZmVAMDFoNDI0aHZ3cHl0emsxYXp4aDZrODA3ZTUiLCJleHAiOjE3NTMyOTM5OTMsIm` +
+			`lhdCI6MTY5MDIyMTk5MywianRpIjoiODRjMDYyNmItNzk3My00MGM5LTlkMzctNzAxYWF` +
+			`mNzNjZmI0In0.VXoZR--oQLRTqTLx3Ogz1UUrzT9hlihWQ8m_JgOucZEYwIjGa2P58wUW` +
+			`vUAxonkiqyvmFfEk8H1vyiaBQ0F9vQ7v16d3D3nfEDW71g09M3NnsKu065-pbjPRGUmSi` +
+			`SvV0WC3Gla5Ui31IA_vVhyc-kPDzoWpHwBWgOMWkJwP0ZrvQ5bwzKrwNQi6YB0SIX2eSH` +
+			`RpReef19W_4BpOUrqMrcDamB3mskwxcYFUMA45FRoV_JVxZsIMOyNNfDlNy01r5bA6ZcY` +
+			`EaseaQpU7skMCW07rUiWq4Z6U0xZEduKPlowJm9xbrBM13FEQTG4b4mW7yyOD4gqQ49wD` +
+			`GGXvhLVFoQ`,
+		"url":              "http://myserver.com:80",
+		"revoke_on_delete": true,
+	})
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      configAdminPath,
+		Storage:   config.StorageView,
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.EqualValues(t, true, resp.Data["revoke_on_delete"])
+
+	httpmock.RegisterResponder(
+		http.MethodDelete,
+		"http://myserver.com:80/access/api/v1/tokens/84c0626b-7973-40c9-9d37-701aaf73cfb4",
+		httpmock.NewStringResponder(200, ""))
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      configAdminPath,
+		Storage:   config.StorageView,
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
 }

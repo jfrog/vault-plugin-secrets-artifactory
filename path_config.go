@@ -40,6 +40,11 @@ func (b *backend) pathConfig() *framework.Path {
 				Default:     false,
 				Description: "Optional. Bypass certification verification for TLS connection with Artifactory. Default to `false`.",
 			},
+			"revoke_on_delete": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "Optional. Revoke Administrator access token when this configuration is deleted. Default to `false`. Will be set to `true` if token is rotated.",
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -81,6 +86,7 @@ type adminConfiguration struct {
 	baseConfiguration
 	UsernameTemplate                 string `json:"username_template,omitempty"`
 	BypassArtifactoryTLSVerification bool   `json:"bypass_artifactory_tls_verification,omitempty"`
+	RevokeOnDelete                   bool   `json:"revoke_on_delete,omitempty"`
 }
 
 // fetchAdminConfiguration will return nil,nil if there's no configuration
@@ -143,6 +149,10 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		config.BypassArtifactoryTLSVerification = val.(bool)
 	}
 
+	if val, ok := data.GetOk("revoke_on_delete"); ok {
+		config.RevokeOnDelete = val.(bool)
+	}
+
 	if config.AccessToken == "" {
 		return logical.ErrorResponse("access_token is required"), nil
 	}
@@ -192,6 +202,22 @@ func (b *backend) pathConfigDelete(ctx context.Context, req *logical.Request, _ 
 		return nil, err
 	}
 
+	if config.RevokeOnDelete {
+		b.Logger().Info("config.RevokeOnDelete is 'true'. Attempt to revoke access token.")
+
+		token, err := b.getTokenInfo(config.baseConfiguration, config.AccessToken)
+		if err != nil {
+			b.Logger().Warn("error parsing existing access token", "err", err)
+			return nil, nil
+		}
+
+		err = b.RevokeToken(config.baseConfiguration, token.TokenID, config.AccessToken)
+		if err != nil {
+			b.Logger().Warn("error revoking existing access token", "tokenId", token.TokenID, "err", err)
+			return nil, nil
+		}
+	}
+
 	return nil, nil
 }
 
@@ -219,6 +245,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		"version":                             b.version,
 		"use_expiring_tokens":                 config.UseExpiringTokens,
 		"bypass_artifactory_tls_verification": config.BypassArtifactoryTLSVerification,
+		"revoke_on_delete":                    config.RevokeOnDelete,
 	}
 
 	// Optionally include username_template
