@@ -18,7 +18,6 @@ import (
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/template"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/samber/lo"
 )
 
@@ -31,9 +30,9 @@ const (
 var ErrIncompatibleVersion = errors.New("incompatible version")
 
 type baseConfiguration struct {
-	AccessToken                      string `json:"access_token"`
-	ArtifactoryURL                   string `json:"artifactory_url"`
-	UseExpiringTokens                bool   `json:"use_expiring_tokens,omitempty"`
+	AccessToken       string `json:"access_token"`
+	ArtifactoryURL    string `json:"artifactory_url"`
+	UseExpiringTokens bool   `json:"use_expiring_tokens,omitempty"`
 }
 
 type errorResponse struct {
@@ -42,8 +41,7 @@ type errorResponse struct {
 	Detail  string `json:"detail"`
 }
 
-func (b *backend) RevokeToken(config baseConfiguration, secret logical.Secret) error {
-	tokenId := secret.InternalData["token_id"].(string)
+func (b *backend) RevokeToken(config baseConfiguration, tokenId, accessToken string) error {
 	u, err := url.Parse(config.ArtifactoryURL)
 	if err != nil {
 		b.Logger().Error("could not parse artifactory url", "url", u, "err", err)
@@ -59,7 +57,6 @@ func (b *backend) RevokeToken(config baseConfiguration, secret logical.Secret) e
 			return err
 		}
 	} else {
-		accessToken := secret.InternalData["access_token"].(string)
 		values := url.Values{}
 		values.Set("token", accessToken)
 

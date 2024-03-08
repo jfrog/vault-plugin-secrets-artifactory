@@ -102,14 +102,7 @@ func (e *accTestEnv) revokeTestToken(t *testing.T, accessToken string, tokenID s
 		t.Fatal(err)
 	}
 
-	secret := logical.Secret{
-		InternalData: map[string]interface{}{
-			"access_token": accessToken,
-			"token_id":     tokenID,
-		},
-	}
-
-	err = e.Backend.(*backend).RevokeToken(config, secret)
+	err = e.Backend.(*backend).RevokeToken(config, tokenID, accessToken)
 	if err != nil {
 		t.Fatal(err)
 	}
