@@ -102,8 +102,24 @@ func (b *backend) fetchUserTokenConfiguration(ctx context.Context, storage logic
 		return nil, err
 	}
 
+	if entry == nil && len(username) > 0 {
+		b.Logger().Info(fmt.Sprintf("no configuration for username %s. Fetching default user token configuration", username), "path", configUserTokenPath)
+		e, err := storage.Get(ctx, configUserTokenPath)
+		if err != nil {
+			return nil, err
+		}
+
+		if e != nil {
+			entry = e
+		}
+	}
+
 	if entry == nil {
-		return &userTokenConfiguration{}, nil
+		b.Logger().Warn("no configuration found. Using system default configuration.")
+		return &userTokenConfiguration{
+			DefaultTTL: b.Backend.System().DefaultLeaseTTL(),
+			MaxTTL:     b.Backend.System().MaxLeaseTTL(),
+		}, nil
 	}
 
 	var config userTokenConfiguration

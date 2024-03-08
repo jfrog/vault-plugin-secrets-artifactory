@@ -2,8 +2,10 @@ package artifactory
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -123,8 +125,13 @@ func (e *accTestEnv) UpdateConfigAdmin(t *testing.T, data testData) {
 }
 
 // UpdateConfigAdmin will send a POST/PUT to the /config/user_token endpoint with testData (vault write artifactory/config/user_token)
-func (e *accTestEnv) UpdateConfigUserToken(t *testing.T, data testData) {
-	resp, err := e.update(configUserTokenPath, data)
+func (e *accTestEnv) UpdateConfigUserToken(t *testing.T, username string, data testData) {
+	path := configUserTokenPath
+	if len(username) > 0 && !strings.HasSuffix(path, username) {
+		path = fmt.Sprintf("%s/%s", path, username)
+	}
+
+	resp, err := e.update(path, data)
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
 }
@@ -144,8 +151,13 @@ func (e *accTestEnv) ReadConfigAdmin(t *testing.T) testData {
 }
 
 // ReadConfigUserToken will send a GET to the /config/user_token endpoint (vault read artifactory/config/user_token)
-func (e *accTestEnv) ReadConfigUserToken(t *testing.T) testData {
-	resp, err := e.read(configUserTokenPath)
+func (e *accTestEnv) ReadConfigUserToken(t *testing.T, username string) testData {
+	path := configUserTokenPath
+	if len(username) > 0 && !strings.HasSuffix(path, username) {
+		path = fmt.Sprintf("%s/%s", path, username)
+	}
+
+	resp, err := e.read(path)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
