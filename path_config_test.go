@@ -25,7 +25,7 @@ func TestAcceptanceBackend_PathConfig(t *testing.T) {
 	t.Run("read", accTestEnv.ReadPathConfig)
 	t.Run("expiringTokens", accTestEnv.PathConfigUpdateExpiringTokens)
 	t.Run("bypassArtifactoryTLSVerification", accTestEnv.PathConfigUpdateBypassArtifactoryTLSVerification)
-	t.Run("allowScopedTokens", accTestEnv.PathConfigUpdateAllowScopedTokens)
+	t.Run("allowScopedTokens", accTestEnv.PathConfigUpdateAllowScopeOverride)
 	t.Run("usernameTemplate", accTestEnv.PathConfigUpdateUsernameTemplate)
 	t.Run("delete", accTestEnv.DeletePathConfig)
 	t.Run("errors", accTestEnv.PathConfigUpdateErrors)
@@ -46,8 +46,8 @@ func (e *accTestEnv) PathConfigUpdateBypassArtifactoryTLSVerification(t *testing
 	e.pathConfigUpdateBooleanField(t, "bypass_artifactory_tls_verification")
 }
 
-func (e *accTestEnv) PathConfigUpdateAllowScopedTokens(t *testing.T) {
-	e.pathConfigUpdateBooleanField(t, "allow_scoped_tokens")
+func (e *accTestEnv) PathConfigUpdateAllowScopeOverride(t *testing.T) {
+	e.pathConfigUpdateBooleanField(t, "allow_scope_override")
 }
 
 func (e *accTestEnv) pathConfigUpdateBooleanField(t *testing.T, fieldName string) {

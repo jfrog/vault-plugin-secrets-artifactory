@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+
 	"net/http"
 	"os"
 	"testing"
@@ -119,7 +120,7 @@ func (e *accTestEnv) UpdatePathConfig(t *testing.T) {
 	e.UpdateConfigAdmin(t, testData{
 		"access_token":        e.AccessToken,
 		"url":                 e.URL,
-		"allow_scoped_tokens": true,
+		"allow_scope_override": true,
 	})
 }
 
@@ -326,7 +327,7 @@ func (e *accTestEnv) CreatePathScopedDownToken(t *testing.T) {
 		Path:      "token/admin-role",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
-			"Scope": "applied-permissions/group:readonly",
+			"scope": "applied-permissions/groups:test-group",
 		},
 	})
 

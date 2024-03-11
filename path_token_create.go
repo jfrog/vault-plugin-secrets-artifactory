@@ -2,6 +2,8 @@ package artifactory
 
 import (
 	"context"
+	"errors"
+	"regexp"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -139,10 +141,15 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		role.ExpiresIn = maxLeaseTTL
 	}
 
-	if config.AllowScopedTokens {
+	if config.AllowScopeOverride {
 	  scope := data.Get("scope").(string)
 	  if len(scope) != 0 {
-	    match, _ := regexp.MatchString(`^applied-permissions/groups:.+$`, scope)
+			re, err := regexp.Compile(`^applied-permissions\/groups:.+$`)
+			if err != nil {
+				return nil, err
+			}
+	    match := re.MatchString(scope)
+
 	    if !match {
 	      return logical.ErrorResponse("provided scope is invalid"), errors.New("provided scope is invalid")
 	    }

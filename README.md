@@ -265,15 +265,16 @@ vault write artifactory/config/admin \
     use_expiring_tokens=true
 ```
 
-#### Use Scoped down Tokens
+#### Enable Scoped down Tokens
 
+[!WARNING]
 In order to decouple Artifactory Group maintenance from Vault plugin configuration, you can configure a single role to request Access Tokens for specific groups. This option should be used with extreme care to ensure that your Vault policies are restricting which groups it can request tokens on behalf of.
 
 ```sh
 vault write artifactory/config/admin \
     url=https://artifactory.example.org \
     access_token=$TOKEN \
-    allow_scoped_tokens=true
+    allow_scope_override=true
 ```
 
 ## Usage
@@ -338,6 +339,9 @@ username           v-jenkins-x4mohTA8
 ```
 
 ### Scoped Access Tokens
+
+[!IMPORTANT]
+In order to use this functionality, you must enable `allow_scope_override` when configuring the plugin, see [Enable Scoped down Tokens](#Use-scoped-down-tokens)
 
 Create a role (scope for artifactory >= 7.21.1)
 
