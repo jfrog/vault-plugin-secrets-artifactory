@@ -44,6 +44,10 @@ func (b *backend) pathConfig() *framework.Path {
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: "Optional. Determine if scoped tokens should be allowed. This is an advanced configuration option. Default to `false`.",
+			"revoke_on_delete": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "Optional. Revoke Administrator access token when this configuration is deleted. Default to `false`. Will be set to `true` if token is rotated.",
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -89,7 +93,8 @@ type adminConfiguration struct {
 	baseConfiguration
 	UsernameTemplate                 string `json:"username_template,omitempty"`
 	BypassArtifactoryTLSVerification bool   `json:"bypass_artifactory_tls_verification,omitempty"`
-	AllowScopeOverride                bool   `json:"allow_scope_override,omitempty"`
+	AllowScopeOverride               bool   `json:"allow_scope_override,omitempty"`
+	RevokeOnDelete                   bool   `json:"revoke_on_delete,omitempty"`
 }
 
 // fetchAdminConfiguration will return nil,nil if there's no configuration
@@ -154,6 +159,9 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 
 	if val, ok := data.GetOk("allow_scope_override"); ok {
 		config.AllowScopeOverride = val.(bool)
+    
+	if val, ok := data.GetOk("revoke_on_delete"); ok {
+		config.RevokeOnDelete = val.(bool)
 	}
 
 	if config.AccessToken == "" {
@@ -205,6 +213,22 @@ func (b *backend) pathConfigDelete(ctx context.Context, req *logical.Request, _ 
 		return nil, err
 	}
 
+	if config.RevokeOnDelete {
+		b.Logger().Info("config.RevokeOnDelete is 'true'. Attempt to revoke access token.")
+
+		token, err := b.getTokenInfo(config.baseConfiguration, config.AccessToken)
+		if err != nil {
+			b.Logger().Warn("error parsing existing access token", "err", err)
+			return nil, nil
+		}
+
+		err = b.RevokeToken(config.baseConfiguration, token.TokenID, config.AccessToken)
+		if err != nil {
+			b.Logger().Warn("error revoking existing access token", "tokenId", token.TokenID, "err", err)
+			return nil, nil
+		}
+	}
+
 	return nil, nil
 }
 
@@ -232,7 +256,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		"version":                             b.version,
 		"use_expiring_tokens":                 config.UseExpiringTokens,
 		"bypass_artifactory_tls_verification": config.BypassArtifactoryTLSVerification,
-		"allow_scope_override"								 : config.AllowScopeOverride,
+		"allow_scope_override":                config.AllowScopeOverride,
+		"revoke_on_delete":                    config.RevokeOnDelete,
 	}
 
 	// Optionally include username_template

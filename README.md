@@ -481,6 +481,7 @@ No renewals or new tokens will be issued if the backend configuration (config/ad
 * `username_template` (string) - Optional. Vault Username Template for dynamically generating usernames.
 * `use_expiring_tokens` (boolean) - Optional. If Artifactory version >= 7.50.3, set `expires_in` to `max_ttl` (admin token) or `ttl` (user token) and `force_revocable = true`. Default to `false`.
 * `bypass_artifactory_tls_verification` (boolean) - Optional. Bypass certification verification for TLS connection with Artifactory. Default to `false`.
+* `revoke_on_delete` (boolean) - Optional. Revoke Administrator access token when this configuration is deleted. Default to `false`. Will be set to `true` if token is rotated.
 
 #### Example
 
@@ -489,7 +490,8 @@ vault write artifactory/config/admin url=$JFROG_URL \
   access_token=$JFROG_ACCESS_TOKEN \
   username_template="v_{{.DisplayName}}_{{.RoleName}}_{{random 10}}_{{unix_time}}" \
   use_expiring_tokens=true \
-  bypass_artifactory_tls_verification=true
+  bypass_artifactory_tls_verification=true \
+  revoke_on_delete=true
 ```
 
 ### User Token Config

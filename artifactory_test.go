@@ -325,4 +325,14 @@ func TestBackend_RotateAdminToken(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      configAdminPath,
+		Storage:   config.StorageView,
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.EqualValues(t, true, resp.Data["revoke_on_delete"])
 }

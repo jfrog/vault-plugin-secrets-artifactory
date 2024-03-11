@@ -82,8 +82,10 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("error creating new access token"), err
 	}
 
-	// Set new token
+	// Set new token and set revoke_on_delete to true
 	config.AccessToken = resp.AccessToken
+	b.Logger().Info("set config.RevokeOnDelete to 'true'")
+	config.RevokeOnDelete = true
 
 	// Save new config
 	entry, err := logical.StorageEntryJSON(configAdminPath, config)
@@ -97,13 +99,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	}
 
 	// Invalidate Old Token
-	oldSecret := logical.Secret{
-		InternalData: map[string]interface{}{
-			"access_token": oldAccessToken,
-			"token_id":     token.TokenID,
-		},
-	}
-	err = b.RevokeToken(config.baseConfiguration, oldSecret)
+	err = b.RevokeToken(config.baseConfiguration, token.TokenID, oldAccessToken)
 	if err != nil {
 		return logical.ErrorResponse("error revoking existing access token %s", token.TokenID), err
 	}

@@ -1,3 +1,13 @@
+## 1.4.0 (March 11, 2023)
+
+IMPROVEMENTS:
+
+* Add `revoke_on_delete` field to `config/admin` path. This enable automatic revocation of admin access token when set to `true`. This field will also be set to `true` if admin access token is rotated. Issue: [#86](https://github.com/jfrog/artifactory-secrets-plugin/issues/86) PR: [#161](https://github.com/jfrog/artifactory-secrets-plugin/pull/161)
+
+BUG FIXES:
+
+* Fix `default_ttl` and `max_ttl` for `config/user_token` path fall back logic. Issue: [#159](https://github.com/jfrog/artifactory-secrets-plugin/issues/159) PR: [#162](https://github.com/jfrog/artifactory-secrets-plugin/pull/162)
+
 ## 1.3.0 (Feburary 27, 2023)
 
 IMPROVEMENTS:
