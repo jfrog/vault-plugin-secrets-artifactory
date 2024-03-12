@@ -44,6 +44,7 @@ func (b *backend) pathConfig() *framework.Path {
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: "Optional. Determine if scoped tokens should be allowed. This is an advanced configuration option. Default to `false`.",
+			},
 			"revoke_on_delete": {
 				Type:        framework.TypeBool,
 				Default:     false,
@@ -159,7 +160,8 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 
 	if val, ok := data.GetOk("allow_scope_override"); ok {
 		config.AllowScopeOverride = val.(bool)
-    
+	}
+
 	if val, ok := data.GetOk("revoke_on_delete"); ok {
 		config.RevokeOnDelete = val.(bool)
 	}

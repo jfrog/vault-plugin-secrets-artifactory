@@ -112,8 +112,8 @@ func (e *accTestEnv) revokeTestToken(t *testing.T, accessToken string, tokenID s
 
 func (e *accTestEnv) UpdatePathConfig(t *testing.T) {
 	e.UpdateConfigAdmin(t, testData{
-		"access_token":        e.AccessToken,
-		"url":                 e.URL,
+		"access_token":         e.AccessToken,
+		"url":                  e.URL,
 		"allow_scope_override": true,
 	})
 }

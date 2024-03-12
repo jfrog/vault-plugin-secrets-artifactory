@@ -267,8 +267,8 @@ vault write artifactory/config/admin \
 
 #### Enable Scoped down Tokens
 
-[!WARNING]
-In order to decouple Artifactory Group maintenance from Vault plugin configuration, you can configure a single role to request Access Tokens for specific groups. This option should be used with extreme care to ensure that your Vault policies are restricting which groups it can request tokens on behalf of.
+> [!WARNING]
+> In order to decouple Artifactory Group maintenance from Vault plugin configuration, you can configure a single role to request Access Tokens for specific groups. This option should be used with extreme care to ensure that your Vault policies are restricting which groups it can request tokens on behalf of.
 
 ```sh
 vault write artifactory/config/admin \
@@ -340,8 +340,8 @@ username           v-jenkins-x4mohTA8
 
 ### Scoped Access Tokens
 
-[!IMPORTANT]
-In order to use this functionality, you must enable `allow_scope_override` when configuring the plugin, see [Enable Scoped down Tokens](#Use-scoped-down-tokens)
+> [!IMPORTANT]
+> In order to use this functionality, you must enable `allow_scope_override` when configuring the plugin, see [Enable Scoped down Tokens](#Use-scoped-down-tokens)
 
 Create a role (scope for artifactory >= 7.21.1)
 
@@ -482,6 +482,7 @@ No renewals or new tokens will be issued if the backend configuration (config/ad
 * `use_expiring_tokens` (boolean) - Optional. If Artifactory version >= 7.50.3, set `expires_in` to `max_ttl` (admin token) or `ttl` (user token) and `force_revocable = true`. Default to `false`.
 * `bypass_artifactory_tls_verification` (boolean) - Optional. Bypass certification verification for TLS connection with Artifactory. Default to `false`.
 * `revoke_on_delete` (boolean) - Optional. Revoke Administrator access token when this configuration is deleted. Default to `false`. Will be set to `true` if token is rotated.
+* `allow_scope_override` (boolean) - Optional. Determine if scoped tokens should be allowed. This is an advanced configuration option. Default to `false`.
 
 #### Example
 

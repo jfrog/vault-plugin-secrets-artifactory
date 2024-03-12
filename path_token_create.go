@@ -142,20 +142,20 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	}
 
 	if config.AllowScopeOverride {
-	  scope := data.Get("scope").(string)
-	  if len(scope) != 0 {
+		scope := data.Get("scope").(string)
+		if len(scope) != 0 {
 			re, err := regexp.Compile(`^applied-permissions\/groups:.+$`)
 			if err != nil {
 				return nil, err
 			}
-	    match := re.MatchString(scope)
+			match := re.MatchString(scope)
 
-	    if !match {
-	      return logical.ErrorResponse("provided scope is invalid"), errors.New("provided scope is invalid")
-	    }
-	    //use the overridden scope rather than role default
-	    role.Scope = scope
-	  }
+			if !match {
+				return logical.ErrorResponse("provided scope is invalid"), errors.New("provided scope is invalid")
+			}
+			//use the overridden scope rather than role default
+			role.Scope = scope
+		}
 	}
 
 	resp, err := b.CreateToken(config.baseConfiguration, *role)
