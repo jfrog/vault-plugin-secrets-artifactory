@@ -1,3 +1,9 @@
+## 1.5.0 (March 13, 2023)
+
+IMPROVEMENTS:
+
+* Add `allow_scope_override` field to `config/admin` path. This allows override of `scope` field when generating new admin scope token using `artifactory/roles/<name>` path. Issue: [#134](https://github.com/jfrog/artifactory-secrets-plugin/issues/134) PR: [#147](https://github.com/jfrog/artifactory-secrets-plugin/pull/147), [#163](https://github.com/jfrog/artifactory-secrets-plugin/pull/163)
+
 ## 1.4.0 (March 11, 2023)
 
 IMPROVEMENTS:

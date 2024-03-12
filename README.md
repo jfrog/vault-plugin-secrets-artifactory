@@ -482,6 +482,7 @@ No renewals or new tokens will be issued if the backend configuration (config/ad
 * `use_expiring_tokens` (boolean) - Optional. If Artifactory version >= 7.50.3, set `expires_in` to `max_ttl` (admin token) or `ttl` (user token) and `force_revocable = true`. Default to `false`.
 * `bypass_artifactory_tls_verification` (boolean) - Optional. Bypass certification verification for TLS connection with Artifactory. Default to `false`.
 * `revoke_on_delete` (boolean) - Optional. Revoke Administrator access token when this configuration is deleted. Default to `false`. Will be set to `true` if token is rotated.
+* `allow_scope_override` (boolean) - Optional. Determine if scoped tokens should be allowed. This is an advanced configuration option. Default to `false`.
 
 #### Example
 
