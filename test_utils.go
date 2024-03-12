@@ -112,8 +112,9 @@ func (e *accTestEnv) revokeTestToken(t *testing.T, accessToken string, tokenID s
 
 func (e *accTestEnv) UpdatePathConfig(t *testing.T) {
 	e.UpdateConfigAdmin(t, testData{
-		"access_token": e.AccessToken,
-		"url":          e.URL,
+		"access_token":        e.AccessToken,
+		"url":                 e.URL,
+		"allow_scope_override": true,
 	})
 }
 
@@ -229,6 +230,27 @@ func (e *accTestEnv) CreatePathRole(t *testing.T) {
 	assert.Nil(t, resp)
 }
 
+func (e *accTestEnv) CreatePathAdminRole(t *testing.T) {
+	roleData := map[string]interface{}{
+		"role":        "admin-role",
+		"username":    "admin",
+		"scope":       "applied-permissions/groups:admin",
+		"audience":    "*@*",
+		"default_ttl": 30 * time.Minute,
+		"max_ttl":     45 * time.Minute,
+	}
+
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/admin-role",
+		Storage:   e.Storage,
+		Data:      roleData,
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+}
+
 func (e *accTestEnv) ReadPathRole(t *testing.T) {
 	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -301,6 +323,44 @@ func (e *accTestEnv) CreatePathToken_overrides(t *testing.T) {
 	assert.NotEmpty(t, resp.Data["refresh_token"])
 	assert.NotEmpty(t, resp.Data["reference_token"])
 	assert.Equal(t, 60, resp.Data["expires_in"])
+}
+
+func (e *accTestEnv) CreatePathScopedDownToken(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "token/admin-role",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"scope": "applied-permissions/groups:test-group",
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotEmpty(t, resp.Data["access_token"])
+	assert.NotEmpty(t, resp.Data["token_id"])
+	assert.Equal(t, "admin", resp.Data["username"])
+	assert.Equal(t, "admin-role", resp.Data["role"])
+	assert.Equal(t, "applied-permissions/groups:test-group", resp.Data["scope"])
+}
+
+func (e *accTestEnv) CreatePathScopedDownTokenBadScope(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "token/admin-role",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"scope": "blueberries?pancakes",
+		},
+	})
+
+	assert.Error(t, err, "provided scope is invalid")
+	assert.NotNil(t, resp)
+	assert.Empty(t, resp.Data["access_token"])
+	assert.Empty(t, resp.Data["token_id"])
+	assert.NotEqual(t, "admin", resp.Data["username"])
+	assert.NotEqual(t, "admin-role", resp.Data["role"])
+	assert.NotEqual(t, "applied-permissions/groups:test-group", resp.Data["scope"])
 }
 
 func (e *accTestEnv) CreatePathUserToken(t *testing.T) {

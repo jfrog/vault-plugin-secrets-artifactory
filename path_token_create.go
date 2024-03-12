@@ -2,6 +2,8 @@ package artifactory
 
 import (
 	"context"
+	"errors"
+	"regexp"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -23,6 +25,10 @@ func (b *backend) pathTokenCreate() *framework.Path {
 			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: `Override the maximum TTL for this access token. Cannot exceed smallest (system, backend) maximum TTL.`,
+			},
+			"scope": {
+				Type:        framework.TypeString,
+				Description: `Override the scope for this access token.`,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -133,6 +139,23 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	// - This value will be passed to createToken and used as expires_in for versions of Artifactory 7.50.3 or higher
 	if config.UseExpiringTokens {
 		role.ExpiresIn = maxLeaseTTL
+	}
+
+	if config.AllowScopeOverride {
+	  scope := data.Get("scope").(string)
+	  if len(scope) != 0 {
+			re, err := regexp.Compile(`^applied-permissions\/groups:.+$`)
+			if err != nil {
+				return nil, err
+			}
+	    match := re.MatchString(scope)
+
+	    if !match {
+	      return logical.ErrorResponse("provided scope is invalid"), errors.New("provided scope is invalid")
+	    }
+	    //use the overridden scope rather than role default
+	    role.Scope = scope
+	  }
 	}
 
 	resp, err := b.CreateToken(config.baseConfiguration, *role)

@@ -265,6 +265,18 @@ vault write artifactory/config/admin \
     use_expiring_tokens=true
 ```
 
+#### Enable Scoped down Tokens
+
+[!WARNING]
+In order to decouple Artifactory Group maintenance from Vault plugin configuration, you can configure a single role to request Access Tokens for specific groups. This option should be used with extreme care to ensure that your Vault policies are restricting which groups it can request tokens on behalf of.
+
+```sh
+vault write artifactory/config/admin \
+    url=https://artifactory.example.org \
+    access_token=$TOKEN \
+    allow_scope_override=true
+```
+
 ## Usage
 
 Create a role (scope for artifactory >= 7.21.1)
@@ -324,6 +336,56 @@ role               jenkins
 scope              applied-permissions/groups:automation
 token_id           06d962b2-63e2-4279-a25d-d2a9cab6507f
 username           v-jenkins-x4mohTA8
+```
+
+### Scoped Access Tokens
+
+[!IMPORTANT]
+In order to use this functionality, you must enable `allow_scope_override` when configuring the plugin, see [Enable Scoped down Tokens](#Use-scoped-down-tokens)
+
+Create a role (scope for artifactory >= 7.21.1)
+
+```sh
+vault write artifactory/roles/jenkins \
+    username="jenkins-vault"
+    scope="applied-permissions/groups:admin" \
+    default_ttl=1h max_ttl=3h
+```
+
+Request Access Token for `test-group`
+
+```sh
+vault read artifactory/token/jenkins scope=applied-permissions/groups:test-group
+```
+
+Example output (token truncated):
+
+```console
+Key                Value
+---                -----
+lease_id           artifactory/token/jenkins/9hHxV1NlyLzPgmNIzjssRCa9
+lease_duration     1h
+lease_renewable    true
+access_token       eyJ2ZXIiOiIyIiw....
+role               jenkins
+scope              applied-permissions/groups:test-group
+token_id           06d962b2-63e2-4279-a25d-d2a9cab6507f
+username           v-jenkins-b0ftbTAG
+```
+
+Example Vault Policy
+
+```console
+path "artifactory/token/jenkins" {
+  capabilities = ["read"],
+  required_parameters = ["scope"],
+  allowed_parameters = {
+    "scope" = ["applied-permissions/groups:test-group"]
+  }
+  denied_parameters = {
+    "scope" = ["applied-permissions/groups:admin"]
+  }
+}
 ```
 
 ### User Token Path
@@ -448,10 +510,10 @@ Configures default values for the `user_token/:user-name` path. The optional `us
 * `access_token` (stirng) - Optional. User identity token to access Artifactory. If `username` is not set then this token will be used for *all* users.
 * `refresh_token` (string) - Optional. Refresh token for the user access token. If `username` is not set then this token will be used for *all* users.
 * `audience` (string) - Optional. See the JFrog Platform REST documentation on [Create Token](https://jfrog.com/help/r/jfrog-rest-apis/create-token) for a full and up to date description. Service ID must begin with valid JFrog service type. Options: jfrt, jfxr, jfpip, jfds, jfmc, jfac, jfevt, jfmd, jfcon, or *. For instructions to retrieve the Artifactory Service ID see this [documentation](https://jfrog.com/help/r/jfrog-rest-apis/get-service-id)
-* `refreshable` (boolean) - Optional. A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to `true` only if your usage requires this. See the JFrog Platform documentation on [Generating Refreshable Tokens](https://jfrog.com/help/r/jfrog-platform-administration-documentation/generating-refreshable-tokens) for a full and up to date description. Defaults to `false`. 
-* `include_reference_token` (boolean) - Optional. Generate a Reference Token (alias to Access Token) in addition to the full token (available from Artifactory 7.38.10). A reference token is a shorter, 64-character string, which can be used as a bearer token, a password, or with the `X-JFrog-Art-Api`header. Note: Using the reference token might have performance implications over a full length token. Defaults to `false`. 
-* `use_expiring_tokens` (boolean) - Optional. If Artifactory version >= 7.50.3, set `expires_in` to `ttl` and `force_revocable = true`. Defaults to `false`. 
-* `default_ttl` (int64) - Optional. Default TTL for issued user access tokens. If unset, uses the backend's `default_ttl`. Cannot exceed `max_ttl`. 
+* `refreshable` (boolean) - Optional. A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to `true` only if your usage requires this. See the JFrog Platform documentation on [Generating Refreshable Tokens](https://jfrog.com/help/r/jfrog-platform-administration-documentation/generating-refreshable-tokens) for a full and up to date description. Defaults to `false`.
+* `include_reference_token` (boolean) - Optional. Generate a Reference Token (alias to Access Token) in addition to the full token (available from Artifactory 7.38.10). A reference token is a shorter, 64-character string, which can be used as a bearer token, a password, or with the `X-JFrog-Art-Api`header. Note: Using the reference token might have performance implications over a full length token. Defaults to `false`.
+* `use_expiring_tokens` (boolean) - Optional. If Artifactory version >= 7.50.3, set `expires_in` to `ttl` and `force_revocable = true`. Defaults to `false`.
+* `default_ttl` (int64) - Optional. Default TTL for issued user access tokens. If unset, uses the backend's `default_ttl`. Cannot exceed `max_ttl`.
 * `default_description` (string) - Optional. Default token description to set in Artifactory for issued user access tokens.
 
 #### Examples
@@ -494,7 +556,7 @@ vault delete artifactory/config/user_token/myuser
 * `audience` (string) - Optional. See the JFrog Platform REST documentation on [Create Token](https://jfrog.com/help/r/jfrog-rest-apis/create-token) for a full and up to date description. Service ID must begin with valid JFrog service type. Options: jfrt, jfxr, jfpip, jfds, jfmc, jfac, jfevt, jfmd, jfcon, or *. For instructions to retrieve the Artifactory Service ID see this [documentation](https://jfrog.com/help/r/jfrog-rest-apis/get-service-id)
 * `include_reference_token` (boolean) - Optional. Generate a Reference Token (alias to Access Token) in addition to the full token (available from Artifactory 7.38.10). A reference token is a shorter, 64-character string, which can be used as a bearer token, a password, or with the `X-JFrog-Art-Api`header. Note: Using the reference token might have performance implications over a full length token. Defaults to `false`.
 * `default_ttl` (int64) - Default TTL for issued user access tokens. If unset, uses the backend's `default_ttl`. Cannot exceed `max_ttl`.
-* `max_ttl` (int64) - Maximum TTL that an access token can be renewed for. If unset, uses the backend's `max_ttl`. Cannot exceed backend's `max_ttl`. 
+* `max_ttl` (int64) - Maximum TTL that an access token can be renewed for. If unset, uses the backend's `max_ttl`. Cannot exceed backend's `max_ttl`.
 
 #### Examples
 
@@ -557,7 +619,7 @@ Provides optional parameters to override default values for the user_token/:user
 * `description` (string) - Optional. Override the token description to set in Artifactory for issued user access tokens.
 * `refreshable` (boolean) - Optional. Override the `refreshable` for this access token. Defaults to `false`.
 * `include_reference_token` (boolean) - Optional. Override the `include_reference_token` for this access token. Defaults to `false`.
-* `use_expiring_tokens` (boolean) - Optional. Override the `use_expiring_tokens` for this access token. If Artifactory version >= 7.50.3, set `expires_in` to `ttl` and `force_revocable = true`. Defaults to `false`. 
+* `use_expiring_tokens` (boolean) - Optional. Override the `use_expiring_tokens` for this access token. If Artifactory version >= 7.50.3, set `expires_in` to `ttl` and `force_revocable = true`. Defaults to `false`.
 * `ttl` (int64) - Optional. Override the default TTL when issuing this access token. Cannot exceed smallest (system, backend, role, this request) maximum TTL.
 * `max_ttl` (int64) - Optional. Override the maximum TTL for this access token. Cannot exceed smallest (system, backend) maximum TTL.
 
