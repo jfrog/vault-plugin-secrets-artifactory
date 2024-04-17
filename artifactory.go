@@ -33,6 +33,7 @@ type baseConfiguration struct {
 	AccessToken       string `json:"access_token"`
 	ArtifactoryURL    string `json:"artifactory_url"`
 	UseExpiringTokens bool   `json:"use_expiring_tokens,omitempty"`
+	ForceRevocable    *bool  `json:"force_revocable,omitempty"`
 }
 
 type errorResponse struct {
@@ -146,9 +147,12 @@ func (b *backend) createToken(config baseConfiguration, expiresIn time.Duration,
 
 	if config.UseExpiringTokens && b.supportForceRevocable() && expiresIn > 0 {
 		request.ExpiresIn = int64(expiresIn.Seconds())
-		request.ForceRevocable = true
+		if config.ForceRevocable != nil {
+			request.ForceRevocable = *config.ForceRevocable
+		} else {
+			request.ForceRevocable = true
+		}
 	}
-
 	u, err := url.Parse(config.ArtifactoryURL)
 	if err != nil {
 		b.Logger().Error("could not parse artifactory url", "url", config.ArtifactoryURL, "err", err)

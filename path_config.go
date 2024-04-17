@@ -35,6 +35,11 @@ func (b *backend) pathConfig() *framework.Path {
 				Default:     false,
 				Description: "Optional. If Artifactory version >= 7.50.3, set expires_in to max_ttl and force_revocable.",
 			},
+			"force_revocable": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "Optional.",
+			},
 			"bypass_artifactory_tls_verification": {
 				Type:        framework.TypeBool,
 				Default:     false,
@@ -154,6 +159,15 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		config.UseExpiringTokens = val.(bool)
 	}
 
+	if val, ok := data.GetOk("force_revocable"); ok {
+
+		temp := val.(bool)
+		config.ForceRevocable = &temp
+	} else {
+
+		config.ForceRevocable = nil
+	}
+
 	if val, ok := data.GetOk("bypass_artifactory_tls_verification"); ok {
 		config.BypassArtifactoryTLSVerification = val.(bool)
 	}
@@ -257,6 +271,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		"url":                                 config.ArtifactoryURL,
 		"version":                             b.version,
 		"use_expiring_tokens":                 config.UseExpiringTokens,
+		"force_revocable":                     config.ForceRevocable,
 		"bypass_artifactory_tls_verification": config.BypassArtifactoryTLSVerification,
 		"allow_scope_override":                config.AllowScopeOverride,
 		"revoke_on_delete":                    config.RevokeOnDelete,

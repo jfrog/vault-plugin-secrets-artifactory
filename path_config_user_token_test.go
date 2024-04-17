@@ -21,6 +21,7 @@ func TestAcceptanceBackend_PathConfigUserToken(t *testing.T) {
 	t.Run("update use_expiring_tokens", accTestEnv.PathConfigUseExpiringTokensUpdate)
 	t.Run("update default_ttl", accTestEnv.PathConfigDefaultTTLUpdate)
 	t.Run("update max_ttl", accTestEnv.PathConfigMaxTTLUpdate)
+	t.Run("update force_revocable", accTestEnv.PathConfigForceRevocableTokens)
 }
 
 func (e *accTestEnv) PathConfigAccessTokenUpdate(t *testing.T) {
@@ -56,6 +57,10 @@ func (e *accTestEnv) PathConfigIncludeReferenceTokenUpdate(t *testing.T) {
 
 func (e *accTestEnv) PathConfigUseExpiringTokensUpdate(t *testing.T) {
 	e.pathConfigUserTokenUpdateBoolField(t, "use_expiring_tokens")
+}
+
+func (e *accTestEnv) PathConfigForceRevocableUpdate(t *testing.T) {
+	e.pathConfigUserTokenUpdateBoolField(t, "force_revocable")
 }
 
 func (e *accTestEnv) PathConfigDefaultTTLUpdate(t *testing.T) {
