@@ -38,7 +38,7 @@ func (b *backend) pathConfig() *framework.Path {
 			"force_revocable": {
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "Optional.",
+				Description: "Optional. When set to true, we will add the 'force_revocable' flag to the token's extension. In addition, a new configuration has been added that sets the default for setting the 'force_revocable' default when creating a new token - the default of this configuration will be 'false' to ensure that the Circle of Trust remains in place.",
 			},
 			"bypass_artifactory_tls_verification": {
 				Type:        framework.TypeBool,
