@@ -480,6 +480,7 @@ No renewals or new tokens will be issued if the backend configuration (config/ad
 * `access_token` (stirng) - Administrator token to access Artifactory
 * `username_template` (string) - Optional. Vault Username Template for dynamically generating usernames.
 * `use_expiring_tokens` (boolean) - Optional. If Artifactory version >= 7.50.3, set `expires_in` to `max_ttl` (admin token) or `ttl` (user token) and `force_revocable = true`. Default to `false`.
+* `force_revocable` (boolean) - Optional. When set to true, we will add the `force_revocable` flag to the token's extension. In addition, a new configuration has been added that sets the default for setting the `force_revocable` default when creating a new token - the default of this configuration will be `false` to ensure that the Circle of Trust remains in place.
 * `bypass_artifactory_tls_verification` (boolean) - Optional. Bypass certification verification for TLS connection with Artifactory. Default to `false`.
 * `revoke_on_delete` (boolean) - Optional. Revoke Administrator access token when this configuration is deleted. Default to `false`. Will be set to `true` if token is rotated.
 * `allow_scope_override` (boolean) - Optional. Determine if scoped tokens should be allowed. This is an advanced configuration option. Default to `false`.
@@ -514,6 +515,7 @@ Configures default values for the `user_token/:user-name` path. The optional `us
 * `refreshable` (boolean) - Optional. A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to `true` only if your usage requires this. See the JFrog Platform documentation on [Generating Refreshable Tokens](https://jfrog.com/help/r/jfrog-platform-administration-documentation/generating-refreshable-tokens) for a full and up to date description. Defaults to `false`.
 * `include_reference_token` (boolean) - Optional. Generate a Reference Token (alias to Access Token) in addition to the full token (available from Artifactory 7.38.10). A reference token is a shorter, 64-character string, which can be used as a bearer token, a password, or with the `X-JFrog-Art-Api`header. Note: Using the reference token might have performance implications over a full length token. Defaults to `false`.
 * `use_expiring_tokens` (boolean) - Optional. If Artifactory version >= 7.50.3, set `expires_in` to `ttl` and `force_revocable = true`. Defaults to `false`.
+* `force_revocable` (boolean) - Optional. When set to true, we will add the `force_revocable` flag to the token's extension. In addition, a new configuration has been added that sets the default for setting the `force_revocable` default when creating a new token - the default of this configuration will be `false` to ensure that the Circle of Trust remains in place.
 * `default_ttl` (int64) - Optional. Default TTL for issued user access tokens. If unset, uses the backend's `default_ttl`. Cannot exceed `max_ttl`.
 * `default_description` (string) - Optional. Default token description to set in Artifactory for issued user access tokens.
 
@@ -621,6 +623,7 @@ Provides optional parameters to override default values for the user_token/:user
 * `refreshable` (boolean) - Optional. Override the `refreshable` for this access token. Defaults to `false`.
 * `include_reference_token` (boolean) - Optional. Override the `include_reference_token` for this access token. Defaults to `false`.
 * `use_expiring_tokens` (boolean) - Optional. Override the `use_expiring_tokens` for this access token. If Artifactory version >= 7.50.3, set `expires_in` to `ttl` and `force_revocable = true`. Defaults to `false`.
+* `force_revocable` (boolean) - Optional. When set to true, we will add the `force_revocable` flag to the token's extension. In addition, a new configuration has been added that sets the default for setting the `force_revocable` default when creating a new token - the default of this configuration will be `false` to ensure that the Circle of Trust remains in place.
 * `ttl` (int64) - Optional. Override the default TTL when issuing this access token. Cannot exceed smallest (system, backend, role, this request) maximum TTL.
 * `max_ttl` (int64) - Optional. Override the maximum TTL for this access token. Cannot exceed smallest (system, backend) maximum TTL.
 

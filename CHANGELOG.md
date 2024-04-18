@@ -1,3 +1,9 @@
+## 1.6.0 (April 19, 2023)
+
+IMPROVEMENTS:
+
+* Add `force_revocable` field to `config/admin`, `config/user_token`, and `config/user_token/<username>` paths. Issue: [#174](https://github.com/jfrog/artifactory-secrets-plugin/issues/174) PR: [#147](https://github.com/jfrog/artifactory-secrets-plugin/pull/147), [#175](https://github.com/jfrog/artifactory-secrets-plugin/pull/175)
+
 ## 1.5.0 (March 13, 2023)
 
 IMPROVEMENTS:
