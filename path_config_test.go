@@ -43,6 +43,10 @@ func (e *accTestEnv) PathConfigUpdateExpiringTokens(t *testing.T) {
 	e.pathConfigUpdateBooleanField(t, "use_expiring_tokens")
 }
 
+func (e *accTestEnv) PathConfigForceRevocableTokens(t *testing.T) {
+	e.pathConfigUpdateBooleanField(t, "force_revocable")
+}
+
 func (e *accTestEnv) PathConfigUpdateBypassArtifactoryTLSVerification(t *testing.T) {
 	e.pathConfigUpdateBooleanField(t, "bypass_artifactory_tls_verification")
 }

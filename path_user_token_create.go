@@ -39,6 +39,11 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 				Default:     false,
 				Description: "Optional. If Artifactory version >= 7.50.3, set expires_in to max_ttl and force_revocable.",
 			},
+			"force_revocable": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "Optional.",
+			},
 			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: `Optional. Override the maximum TTL for this access token. Cannot exceed smallest (system, mount, backend) maximum TTL.`,
@@ -91,6 +96,10 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 	baseConfig.UseExpiringTokens = userTokenConfig.UseExpiringTokens
 	if value, ok := data.GetOk("use_expiring_tokens"); ok {
 		baseConfig.UseExpiringTokens = value.(bool)
+	}
+	if value, ok := data.GetOk("force_revocable"); ok {
+		temp := value.(bool)
+		baseConfig.ForceRevocable = &temp
 	}
 
 	role := artifactoryRole{

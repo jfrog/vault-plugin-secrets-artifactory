@@ -48,6 +48,11 @@ func (b *backend) pathConfigUserToken() *framework.Path {
 				Default:     false,
 				Description: "Optional. If Artifactory version >= 7.50.3, set expires_in to max_ttl and force_revocable.",
 			},
+			"force_revocable": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "Optional.",
+			},
 			"default_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: `Optional. Default TTL for issued user access tokens. If unset, uses the backend's default_ttl. Cannot exceed max_ttl.`,
@@ -208,6 +213,13 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		userTokenConfig.UseExpiringTokens = adminConfig.UseExpiringTokens
 	}
 
+	if val, ok := data.GetOk("force_revocable"); ok {
+		b := val.(bool)
+		userTokenConfig.ForceRevocable = &b
+	} else {
+		userTokenConfig.ForceRevocable = adminConfig.ForceRevocable
+	}
+
 	if val, ok := data.GetOk("default_ttl"); ok {
 		userTokenConfig.DefaultTTL = time.Duration(val.(int)) * time.Second
 	}
@@ -263,6 +275,7 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 		"refreshable":             userTokenConfig.Refreshable,
 		"include_reference_token": userTokenConfig.IncludeReferenceToken,
 		"use_expiring_tokens":     userTokenConfig.UseExpiringTokens,
+		"force_revocable":         userTokenConfig.ForceRevocable,
 		"default_ttl":             userTokenConfig.DefaultTTL.Seconds(),
 		"max_ttl":                 userTokenConfig.MaxTTL.Seconds(),
 		"default_description":     userTokenConfig.DefaultDescription,
