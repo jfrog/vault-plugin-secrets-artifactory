@@ -44,7 +44,7 @@ func (e *accTestEnv) PathConfigUpdateExpiringTokens(t *testing.T) {
 }
 
 func (e *accTestEnv) PathConfigForceRevocableTokens(t *testing.T) {
-	e.pathConfigUpdateBooleanField(t, "force_revocable")
+	e.pathConfigUpdateBooleanPtrField(t, "force_revocable")
 }
 
 func (e *accTestEnv) PathConfigUpdateBypassArtifactoryTLSVerification(t *testing.T) {
@@ -81,6 +81,42 @@ func (e *accTestEnv) pathConfigUpdateBooleanField(t *testing.T, fieldName string
 	})
 	data = e.ReadConfigAdmin(t)
 	assert.Equal(t, false, data[fieldName])
+
+	// Fail Tests
+	resp, err := e.update(configAdminPath, testData{
+		fieldName: "Sure, why not",
+	})
+	assert.NotNil(t, resp)
+	assert.Regexp(t, regexp.MustCompile("Field validation failed: error converting input .* strconv.ParseBool: parsing .*: invalid syntax"), resp.Data["error"])
+	assert.Nil(t, err)
+}
+
+func (e *accTestEnv) pathConfigUpdateBooleanPtrField(t *testing.T, fieldName string) {
+	// Boolean
+	e.UpdateConfigAdmin(t, testData{
+		fieldName: true,
+	})
+	data := e.ReadConfigAdmin(t)
+	assert.Equal(t, true, *data[fieldName].(*bool))
+
+	e.UpdateConfigAdmin(t, testData{
+		fieldName: false,
+	})
+	data = e.ReadConfigAdmin(t)
+	assert.Equal(t, false, *data[fieldName].(*bool))
+
+	// String
+	e.UpdateConfigAdmin(t, testData{
+		fieldName: "true",
+	})
+	data = e.ReadConfigAdmin(t)
+	assert.Equal(t, true, *data[fieldName].(*bool))
+
+	e.UpdateConfigAdmin(t, testData{
+		fieldName: "false",
+	})
+	data = e.ReadConfigAdmin(t)
+	assert.Equal(t, false, *data[fieldName].(*bool))
 
 	// Fail Tests
 	resp, err := e.update(configAdminPath, testData{
