@@ -18,7 +18,6 @@ func (b *backend) pathConfig() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"access_token": {
 				Type:        framework.TypeString,
-				Required:    true,
 				Description: "Administrator token to access Artifactory",
 			},
 			"url": {

@@ -477,7 +477,7 @@ No renewals or new tokens will be issued if the backend configuration (config/ad
 #### Parameters
 
 * `url` (string) - Address of the Artifactory instance, e.g. https://my.jfrog.io
-* `access_token` (stirng) - Administrator token to access Artifactory
+* `access_token` (string) - Optional. Administrator token to access Artifactory
 * `username_template` (string) - Optional. Vault Username Template for dynamically generating usernames.
 * `use_expiring_tokens` (boolean) - Optional. If Artifactory version >= 7.50.3, set `expires_in` to `max_ttl` (admin token) or `ttl` (user token) and `force_revocable = true`. Default to `false`.
 * `force_revocable` (boolean) - Optional. When set to true, we will add the `force_revocable` flag to the token's extension. In addition, a new configuration has been added that sets the default for setting the `force_revocable` default when creating a new token - the default of this configuration will be `false` to ensure that the Circle of Trust remains in place.
@@ -509,7 +509,7 @@ Configures default values for the `user_token/:user-name` path. The optional `us
 
 #### Parameters
 
-* `access_token` (stirng) - Optional. User identity token to access Artifactory. If `username` is not set then this token will be used for *all* users.
+* `access_token` (string) - Optional. User identity token to access Artifactory. If `username` is not set then this token will be used for *all* users.
 * `refresh_token` (string) - Optional. Refresh token for the user access token. If `username` is not set then this token will be used for *all* users.
 * `audience` (string) - Optional. See the JFrog Platform REST documentation on [Create Token](https://jfrog.com/help/r/jfrog-rest-apis/create-token) for a full and up to date description. Service ID must begin with valid JFrog service type. Options: jfrt, jfxr, jfpip, jfds, jfmc, jfac, jfevt, jfmd, jfcon, or *. For instructions to retrieve the Artifactory Service ID see this [documentation](https://jfrog.com/help/r/jfrog-rest-apis/get-service-id)
 * `refreshable` (boolean) - Optional. A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to `true` only if your usage requires this. See the JFrog Platform documentation on [Generating Refreshable Tokens](https://jfrog.com/help/r/jfrog-platform-administration-documentation/generating-refreshable-tokens) for a full and up to date description. Defaults to `false`.
@@ -552,7 +552,7 @@ vault delete artifactory/config/user_token/myuser
 
 #### Parameters
 
-* `grant_type` (stirng) - Optional. Defaults to `client_credentials` when creating the access token. You likely don't need to change this.
+* `grant_type` (string) - Optional. Defaults to `client_credentials` when creating the access token. You likely don't need to change this.
 * `username` (string) - Optional. Defaults to using the username_template. The static username for which the access token is created. If the user does not exist, Artifactory will create a transient user. Note that non-administrative access tokens can only create tokens for themselves.
 * `scope` (string) - Space-delimited list. See the JFrog Artifactory REST documentation on ["Create Token"](https://jfrog.com/help/r/jfrog-rest-apis/create-token) for a full and up to date description.
 * `refreshable` (boolean) - Optional. A refreshable access token gets replaced by a new access token, which is not what a consumer of tokens from this backend would be expecting; instead they'd likely just request a new token periodically. Set this to `true` only if your usage requires this. See the JFrog Platform documentation on [Generating Refreshable Tokens](https://jfrog.com/help/r/jfrog-platform-administration-documentation/generating-refreshable-tokens) for a full and up to date description. Defaults to `false`.
