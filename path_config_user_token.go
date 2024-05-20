@@ -107,8 +107,10 @@ func (b *backend) fetchUserTokenConfiguration(ctx context.Context, storage logic
 		return nil, err
 	}
 
+	logger := b.Logger().With("func", "fetchUserTokenConfiguration")
+
 	if entry == nil && len(username) > 0 {
-		b.Logger().Info(fmt.Sprintf("no configuration for username %s. Fetching default user token configuration", username), "path", configUserTokenPath)
+		logger.Info(fmt.Sprintf("no configuration for username %s. Fetching default user token configuration", username), "path", configUserTokenPath)
 		e, err := storage.Get(ctx, configUserTokenPath)
 		if err != nil {
 			return nil, err
@@ -120,7 +122,7 @@ func (b *backend) fetchUserTokenConfiguration(ctx context.Context, storage logic
 	}
 
 	if entry == nil {
-		b.Logger().Warn("no configuration found. Using system default configuration.")
+		logger.Warn("no configuration found. Using system default configuration.")
 		return &userTokenConfiguration{
 			DefaultTTL: b.Backend.System().DefaultLeaseTTL(),
 			MaxTTL:     b.Backend.System().MaxLeaseTTL(),
@@ -147,7 +149,7 @@ func (b *backend) storeUserTokenConfiguration(ctx context.Context, req *logical.
 		return err
 	}
 
-	b.Logger().Info("saving user token configuration", "path", path)
+	b.Logger().With("func", "storeUserTokenConfiguration").Info("saving user token configuration", "path", path)
 	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return err
@@ -284,7 +286,7 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 	// Optionally include token info if it parses properly
 	token, err := b.getTokenInfo(adminConfig.baseConfiguration, userTokenConfig.AccessToken)
 	if err != nil {
-		b.Logger().Warn("Error parsing AccessToken", "err", err.Error())
+		b.Logger().With("func", "pathConfigUserTokenRead").Warn("Error parsing AccessToken", "err", err.Error())
 	} else {
 		configMap["token_id"] = token.TokenID
 		configMap["username"] = token.Username

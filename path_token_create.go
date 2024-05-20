@@ -102,11 +102,13 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 		}
 	}
 
+	logger := b.Logger().With("func", "pathTokenCreatePerform")
+
 	maxLeaseTTL := b.Backend.System().MaxLeaseTTL()
-	b.Logger().Debug("initialize maxLeaseTTL to system value", "maxLeaseTTL", maxLeaseTTL)
+	logger.Debug("initialize maxLeaseTTL to system value", "maxLeaseTTL", maxLeaseTTL)
 
 	if value, ok := data.GetOk("max_ttl"); ok && value.(int) > 0 {
-		b.Logger().Debug("max_ttl is set", "max_ttl", value)
+		logger.Debug("max_ttl is set", "max_ttl", value)
 		maxTTL := time.Second * time.Duration(value.(int))
 
 		// use override max TTL if set and less than maxLeaseTTL
@@ -114,26 +116,26 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 			maxLeaseTTL = maxTTL
 		}
 	} else if role.MaxTTL > 0 && role.MaxTTL < maxLeaseTTL {
-		b.Logger().Debug("using role MaxTTL", "role.MaxTTL", role.MaxTTL)
+		logger.Debug("using role MaxTTL", "role.MaxTTL", role.MaxTTL)
 		maxLeaseTTL = role.MaxTTL
 	}
-	b.Logger().Debug("Max lease TTL (sec)", "maxLeaseTTL", maxLeaseTTL)
+	logger.Debug("Max lease TTL (sec)", "maxLeaseTTL", maxLeaseTTL)
 
 	ttl := b.Backend.System().DefaultLeaseTTL()
 	if value, ok := data.GetOk("ttl"); ok && value.(int) > 0 {
-		b.Logger().Debug("ttl is set", "ttl", value)
+		logger.Debug("ttl is set", "ttl", value)
 		ttl = time.Second * time.Duration(value.(int))
 	} else if role.DefaultTTL != 0 {
-		b.Logger().Debug("using role DefaultTTL", "role.DefaultTTL", role.DefaultTTL)
+		logger.Debug("using role DefaultTTL", "role.DefaultTTL", role.DefaultTTL)
 		ttl = role.DefaultTTL
 	}
 
 	// cap ttl to maxLeaseTTL
 	if ttl > maxLeaseTTL {
-		b.Logger().Debug("ttl is longer than maxLeaseTTL", "ttl", ttl, "maxLeaseTTL", maxLeaseTTL)
+		logger.Debug("ttl is longer than maxLeaseTTL", "ttl", ttl, "maxLeaseTTL", maxLeaseTTL)
 		ttl = maxLeaseTTL
 	}
-	b.Logger().Debug("TTL (sec)", "ttl", ttl)
+	logger.Debug("TTL (sec)", "ttl", ttl)
 
 	// Set the role.ExpiresIn based on maxLeaseTTL if use_expiring_tokens is set to tru in config
 	// - This value will be passed to createToken and used as expires_in for versions of Artifactory 7.50.3 or higher

@@ -113,11 +113,13 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		RefreshToken:          userTokenConfig.RefreshToken,
 	}
 
+	logger := b.Logger().With("func", "pathUserTokenCreatePerform")
+
 	maxLeaseTTL := b.Backend.System().MaxLeaseTTL()
-	b.Logger().Debug("initialize maxLeaseTTL to system value", "maxLeaseTTL", maxLeaseTTL)
+	logger.Debug("initialize maxLeaseTTL to system value", "maxLeaseTTL", maxLeaseTTL)
 
 	if value, ok := data.GetOk("max_ttl"); ok && value.(int) > 0 {
-		b.Logger().Debug("max_ttl is set", "max_ttl", value)
+		logger.Debug("max_ttl is set", "max_ttl", value)
 		maxTTL := time.Second * time.Duration(value.(int))
 
 		// use override max TTL if set and is less than maxLeaseTTL
@@ -125,27 +127,27 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 			maxLeaseTTL = maxTTL
 		}
 	} else if userTokenConfig.MaxTTL > 0 && userTokenConfig.MaxTTL < maxLeaseTTL {
-		b.Logger().Debug("using user token config MaxTTL", "userTokenConfig.MaxTTL", userTokenConfig.MaxTTL)
+		logger.Debug("using user token config MaxTTL", "userTokenConfig.MaxTTL", userTokenConfig.MaxTTL)
 		// use max TTL from user config if set and is less than system max lease TTL
 		maxLeaseTTL = userTokenConfig.MaxTTL
 	}
-	b.Logger().Debug("Max lease TTL (sec)", "maxLeaseTTL", maxLeaseTTL)
+	logger.Debug("Max lease TTL (sec)", "maxLeaseTTL", maxLeaseTTL)
 
 	ttl := b.Backend.System().DefaultLeaseTTL()
 	if value, ok := data.GetOk("ttl"); ok && value.(int) > 0 {
-		b.Logger().Debug("ttl is set", "ttl", value)
+		logger.Debug("ttl is set", "ttl", value)
 		ttl = time.Second * time.Duration(value.(int))
 	} else if userTokenConfig.DefaultTTL != 0 {
-		b.Logger().Debug("using user config DefaultTTL", "userTokenConfig.DefaultTTL", userTokenConfig.DefaultTTL)
+		logger.Debug("using user config DefaultTTL", "userTokenConfig.DefaultTTL", userTokenConfig.DefaultTTL)
 		ttl = userTokenConfig.DefaultTTL
 	}
 
 	// cap ttl to maxLeaseTTL
 	if maxLeaseTTL > 0 && ttl > maxLeaseTTL {
-		b.Logger().Debug("ttl is longer than maxLeaseTTL", "ttl", ttl, "maxLeaseTTL", maxLeaseTTL)
+		logger.Debug("ttl is longer than maxLeaseTTL", "ttl", ttl, "maxLeaseTTL", maxLeaseTTL)
 		ttl = maxLeaseTTL
 	}
-	b.Logger().Debug("TTL (sec)", "ttl", ttl)
+	logger.Debug("TTL (sec)", "ttl", ttl)
 
 	// now ttl is determined, we set role.ExpiresIn so this value so expirable token has the correct expiration
 	if baseConfig.UseExpiringTokens {
@@ -171,12 +173,12 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 	resp, err := b.CreateToken(baseConfig, role)
 	if err != nil {
 		if _, ok := err.(*TokenExpiredError); ok {
-			b.Logger().Info("access token expired. Attempt to refresh using the refresh token.")
+			logger.Info("access token expired. Attempt to refresh using the refresh token.")
 			refreshResp, err := b.RefreshToken(baseConfig, role)
 			if err != nil {
 				return nil, fmt.Errorf("failed to refresh access token. err: %v", err)
 			}
-			b.Logger().Info("access token refresh successful")
+			logger.Info("access token refresh successful")
 
 			userTokenConfig.AccessToken = refreshResp.AccessToken
 			userTokenConfig.RefreshToken = refreshResp.RefreshToken
@@ -186,7 +188,7 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 			role.RefreshToken = userTokenConfig.RefreshToken
 
 			// try again after token was refreshed
-			b.Logger().Info("attempt to create user token again after access token refresh")
+			logger.Info("attempt to create user token again after access token refresh")
 			resp, err = b.CreateToken(baseConfig, role)
 			if err != nil {
 				return nil, err

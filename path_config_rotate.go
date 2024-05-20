@@ -84,7 +84,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 
 	// Set new token and set revoke_on_delete to true
 	config.AccessToken = resp.AccessToken
-	b.Logger().Info("set config.RevokeOnDelete to 'true'")
+	b.Logger().With("func", "pathConfigRotateWrite").Info("set config.RevokeOnDelete to 'true'")
 	config.RevokeOnDelete = true
 
 	// Save new config

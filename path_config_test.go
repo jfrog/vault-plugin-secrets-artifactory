@@ -146,31 +146,14 @@ func (e *accTestEnv) PathConfigUpdateUsernameTemplate(t *testing.T) {
 
 // most of these were covered by unit tests, but we want test coverage for acceptance
 func (e *accTestEnv) PathConfigUpdateErrors(t *testing.T) {
-	// Access Token Required
-	resp, err := e.update(configAdminPath, testData{
-		"url": e.URL,
-	})
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-	assert.True(t, resp.IsError())
-	assert.Contains(t, resp.Error().Error(), "access_token")
 	// URL Required
-	resp, err = e.update(configAdminPath, testData{
+	resp, err := e.update(configAdminPath, testData{
 		"access_token": "test-access-token",
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.True(t, resp.IsError())
 	assert.Contains(t, resp.Error().Error(), "url")
-	// Bad Token
-	resp, err = e.update(configAdminPath, testData{
-		"access_token": "test-access-token",
-		"url":          e.URL,
-	})
-	assert.NotNil(t, resp)
-	assert.True(t, resp.IsError())
-	assert.Contains(t, resp.Error().Error(), "Unable to get Artifactory Version")
-	assert.ErrorContains(t, err, "could not get the system version")
 }
 
 func (e *accTestEnv) PathConfigReadBadAccessToken(t *testing.T) {

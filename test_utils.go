@@ -49,11 +49,6 @@ func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
 
 	e.Backend.(*backend).InitializeHttpClient(&config)
 
-	err := e.Backend.(*backend).getVersion(config.baseConfiguration)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	resp, err := e.Backend.(*backend).CreateToken(config.baseConfiguration, role)
 	if err != nil {
 		t.Fatal(err)
@@ -80,11 +75,6 @@ func (e *accTestEnv) createNewNonAdminTestToken(t *testing.T) (string, string) {
 
 	e.Backend.(*backend).InitializeHttpClient(&config)
 
-	err := e.Backend.(*backend).getVersion(config.baseConfiguration)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	resp, err := e.Backend.(*backend).CreateToken(config.baseConfiguration, role)
 	if err != nil {
 		t.Fatal(err)
@@ -99,12 +89,7 @@ func (e *accTestEnv) revokeTestToken(t *testing.T, accessToken string, tokenID s
 		ArtifactoryURL: e.URL,
 	}
 
-	err := e.Backend.(*backend).getVersion(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = e.Backend.(*backend).RevokeToken(config, tokenID, accessToken)
+	err := e.Backend.(*backend).RevokeToken(config, tokenID, accessToken)
 	if err != nil {
 		t.Fatal(err)
 	}

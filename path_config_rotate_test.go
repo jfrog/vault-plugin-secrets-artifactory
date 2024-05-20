@@ -92,7 +92,6 @@ func (e *accTestEnv) PathConfigRotateBadAccessToken(t *testing.T) {
 	err = e.Storage.Put(e.Context, entry)
 	assert.NoError(t, err)
 	resp, err := e.update("config/rotate", testData{})
-	// assert.Contains(t, resp.Data["error"], "error parsing existing AccessToken")
-	assert.Contains(t, resp.Data["error"], "could not get the certificate")
+	assert.Contains(t, resp.Data["error"], "error parsing existing access token")
 	assert.Error(t, err)
 }
