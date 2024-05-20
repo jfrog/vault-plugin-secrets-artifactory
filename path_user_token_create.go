@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -91,6 +92,10 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 
 	if userTokenConfig.baseConfiguration.AccessToken != "" {
 		baseConfig.AccessToken = userTokenConfig.baseConfiguration.AccessToken
+	}
+
+	if baseConfig.AccessToken == "" {
+		return logical.ErrorResponse("missing access token"), errors.New("missing access token")
 	}
 
 	baseConfig.UseExpiringTokens = userTokenConfig.UseExpiringTokens

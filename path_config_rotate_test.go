@@ -28,6 +28,7 @@ func TestAcceptanceBackend_PathRotate(t *testing.T) {
 	e.Cleanup(t)
 
 	// Failure Tests
+	t.Run("MissingAccessTokenErr", e.PathConfigRotateMissingAccessTokenErr)
 	t.Run("CreateTokenErr", e.PathConfigRotateCreateTokenErr)
 	t.Run("badAccessToken", e.PathConfigRotateBadAccessToken)
 }
@@ -65,6 +66,17 @@ func (e *accTestEnv) PathConfigRotateWithDetails(t *testing.T) {
 	assert.NotEqual(t, before["access_token_sha256sum"], after["access_token_sha256"])
 	assert.Equal(t, newUsername, after["username"])
 	// Not testing Description, because it is not returned in the token (yet)
+}
+
+func (e *accTestEnv) PathConfigRotateMissingAccessTokenErr(t *testing.T) {
+	e.UpdateConfigAdmin(t, testData{
+		"access_token": "",
+		"url":          e.URL,
+	})
+	resp, err := e.update("config/rotate", testData{})
+	assert.NotNil(t, resp)
+	assert.Contains(t, resp.Data["error"], "missing access token")
+	assert.ErrorContains(t, err, "missing access token")
 }
 
 func (e *accTestEnv) PathConfigRotateCreateTokenErr(t *testing.T) {

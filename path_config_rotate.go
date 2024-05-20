@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"errors"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -42,6 +43,10 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 
 	if config == nil {
 		return logical.ErrorResponse("backend not configured"), nil
+	}
+
+	if config.AccessToken == "" {
+		return logical.ErrorResponse("missing access token"), errors.New("missing access token")
 	}
 
 	go b.sendUsage(config.baseConfiguration, "pathConfigRotateWrite")

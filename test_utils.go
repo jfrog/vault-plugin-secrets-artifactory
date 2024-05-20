@@ -310,6 +310,19 @@ func (e *accTestEnv) CreatePathToken_overrides(t *testing.T) {
 	assert.Equal(t, 60, resp.Data["expires_in"])
 }
 
+func (e *accTestEnv) CreatePathToken_no_access_token(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "token/admin-role",
+		Storage:   e.Storage,
+	})
+
+	assert.Error(t, err, "missing access token")
+	assert.NotNil(t, resp)
+	assert.Empty(t, resp.Data["access_token"])
+	assert.Empty(t, resp.Data["token_id"])
+}
+
 func (e *accTestEnv) CreatePathScopedDownToken(t *testing.T) {
 	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -419,6 +432,35 @@ func (e *accTestEnv) CreatePathUserToken_overrides(t *testing.T) {
 	assert.Equal(t, 600, resp.Data["expires_in"])
 	assert.NotEmpty(t, resp.Data["refresh_token"])
 	assert.NotEmpty(t, resp.Data["reference_token"])
+}
+
+func (e *accTestEnv) CreatePathUserToken_no_access_token(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      configUserTokenPath + "/admin",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"default_description":     "foo",
+			"refreshable":             true,
+			"include_reference_token": true,
+			"use_expiring_tokens":     true,
+			"default_ttl":             60,
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+
+	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      createUserTokenPath + "admin",
+		Storage:   e.Storage,
+	})
+
+	assert.Error(t, err, "missing access token")
+	assert.NotNil(t, resp)
+	assert.Empty(t, resp.Data["access_token"])
+	assert.Empty(t, resp.Data["token_id"])
 }
 
 // Cleanup will delete the admin configuration and revoke the token
