@@ -156,13 +156,13 @@ Checksums for each binary are provided in the `artifactory-secrets-plugin_<versi
 
 If the public key is not in your GPG keychain, import it:
 ```sh
-gpg --import artifactory-secrets-plugin-public-key.asc
+gpg --import vault-plugin-secrets-artifactory-public-key.asc
 ```
 
 Then verify the checksums file signature:
 
 ```sh
-gpg --verify artifactory-secrets-plugin_<version>_checksums.txt.sig
+gpg --verify artifactory-secrets-plugin_<version>_checksums.txt.sig artifactory-secrets-plugin_<version>_checksums.txt
 ```
 
 You should see something like the following:
