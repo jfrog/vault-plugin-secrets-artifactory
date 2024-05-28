@@ -2,7 +2,7 @@
 
 IMPROVEMENTS:
 
-* Make `access_token` field to `config/admin` optional for path. This allows the plugin to be configured without requiring a admin access token even if the plugin is used only to generate user token using identity token with `config/user_token` path. PR: [#189](https://github.com/jfrog/artifactory-secrets-plugin/pull/189)
+* Make `access_token` field to `config/admin` optional for path. This allows the plugin to be configured without requiring an admin access token even if the plugin is used only to generate user token using identity token with `config/user_token` path. PR: [#189](https://github.com/jfrog/artifactory-secrets-plugin/pull/189)
 
 ## 1.6.0 (April 19, 2024)
 
