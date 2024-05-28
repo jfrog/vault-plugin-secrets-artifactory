@@ -28,6 +28,7 @@ func TestAcceptanceBackend_PathRotate(t *testing.T) {
 	e.Cleanup(t)
 
 	// Failure Tests
+	t.Run("MissingAccessTokenErr", e.PathConfigRotateMissingAccessTokenErr)
 	t.Run("CreateTokenErr", e.PathConfigRotateCreateTokenErr)
 	t.Run("badAccessToken", e.PathConfigRotateBadAccessToken)
 }
@@ -67,6 +68,17 @@ func (e *accTestEnv) PathConfigRotateWithDetails(t *testing.T) {
 	// Not testing Description, because it is not returned in the token (yet)
 }
 
+func (e *accTestEnv) PathConfigRotateMissingAccessTokenErr(t *testing.T) {
+	e.UpdateConfigAdmin(t, testData{
+		"access_token": "",
+		"url":          e.URL,
+	})
+	resp, err := e.update("config/rotate", testData{})
+	assert.NotNil(t, resp)
+	assert.Contains(t, resp.Data["error"], "missing access token")
+	assert.ErrorContains(t, err, "missing access token")
+}
+
 func (e *accTestEnv) PathConfigRotateCreateTokenErr(t *testing.T) {
 	tokenId, accessToken := e.createNewNonAdminTestToken(t)
 	e.UpdateConfigAdmin(t, testData{
@@ -92,7 +104,6 @@ func (e *accTestEnv) PathConfigRotateBadAccessToken(t *testing.T) {
 	err = e.Storage.Put(e.Context, entry)
 	assert.NoError(t, err)
 	resp, err := e.update("config/rotate", testData{})
-	// assert.Contains(t, resp.Data["error"], "error parsing existing AccessToken")
-	assert.Contains(t, resp.Data["error"], "could not get the certificate")
+	assert.Contains(t, resp.Data["error"], "error parsing existing access token")
 	assert.Error(t, err)
 }

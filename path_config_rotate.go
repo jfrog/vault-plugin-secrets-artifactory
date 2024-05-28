@@ -2,6 +2,7 @@ package artifactory
 
 import (
 	"context"
+	"errors"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -44,6 +45,10 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
+	if config.AccessToken == "" {
+		return logical.ErrorResponse("missing access token"), errors.New("missing access token")
+	}
+
 	go b.sendUsage(config.baseConfiguration, "pathConfigRotateWrite")
 
 	oldAccessToken := config.AccessToken
@@ -84,7 +89,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 
 	// Set new token and set revoke_on_delete to true
 	config.AccessToken = resp.AccessToken
-	b.Logger().Info("set config.RevokeOnDelete to 'true'")
+	b.Logger().With("func", "pathConfigRotateWrite").Info("set config.RevokeOnDelete to 'true'")
 	config.RevokeOnDelete = true
 
 	// Save new config

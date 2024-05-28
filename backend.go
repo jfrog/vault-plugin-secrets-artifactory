@@ -22,7 +22,6 @@ type backend struct {
 	rolesMutex       sync.RWMutex
 	httpClient       *http.Client
 	usernameProducer template.StringTemplate
-	version          string
 }
 
 // UsernameMetadata defines the metadata that a user_template can use to dynamically create user account in Artifactory
@@ -95,11 +94,6 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 	}
 
 	b.InitializeHttpClient(config)
-
-	err = b.getVersion(config.baseConfiguration)
-	if err != nil {
-		return err
-	}
 
 	if len(config.UsernameTemplate) != 0 {
 		up, err := testUsernameTemplate(config.UsernameTemplate)

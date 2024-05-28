@@ -18,7 +18,6 @@ func (b *backend) pathConfig() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"access_token": {
 				Type:        framework.TypeString,
-				Required:    true,
 				Description: "Administrator token to access Artifactory",
 			},
 			"url": {
@@ -160,11 +159,9 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 	}
 
 	if val, ok := data.GetOk("force_revocable"); ok {
-
 		temp := val.(bool)
 		config.ForceRevocable = &temp
 	} else {
-
 		config.ForceRevocable = nil
 	}
 
@@ -180,10 +177,6 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 		config.RevokeOnDelete = val.(bool)
 	}
 
-	if config.AccessToken == "" {
-		return logical.ErrorResponse("access_token is required"), nil
-	}
-
 	if config.ArtifactoryURL == "" {
 		return logical.ErrorResponse("url is required"), nil
 	}
@@ -191,11 +184,6 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 	b.InitializeHttpClient(config)
 
 	go b.sendUsage(config.baseConfiguration, "pathConfigRotateUpdate")
-
-	err = b.getVersion(config.baseConfiguration)
-	if err != nil {
-		return logical.ErrorResponse("Unable to get Artifactory Version. Check url and access_token fields. TLS connection verification with Artifactory can be skipped by setting bypass_artifactory_tls_verification field to 'true'"), err
-	}
 
 	entry, err := logical.StorageEntryJSON(configAdminPath, config)
 	if err != nil {
@@ -263,13 +251,18 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 
 	go b.sendUsage(config.baseConfiguration, "pathConfigRead")
 
+	version, err := b.getVersion(config.baseConfiguration)
+	if err != nil {
+		b.Logger().Warn("failed to get system version", "err", err)
+	}
+
 	// I'm not sure if I should be returning the access token, so I'll hash it.
 	accessTokenHash := sha256.Sum256([]byte(config.AccessToken))
 
 	configMap := map[string]interface{}{
 		"access_token_sha256":                 fmt.Sprintf("%x", accessTokenHash[:]),
 		"url":                                 config.ArtifactoryURL,
-		"version":                             b.version,
+		"version":                             version,
 		"use_expiring_tokens":                 config.UseExpiringTokens,
 		"force_revocable":                     config.ForceRevocable,
 		"bypass_artifactory_tls_verification": config.BypassArtifactoryTLSVerification,
@@ -297,7 +290,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		}
 	}
 
-	if b.supportForceRevocable() {
+	if b.supportForceRevocable(config.baseConfiguration) {
 		configMap["use_expiring_tokens"] = config.UseExpiringTokens
 	}
 

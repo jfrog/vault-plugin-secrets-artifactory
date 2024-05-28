@@ -1,16 +1,22 @@
-## 1.6.0 (April 19, 2023)
+## 1.7.0 (May 29, 2024)
+
+IMPROVEMENTS:
+
+* Make `access_token` field to `config/admin` optional for path. This allows the plugin to be configured without requiring an admin access token even if the plugin is used only to generate user token using identity token with `config/user_token` path. PR: [#189](https://github.com/jfrog/artifactory-secrets-plugin/pull/189)
+
+## 1.6.0 (April 19, 2024)
 
 IMPROVEMENTS:
 
 * Add `force_revocable` field to `config/admin`, `config/user_token`, and `config/user_token/<username>` paths. Issue: [#174](https://github.com/jfrog/artifactory-secrets-plugin/issues/174) PR: [#147](https://github.com/jfrog/artifactory-secrets-plugin/pull/147), [#175](https://github.com/jfrog/artifactory-secrets-plugin/pull/175)
 
-## 1.5.0 (March 13, 2023)
+## 1.5.0 (March 13, 2024)
 
 IMPROVEMENTS:
 
 * Add `allow_scope_override` field to `config/admin` path. This allows override of `scope` field when generating new admin scope token using `artifactory/roles/<name>` path. Issue: [#134](https://github.com/jfrog/artifactory-secrets-plugin/issues/134) PR: [#147](https://github.com/jfrog/artifactory-secrets-plugin/pull/147), [#163](https://github.com/jfrog/artifactory-secrets-plugin/pull/163)
 
-## 1.4.0 (March 11, 2023)
+## 1.4.0 (March 11, 2024)
 
 IMPROVEMENTS:
 
@@ -20,7 +26,7 @@ BUG FIXES:
 
 * Fix `default_ttl` and `max_ttl` for `config/user_token` path fall back logic. Issue: [#159](https://github.com/jfrog/artifactory-secrets-plugin/issues/159) PR: [#162](https://github.com/jfrog/artifactory-secrets-plugin/pull/162)
 
-## 1.3.0 (Feburary 27, 2023)
+## 1.3.0 (Feburary 27, 2024)
 
 IMPROVEMENTS:
 
@@ -37,7 +43,7 @@ BUG FIXES:
 
 PR: [155](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/155)
 
-## 1.2.0 (January 10, 2023)
+## 1.2.0 (January 10, 2024)
 
 IMPROVEMENTS:
 
