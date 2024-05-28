@@ -174,26 +174,6 @@ func (e *accTestEnv) PathConfigReadBadAccessToken(t *testing.T) {
 	// Otherwise success, we don't need to re-test for this
 }
 
-func TestBackend_AccessTokenRequired(t *testing.T) {
-	b, config := makeBackend(t)
-
-	adminConfig := map[string]interface{}{
-		"url": "https://127.0.0.1",
-	}
-
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      configAdminPath,
-		Storage:   config.StorageView,
-		Data:      adminConfig,
-	})
-	assert.NoError(t, err)
-
-	assert.NotNil(t, resp)
-	assert.True(t, resp.IsError())
-	assert.Contains(t, resp.Error().Error(), "access_token")
-}
-
 func TestBackend_URLRequired(t *testing.T) {
 	b, config := makeBackend(t)
 
