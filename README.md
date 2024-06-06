@@ -578,7 +578,7 @@ vault delete artifactory/roles/test
 
 | Command | Path |
 | ------- | ---- |
-| read   | artifactory/token/:rolename |
+| read    | artifactory/token/:rolename |
 
 Create an Artifactory access token using paramters from the specified role.
 
@@ -586,13 +586,15 @@ Create an Artifactory access token using paramters from the specified role.
 
 * `ttl` (int64) - Optional. Override the default TTL when issuing this access token. Cannot exceed smallest (system, backend, role, this request) maximum TTL.
 * `max_ttl` (int64) - Optional. Override the maximum TTL for this access token. Cannot exceed smallest (system, backend) maximum TTL.
+* `scope` (string) - Optional. Override the scope for this access token. Limited to group scope only: `applied-permissions/groups:<group-name>[,<group-name>...]`. Only applicable when config field `allow_scope_override` is set to `true`.
 
 #### Examples
 
 ```console
 vault read artifactory/token/test \
   ttl=30m \
-  max_ttl=1h
+  max_ttl=1h \
+  scope=applied-permissions/groups:mygroup
 ```
 
 ### Rotate Admin Token
@@ -626,6 +628,7 @@ Provides optional parameters to override default values for the user_token/:user
 * `force_revocable` (boolean) - Optional. When set to true, we will add the `force_revocable` flag to the token's extension. In addition, a new configuration has been added that sets the default for setting the `force_revocable` default when creating a new token - the default of this configuration will be `false` to ensure that the Circle of Trust remains in place.
 * `ttl` (int64) - Optional. Override the default TTL when issuing this access token. Cannot exceed smallest (system, backend, role, this request) maximum TTL.
 * `max_ttl` (int64) - Optional. Override the maximum TTL for this access token. Cannot exceed smallest (system, backend) maximum TTL.
+* `scope` (string) - Optional. Override the scope (default: `applied-permissions/user`) for this access token. Limited to group scope only: `applied-permissions/groups:<group-name>[,<group-name>...]`.
 
 #### Examples
 

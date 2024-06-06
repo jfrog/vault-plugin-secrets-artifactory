@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+var GroupPermissionScopeRegex = regexp.MustCompile(`^applied-permissions\/groups:.+$`)
+
 func (b *backend) pathTokenCreate() *framework.Path {
 	return &framework.Path{
 		Pattern: "token/" + framework.GenericNameWithAtRegex("role"),
@@ -28,7 +30,7 @@ func (b *backend) pathTokenCreate() *framework.Path {
 			},
 			"scope": {
 				Type:        framework.TypeString,
-				Description: `Override the scope for this access token.`,
+				Description: `Override the scope for this access token. Limited to group scope only: 'applied-permissions/groups:<group-name>[,<group-name>...]'. Only applicable when config field 'allow_scope_override' is set to 'true'.`,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -150,12 +152,7 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	if config.AllowScopeOverride {
 		scope := data.Get("scope").(string)
 		if len(scope) != 0 {
-			re, err := regexp.Compile(`^applied-permissions\/groups:.+$`)
-			if err != nil {
-				return nil, err
-			}
-			match := re.MatchString(scope)
-
+			match := GroupPermissionScopeRegex.MatchString(scope)
 			if !match {
 				return logical.ErrorResponse("provided scope is invalid"), errors.New("provided scope is invalid")
 			}
