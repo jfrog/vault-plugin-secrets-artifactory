@@ -30,7 +30,8 @@ func TestAcceptanceBackend_PathUserTokenCreate_overrides(t *testing.T) {
 	}
 
 	t.Run("configure backend", accTestEnv.UpdatePathConfig)
-	t.Run("create token for admin user", accTestEnv.CreatePathUserToken_overrides)
+	t.Run("create token for user", accTestEnv.CreatePathUserToken_overrides)
+	t.Run("create token for user with bad scope", accTestEnv.CreatePathUserToken_BadScope)
 	t.Run("cleanup backend", accTestEnv.DeletePathConfig)
 }
 

@@ -419,6 +419,7 @@ func (e *accTestEnv) CreatePathUserToken_overrides(t *testing.T) {
 			"refreshable":             true,
 			"include_reference_token": true,
 			"use_expiring_tokens":     true,
+			"scope":                   "applied-permissions/groups:test-group",
 		},
 	})
 
@@ -427,11 +428,46 @@ func (e *accTestEnv) CreatePathUserToken_overrides(t *testing.T) {
 	assert.NotEmpty(t, resp.Data["access_token"])
 	assert.NotEmpty(t, resp.Data["token_id"])
 	assert.Equal(t, "admin", resp.Data["username"])
-	assert.Equal(t, "applied-permissions/user", resp.Data["scope"])
+	assert.Equal(t, "applied-permissions/groups:test-group", resp.Data["scope"])
 	assert.Equal(t, "buffalo", resp.Data["description"])
 	assert.Equal(t, 600, resp.Data["expires_in"])
 	assert.NotEmpty(t, resp.Data["refresh_token"])
 	assert.NotEmpty(t, resp.Data["reference_token"])
+}
+
+func (e *accTestEnv) CreatePathUserToken_BadScope(t *testing.T) {
+	resp, err := e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      configUserTokenPath + "/admin",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"default_description": "foo",
+			"default_ttl":         600,
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+
+	resp, err = e.Backend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      createUserTokenPath + "admin",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"description":             "buffalo",
+			"refreshable":             true,
+			"include_reference_token": true,
+			"use_expiring_tokens":     true,
+			"scope":                   "applied-permissions/foo",
+		},
+	})
+
+	assert.Error(t, err, "provided scope is invalid")
+	assert.NotNil(t, resp)
+	assert.Empty(t, resp.Data["access_token"])
+	assert.Empty(t, resp.Data["token_id"])
+	assert.NotEqual(t, "admin", resp.Data["username"])
+	assert.NotEqual(t, "applied-permissions/groups:foo", resp.Data["scope"])
 }
 
 func (e *accTestEnv) CreatePathUserToken_no_access_token(t *testing.T) {

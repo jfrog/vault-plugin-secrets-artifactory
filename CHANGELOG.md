@@ -1,3 +1,9 @@
+## 1.8.0 (June 7, 2024)
+
+IMPROVEMENTS:
+
+* Add `scope` field to `user_token/<username>` to allows override of token scope. PR: [#192](https://github.com/jfrog/artifactory-secrets-plugin/pull/192)
+
 ## 1.7.0 (May 29, 2024)
 
 IMPROVEMENTS:
