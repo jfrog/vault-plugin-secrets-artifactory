@@ -1,3 +1,5 @@
+[![Vault Acceptance Tests](https://github.com/jfrog/vault-plugin-secrets-artifactory/actions/workflows/acceptance-tests.yml/badge.svg)](https://github.com/jfrog/vault-plugin-secrets-artifactory/actions/workflows/acceptance-tests.yml)
+
 # Vault Artifactory Secrets Plugin
 
 This plugin is actively maintained by JFrog Inc. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and [create GitHub issues](https://github.com/jfrog/vault-plugin-secrets-artifactory/issues/new/choose) to ask for feature requests and support.
