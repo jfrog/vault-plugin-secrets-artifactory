@@ -100,13 +100,13 @@ jobs:
         with:
           payload: |
             {
-              "text": "${{ github.workflow }} https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ github.job }} ${{ matrix.cli }} GitHub Action result: ${{ job.status == 'success' && ':white_check_mark:' || ':x:' }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}",
+              "text": "${{ github.workflow }} https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ github.job }} GitHub Action result: ${{ job.status == 'success' && ':white_check_mark:' || ':x:' }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "${{ github.workflow }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ github.job }}|${{ matrix.cli }} GitHub Action result>: ${{ job.status == 'success' && ':white_check_mark:' || ':x:' }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+                    "text": "${{ github.workflow }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ github.job }}| GitHub Action result>: ${{ job.status == 'success' && ':white_check_mark:' || ':x:' }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
                   }
                 }
               ]
@@ -154,13 +154,13 @@ jobs:
         with:
           payload: |
             {
-              "text": "Terraform Provider Platform. A new PR was submitted by ${{ github.event.pull_request.user.login }} - ${{ github.event.pull_request.html_url }}, branch ${{ github.event.pull_request.base.ref }}. Changes tested successfully. <@U01H1SLSPA8> or <@UNDRUL1EU> please, review and merge.",
+              "text": "Vault Artifactory Secrets Plugin. A new PR was submitted by ${{ github.event.pull_request.user.login }} - ${{ github.event.pull_request.html_url }}, branch ${{ github.event.pull_request.base.ref }}. Changes tested successfully. <@U01H1SLSPA8> or <@UNDRUL1EU> please, review and merge.",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "<http://github.com/${{ github.repository }}|Terraform Provider Platform>. A new PR was submitted by *${{ github.event.pull_request.user.login }}* - <${{ github.event.pull_request.html_url }}|${{ github.event.pull_request.title }}>, branch *${{ github.event.pull_request.base.ref }}*. Changes tested successfully. <@U01H1SLSPA8> or <@UNDRUL1EU> please, review and merge."
+                    "text": "<http://github.com/${{ github.repository }}|Vault Artifactory Secrets Plugin>. A new PR was submitted by *${{ github.event.pull_request.user.login }}* - <${{ github.event.pull_request.html_url }}|${{ github.event.pull_request.title }}>, branch *${{ github.event.pull_request.base.ref }}*. Changes tested successfully. <@U01H1SLSPA8> or <@UNDRUL1EU> please, review and merge."
                   }
                 }
               ]
