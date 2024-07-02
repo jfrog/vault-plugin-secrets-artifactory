@@ -15,7 +15,6 @@ jobs:
     continue-on-error: false
     environment: development
     outputs:
-      vault_version: ${{ steps.get_vault_cli_version.outputs.version }}
       artifactory_version: ${{ steps.run_artifactory_container.outputs.version }}
     steps:
       - name: Checkout
@@ -28,13 +27,6 @@ jobs:
           go-version: 1.21
       - name: Install Helm
         uses: azure/setup-helm@v4.2.0
-      - name: Install Vault CLI
-        uses: eLco/setup-vault@v1
-      - name: Get Vault CLI version
-        id: get_vault_cli_version
-        run: |
-          VAULT_VERSION=$(vault version | grep -o -E "v\d+\.\d+\.\d+")
-          echo "version=$VAULT_VERSION" >> "$GITHUB_OUTPUT"
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -129,10 +121,9 @@ jobs:
       - name: Update CHANGELOG and push commit
         env:
           ARTIFACTORY_VERSION: ${{ needs.acceptance-tests.outputs.artifactory_version }}
-          VAULT_VERSION: ${{ needs.acceptance-tests.outputs.vault_version }}
         run: |
           echo "Adding Artifactory version to CHANGELOG.md"
-          sed -i -E "0,/(##\s.+\..+\..+\s\(.+\)).*/ s/(##\s.+\..+\..+\s\(.+\)).*/\1. Tested on Artifactory $ARTIFACTORY_VERSION with Vault $VAULT_VERSION/" CHANGELOG.md
+          sed -i -E "0,/(##\s.+\..+\..+\s\(.+\)).*/ s/(##\s.+\..+\..+\s\(.+\)).*/\1. Tested on Artifactory $ARTIFACTORY_VERSION/" CHANGELOG.md
           head -10 CHANGELOG.md
           git add CHANGELOG.md
           export REGEX="Changes to be committed*"
