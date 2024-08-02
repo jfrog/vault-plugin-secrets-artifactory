@@ -15,6 +15,8 @@ PLUGIN_FILE := artifactory-secrets-plugin
 PLUGIN_NAME ?= artifactory
 PLUGIN_VAULT_PATH ?= artifactory
 
+VAULT_CLI?=vault
+
 ARTIFACTORY_ENV := ./vault/artifactory.env
 ARTIFACTORY_SCOPE ?= applied-permissions/groups:readers
 export JFROG_URL ?= http://localhost:8082
@@ -34,23 +36,23 @@ release:
 	goreleaser release --clean --snapshot --parallelism 2
 
 start:
-	vault server -dev -dev-root-token-id=root -dev-plugin-dir=$(PLUGIN_DIR) -log-level=DEBUG
+	${VAULT_CLI} server -dev -dev-root-token-id=root -dev-plugin-dir=$(PLUGIN_DIR) -log-level=DEBUG
 
 disable:
-	vault secrets disable $(PLUGIN_VAULT_PATH)
+	${VAULT_CLI} secrets disable $(PLUGIN_VAULT_PATH)
 
 enable:
-	vault secrets enable -path=$(PLUGIN_VAULT_PATH) -plugin-version=$(NEXT_VERSION) $(PLUGIN_NAME)
+	${VAULT_CLI} secrets enable -path=$(PLUGIN_VAULT_PATH) -plugin-version=$(NEXT_VERSION) $(PLUGIN_NAME)
 
 register:
-	vault plugin register -sha256=$$(sha256sum $(PLUGIN_DIR)/$(PLUGIN_FILE) | cut -d " " -f 1) -command=$(PLUGIN_FILE) -version=$(NEXT_VERSION) secret $(PLUGIN_NAME)
-	vault plugin info -version=$(NEXT_VERSION) secret $(PLUGIN_NAME)
+	${VAULT_CLI} plugin register -sha256=$$(sha256sum $(PLUGIN_DIR)/$(PLUGIN_FILE) | cut -d " " -f 1) -command=$(PLUGIN_FILE) -version=$(NEXT_VERSION) secret $(PLUGIN_NAME)
+	${VAULT_CLI} plugin info -version=$(NEXT_VERSION) secret $(PLUGIN_NAME)
 
 deregister:
-	vault plugin deregister -version=$(NEXT_VERSION) secret $(PLUGIN_NAME)
+	${VAULT_CLI} plugin deregister -version=$(NEXT_VERSION) secret $(PLUGIN_NAME)
 
 upgrade: build register
-	vault plugin reload -plugin=$(PLUGIN_NAME)
+	${VAULT_CLI} plugin reload -plugin=$(PLUGIN_NAME)
 
 test:
 	go test -v -count=1 ./...
@@ -74,21 +76,21 @@ fmt:
 setup: disable register enable
 
 admin:
-	vault write $(PLUGIN_VAULT_PATH)/config/admin url=$(JFROG_URL) access_token=$(JFROG_ACCESS_TOKEN)
-	vault read $(PLUGIN_VAULT_PATH)/config/admin
-	vault write -f $(PLUGIN_VAULT_PATH)/config/rotate
-	vault read $(PLUGIN_VAULT_PATH)/config/admin
+	${VAULT_CLI} write $(PLUGIN_VAULT_PATH)/config/admin url=$(JFROG_URL) access_token=$(JFROG_ACCESS_TOKEN)
+	${VAULT_CLI} read $(PLUGIN_VAULT_PATH)/config/admin
+	${VAULT_CLI} write -f $(PLUGIN_VAULT_PATH)/config/rotate
+	${VAULT_CLI} read $(PLUGIN_VAULT_PATH)/config/admin
 
 usertoken:
-	vault write $(PLUGIN_VAULT_PATH)/config/admin url=$(JFROG_URL) access_token=$(JFROG_ACCESS_TOKEN)
-	vault write $(PLUGIN_VAULT_PATH)/config/user_token default_description="Vault Test"
-	vault read $(PLUGIN_VAULT_PATH)/config/user_token
-	vault read $(PLUGIN_VAULT_PATH)/user_token/test refreshable=true include_reference_token=true use_expiring_tokens=true
+	${VAULT_CLI} write $(PLUGIN_VAULT_PATH)/config/admin url=$(JFROG_URL) access_token=$(JFROG_ACCESS_TOKEN)
+	${VAULT_CLI} write $(PLUGIN_VAULT_PATH)/config/user_token default_description="Vault Test"
+	${VAULT_CLI} read $(PLUGIN_VAULT_PATH)/config/user_token
+	${VAULT_CLI} read $(PLUGIN_VAULT_PATH)/user_token/test refreshable=true include_reference_token=true use_expiring_tokens=true
 
 testrole:
-	vault write $(PLUGIN_VAULT_PATH)/roles/test scope="$(ARTIFACTORY_SCOPE)" max_ttl=3h default_ttl=2h
-	vault read $(PLUGIN_VAULT_PATH)/roles/test
-	vault read $(PLUGIN_VAULT_PATH)/token/test
+	${VAULT_CLI} write $(PLUGIN_VAULT_PATH)/roles/test scope="$(ARTIFACTORY_SCOPE)" max_ttl=3h default_ttl=2h
+	${VAULT_CLI} read $(PLUGIN_VAULT_PATH)/roles/test
+	${VAULT_CLI} read $(PLUGIN_VAULT_PATH)/token/test
 
 artifactory: $(ARTIFACTORY_ENV)
 
@@ -99,4 +101,4 @@ stop_artifactory:
 	source $(ARTIFACTORY_ENV) && docker stop $$ARTIFACTORY_CONTAINER_ID
 	rm -f $(ARTIFACTORY_ENV)
 
-.PHONY: build clean fmt start disable enable register deregister upgrade test acceptance  setup admin testrole artifactory stop_artifactory
+.PHONY: build clean fmt start disable enable register deregister upgrade test acceptance setup admin testrole artifactory stop_artifactory
