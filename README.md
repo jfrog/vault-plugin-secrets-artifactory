@@ -717,6 +717,12 @@ brew tap hashicorp/tap
 brew install hashicorp/tap/vault
 ```
 
+#### Test with OpenBao binary
+
+*  You can follow the [Installing OpenBao](https://openbao.org/docs/install/) instructions.
+* Export env var `VAULT_CLI=<your path to bao binary>`, e.g. `export VAULT_CLI=/usr/local/bin/bao`
+* Run makefile as usual `make setup` or `VAULT_CLI=/usr/local/bin/bao make setup`
+
 #### Start Vault dev server
 
 ```sh

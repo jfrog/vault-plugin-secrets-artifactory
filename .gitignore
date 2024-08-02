@@ -3,5 +3,6 @@
 /vendor
 
 .DS_Store
+bin/
 dist/
 /coverage.*
