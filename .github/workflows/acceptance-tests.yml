@@ -61,7 +61,7 @@ jobs:
           echo $BAO_VERSION
           echo "version=$BAO_VERSION" >> "$GITHUB_OUTPUT"
       - name: Run Vault Dev server
-        if: ${{ matrix.cli == 'bao' }}
+        if: ${{ matrix.cli == 'vault' }}
         run: |
           docker run --cap-add=IPC_LOCK -e 'VAULT_DEV_ROOT_TOKEN_ID=root' -d --rm --name=dev-vault -p 8200:8200 hashicorp/vault
           export VAULT_SERVER_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.Gateway}}{{end}}' dev-vault)
