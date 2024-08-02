@@ -64,7 +64,7 @@ jobs:
         run: |
           docker run --cap-add=IPC_LOCK -e 'VAULT_LOCAL_CONFIG={"storage": {"file": {"path": "/vault/file"}}}' -d --name=dev-vault -p 8200:8200 hashicorp/vault server
           export VAULT_SERVER_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.Gateway}}{{end}}' dev-vault)
-          echo "VAULT_ADDR='http://$VAULT_SERVER_IP:8200'" >> "$GITHUB_ENV"
+          echo "VAULT_ADDR=http://$VAULT_SERVER_IP:8200" >> "$GITHUB_ENV"
       - name: Create Artifactory data directories and copy data
         env:
           ARTIFACTORY_LICENSE: ${{ secrets.ARTIFACTORY_LICENSE }}
