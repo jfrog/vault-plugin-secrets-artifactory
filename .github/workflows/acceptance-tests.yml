@@ -70,7 +70,7 @@ jobs:
       - name: Run Bao Dev server
         if: ${{ matrix.cli == 'bao' }}
         run: |
-          docker run --cap-add=IPC_LOCK -d --rm --name=dev-bao -p 8200:8200 quay.io/openbao/openbao server -dev -dev-root-token-id="root"
+          docker run --cap-add=IPC_LOCK -e 'BAO_DEV_ROOT_TOKEN_ID=root' -d --rm --name=dev-bao -p 8200:8200 quay.io/openbao/openbao server -dev
           export VAULT_SERVER_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.Gateway}}{{end}}' dev-bao)
           echo "VAULT_ADDR=http://$VAULT_SERVER_IP:8200" >> "$GITHUB_ENV"
           echo "VAULT_TOKEN=root" >> "$GITHUB_ENV"
@@ -126,10 +126,6 @@ jobs:
           echo "JFROG_ACCESS_TOKEN=$JFROG_ACCESS_TOKEN" >> "$GITHUB_ENV"
       - name: Execute all tests
         run: make alltests
-      - name: Setup plugin with Vault server
-        run: |
-          make build
-          VAULT_CLI=${{ matrix.cli }} make setup
       - name: Clean up Docker container
         if: always() && ${{ steps.run_artifactory_container.outcome == 'success' }}
         run: docker stop artifactory
