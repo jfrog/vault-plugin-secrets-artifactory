@@ -7,7 +7,7 @@ on:
       - '**.go'
   workflow_dispatch:
 
-name: Vault Acceptance Tests
+name: Vault & OpenBao Acceptance Tests
 
 jobs:
   acceptance-tests-matrix:
@@ -48,12 +48,12 @@ jobs:
           VAULT_VERSION=$(vault version | cut -d ' ' -f 2)
           echo $VAULT_VERSION
           echo "version=$VAULT_VERSION" >> "$GITHUB_OUTPUT"
-     - name: Install OpenBoa binary
+      - name: Install OpenBoa binary
         if: ${{ matrix.cli == 'bao' }}
         run: |
           curl -o ${{ runner.temp }}/bao_2.0.0_linux_amd64.deb https://github.com/openbao/openbao/releases/download/v2.0.0/bao_2.0.0_linux_amd64.deb
           sudo dpkg -i ${{ runner.temp }}/bao_2.0.0_linux_amd64.deb
-     - name: Get OpenBao CLI version
+      - name: Get OpenBao CLI version
         id: get_bao_cli_version
         if: ${{ matrix.cli == 'bao' }}
         run: |
