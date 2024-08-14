@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/vault/api v1.14.0
 	github.com/hashicorp/vault/sdk v0.13.0
 	github.com/jarcoal/httpmock v1.3.1
-	github.com/samber/lo v1.46.0
+	github.com/samber/lo v1.47.0
 	github.com/stretchr/testify v1.9.0
 )
 
