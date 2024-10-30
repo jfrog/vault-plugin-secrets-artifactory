@@ -221,7 +221,7 @@ vault write -f artifactory/config/rotate
 **ALSO** If you want to change the username for the admin token (tired of it just being "admin"?) or set a "Description" on the token, those parameters are optionally available on the `artifactory/config/rotate` endpoint.
 
 ```sh
-vault write artifactory/config/rotate username="new-username" description="A token used by vault-secrets-engine on our vault server"`
+vault write artifactory/config/rotate username="new-username" description="A token used by vault-secrets-engine on our vault server"
 ```
 
 #### Bypass TLS connection verification with Artifactory
