@@ -3,7 +3,6 @@ package artifactory
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -83,8 +82,6 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(adminConfig.baseConfiguration, "pathUserTokenCreatePerform")
-
 	baseConfig = adminConfig.baseConfiguration
 
 	username := data.Get("username").(string)
@@ -101,6 +98,13 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 	if baseConfig.AccessToken == "" {
 		return logical.ErrorResponse("missing access token"), errors.New("missing access token")
 	}
+
+	err = b.refreshExpiredAccessToken(ctx, req, &baseConfig, userTokenConfig, username)
+	if err != nil {
+		return logical.ErrorResponse("failed to refresh access token"), err
+	}
+
+	go b.sendUsage(baseConfig, "pathUserTokenCreatePerform")
 
 	baseConfig.UseExpiringTokens = userTokenConfig.UseExpiringTokens
 	if value, ok := data.GetOk("use_expiring_tokens"); ok {
@@ -191,30 +195,7 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 
 	resp, err := b.CreateToken(baseConfig, role)
 	if err != nil {
-		if _, ok := err.(*TokenExpiredError); ok {
-			logger.Info("access token expired. Attempt to refresh using the refresh token.")
-			refreshResp, err := b.RefreshToken(baseConfig, role)
-			if err != nil {
-				return nil, fmt.Errorf("failed to refresh access token. err: %v", err)
-			}
-			logger.Info("access token refresh successful")
-
-			userTokenConfig.AccessToken = refreshResp.AccessToken
-			userTokenConfig.RefreshToken = refreshResp.RefreshToken
-			b.storeUserTokenConfiguration(ctx, req, username, userTokenConfig)
-
-			baseConfig.AccessToken = userTokenConfig.AccessToken
-			role.RefreshToken = userTokenConfig.RefreshToken
-
-			// try again after token was refreshed
-			logger.Info("attempt to create user token again after access token refresh")
-			resp, err = b.CreateToken(baseConfig, role)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
+		return logical.ErrorResponse("failed to create new token"), err
 	}
 
 	response := b.Secret(SecretArtifactoryAccessTokenType).Response(map[string]interface{}{

@@ -85,8 +85,7 @@ func (b *backend) secretAccessTokenRevoke(ctx context.Context, req *logical.Requ
 	}
 
 	tokenId := req.Secret.InternalData["token_id"].(string)
-	accessToken := req.Secret.InternalData["access_token"].(string)
-	if err := b.RevokeToken(config.baseConfiguration, tokenId, accessToken); err != nil {
+	if err := b.RevokeToken(config.baseConfiguration, tokenId); err != nil {
 		return nil, err
 	}
 

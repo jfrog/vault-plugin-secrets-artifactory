@@ -133,7 +133,11 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 	}
 
 	if config == nil {
-		config = &adminConfiguration{}
+		config = &adminConfiguration{
+			baseConfiguration: baseConfiguration{
+				UseNewAccessAPI: true,
+			},
+		}
 	}
 
 	if val, ok := data.GetOk("url"); ok {
@@ -185,6 +189,8 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 
 	go b.sendUsage(config.baseConfiguration, "pathConfigRotateUpdate")
 
+	config.UseNewAccessAPI = b.useNewAccessAPI(config.baseConfiguration)
+
 	entry, err := logical.StorageEntryJSON(configAdminPath, config)
 	if err != nil {
 		return nil, err
@@ -226,7 +232,7 @@ func (b *backend) pathConfigDelete(ctx context.Context, req *logical.Request, _ 
 			return nil, nil
 		}
 
-		err = b.RevokeToken(config.baseConfiguration, token.TokenID, config.AccessToken)
+		err = b.RevokeToken(config.baseConfiguration, token.TokenID)
 		if err != nil {
 			b.Logger().Warn("error revoking existing access token", "tokenId", token.TokenID, "err", err)
 			return nil, nil
@@ -239,6 +245,8 @@ func (b *backend) pathConfigDelete(ctx context.Context, req *logical.Request, _ 
 func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
+
+	logger := b.Logger().With("func", "pathConfigRead")
 
 	config, err := b.fetchAdminConfiguration(ctx, req.Storage)
 	if err != nil {
@@ -253,7 +261,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 
 	version, err := b.getVersion(config.baseConfiguration)
 	if err != nil {
-		b.Logger().Warn("failed to get system version", "err", err)
+		logger.Error("failed to get system version", "err", err)
+		return nil, err
 	}
 
 	// I'm not sure if I should be returning the access token, so I'll hash it.
@@ -278,7 +287,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 	// Optionally include token info if it parses properly
 	token, err := b.getTokenInfo(config.baseConfiguration, config.AccessToken)
 	if err != nil {
-		b.Logger().Warn("Error parsing AccessToken", "err", err.Error())
+		logger.Warn("Error parsing AccessToken", "err", err.Error())
 	} else {
 		configMap["token_id"] = token.TokenID
 		configMap["username"] = token.Username
@@ -290,7 +299,13 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		}
 	}
 
-	if b.supportForceRevocable(config.baseConfiguration) {
+	supportForceRevocable, err := b.supportForceRevocable(config.baseConfiguration)
+	if err != nil {
+		logger.Warn("failed to determine if force_revocable is supported. Set 'supportForceRevocable' to 'false'.", "err", err)
+		supportForceRevocable = false
+	}
+
+	if supportForceRevocable {
 		configMap["use_expiring_tokens"] = config.UseExpiringTokens
 	}
 

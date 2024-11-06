@@ -36,8 +36,9 @@ type testData map[string]interface{}
 func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
 	config := adminConfiguration{
 		baseConfiguration: baseConfiguration{
-			AccessToken:    e.AccessToken,
-			ArtifactoryURL: e.URL,
+			AccessToken:     e.AccessToken,
+			ArtifactoryURL:  e.URL,
+			UseNewAccessAPI: true,
 		},
 	}
 
@@ -62,8 +63,9 @@ func (e *accTestEnv) createNewTestToken(t *testing.T) (string, string) {
 func (e *accTestEnv) createNewNonAdminTestToken(t *testing.T) (string, string) {
 	config := adminConfiguration{
 		baseConfiguration: baseConfiguration{
-			AccessToken:    e.AccessToken,
-			ArtifactoryURL: e.URL,
+			AccessToken:     e.AccessToken,
+			ArtifactoryURL:  e.URL,
+			UseNewAccessAPI: true,
 		},
 	}
 
@@ -83,13 +85,13 @@ func (e *accTestEnv) createNewNonAdminTestToken(t *testing.T) (string, string) {
 	return resp.TokenId, resp.AccessToken
 }
 
-func (e *accTestEnv) revokeTestToken(t *testing.T, accessToken string, tokenID string) {
+func (e *accTestEnv) revokeTestToken(t *testing.T, tokenID string) {
 	config := baseConfiguration{
 		AccessToken:    e.AccessToken,
 		ArtifactoryURL: e.URL,
 	}
 
-	err := e.Backend.(*backend).RevokeToken(config, tokenID, accessToken)
+	err := e.Backend.(*backend).RevokeToken(config, tokenID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -505,7 +507,7 @@ func (e *accTestEnv) Cleanup(t *testing.T) {
 	e.DeleteConfigAdmin(t)
 
 	// revoke the test token
-	e.revokeTestToken(t, e.AccessToken, data["token_id"].(string))
+	e.revokeTestToken(t, data["token_id"].(string))
 }
 
 func newAcceptanceTestEnv() (*accTestEnv, error) {

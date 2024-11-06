@@ -3,6 +3,7 @@ package artifactory
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -92,6 +93,25 @@ type userTokenConfiguration struct {
 	DefaultDescription    string        `json:"default_description,omitempty"`
 }
 
+func (c *userTokenConfiguration) RefreshAccessToken(ctx context.Context, req *logical.Request, username string, b *backend, adminBaseConfig baseConfiguration) error {
+	logger := b.Logger().With("func", "RefreshAccessToken")
+
+	if c.RefreshToken == "" {
+		return fmt.Errorf("refresh_token is empty")
+	}
+
+	refreshResp, err := b.RefreshToken(adminBaseConfig, c.RefreshToken)
+	if err != nil {
+		return err
+	}
+	logger.Info("access token refresh successful")
+
+	c.AccessToken = refreshResp.AccessToken
+	c.RefreshToken = refreshResp.RefreshToken
+
+	return b.storeUserTokenConfiguration(ctx, req, username, c)
+}
+
 // fetchAdminConfiguration will return nil,nil if there's no configuration
 func (b *backend) fetchUserTokenConfiguration(ctx context.Context, storage logical.Storage, username string) (*userTokenConfiguration, error) {
 	// If username is not empty, then append to the path to fetch username specific configuration
@@ -100,14 +120,14 @@ func (b *backend) fetchUserTokenConfiguration(ctx context.Context, storage logic
 		path = fmt.Sprintf("%s/%s", path, username)
 	}
 
+	logger := b.Logger().With("func", "fetchUserTokenConfiguration")
+
 	// Read in the backend configuration
-	b.Logger().Info("fetching user token configuration", "path", path)
+	logger.Info("fetching user token configuration", "path", path)
 	entry, err := storage.Get(ctx, path)
 	if err != nil {
 		return nil, err
 	}
-
-	logger := b.Logger().With("func", "fetchUserTokenConfiguration")
 
 	if entry == nil && len(username) > 0 {
 		logger.Info(fmt.Sprintf("no configuration for username %s. Fetching default user token configuration", username), "path", configUserTokenPath)
@@ -124,6 +144,9 @@ func (b *backend) fetchUserTokenConfiguration(ctx context.Context, storage logic
 	if entry == nil {
 		logger.Warn("no configuration found. Using system default configuration.")
 		return &userTokenConfiguration{
+			baseConfiguration: baseConfiguration{
+				UseNewAccessAPI: true,
+			},
 			DefaultTTL: b.Backend.System().DefaultLeaseTTL(),
 			MaxTTL:     b.Backend.System().MaxLeaseTTL(),
 		}, nil
@@ -171,8 +194,6 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(adminConfig.baseConfiguration, "pathConfigUserTokenUpdate")
-
 	username := ""
 	if val, ok := data.GetOk("username"); ok {
 		username = val.(string)
@@ -192,6 +213,8 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 	} else {
 		userTokenConfig.AccessToken = adminConfig.AccessToken
 	}
+
+	go b.sendUsage(userTokenConfig.baseConfiguration, "pathConfigUserTokenUpdate")
 
 	if val, ok := data.GetOk("refresh_token"); ok {
 		userTokenConfig.RefreshToken = val.(string)
@@ -234,6 +257,8 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		userTokenConfig.DefaultDescription = val.(string)
 	}
 
+	userTokenConfig.UseNewAccessAPI = b.useNewAccessAPI(userTokenConfig.baseConfiguration)
+
 	err = b.storeUserTokenConfiguration(ctx, req, username, userTokenConfig)
 	if err != nil {
 		return nil, err
@@ -246,6 +271,8 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
+	baseConfig := baseConfiguration{}
+
 	adminConfig, err := b.fetchAdminConfiguration(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -255,7 +282,7 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(adminConfig.baseConfiguration, "pathConfigUserTokenRead")
+	baseConfig = adminConfig.baseConfiguration
 
 	username := ""
 	if val, ok := data.GetOk("username"); ok {
@@ -266,6 +293,21 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 	if err != nil {
 		return nil, err
 	}
+
+	if userTokenConfig.baseConfiguration.AccessToken != "" {
+		baseConfig.AccessToken = userTokenConfig.baseConfiguration.AccessToken
+	}
+
+	if baseConfig.AccessToken == "" {
+		return logical.ErrorResponse("missing access token"), errors.New("missing access token")
+	}
+
+	err = b.refreshExpiredAccessToken(ctx, req, &baseConfig, userTokenConfig, username)
+	if err != nil {
+		return logical.ErrorResponse("failed to refresh access token"), err
+	}
+
+	go b.sendUsage(baseConfig, "pathConfigUserTokenRead")
 
 	accessTokenHash := sha256.Sum256([]byte(userTokenConfig.AccessToken))
 	refreshTokenHash := sha256.Sum256([]byte(userTokenConfig.RefreshToken))
@@ -284,10 +326,12 @@ func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Requ
 	}
 
 	// Optionally include token info if it parses properly
-	token, err := b.getTokenInfo(adminConfig.baseConfiguration, userTokenConfig.AccessToken)
+	token, err := b.getTokenInfo(baseConfig, userTokenConfig.AccessToken)
 	if err != nil {
-		b.Logger().With("func", "pathConfigUserTokenRead").Warn("Error parsing AccessToken", "err", err.Error())
-	} else {
+		return logical.ErrorResponse("failed to get token info"), err
+	}
+
+	if token != nil {
 		configMap["token_id"] = token.TokenID
 		configMap["username"] = token.Username
 		configMap["scope"] = token.Scope
