@@ -169,8 +169,8 @@ func (e *accTestEnv) PathConfigReadBadAccessToken(t *testing.T) {
 	assert.NoError(t, err)
 	resp, err := e.read(configAdminPath)
 
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
+	assert.Error(t, err)
+	assert.Nil(t, resp)
 	// Otherwise success, we don't need to re-test for this
 }
 

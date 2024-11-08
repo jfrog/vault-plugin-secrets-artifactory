@@ -218,7 +218,7 @@ func TestBackend_UserTokenConfigMaxTTLUseConfigMaxTTL(t *testing.T) {
 
 	configPath := configUserTokenPath + "/admin"
 	backend_max_ttl := b.System().MaxLeaseTTL()
-	user_token_config_ttl := backend_max_ttl - 1*time.Minute
+	user_token_config_ttl := backend_max_ttl - 10*time.Minute
 	SetUserTokenMaxTTL(t, b, config.StorageView, configPath, user_token_config_ttl)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{

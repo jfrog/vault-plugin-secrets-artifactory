@@ -32,7 +32,7 @@ builds:
         goarch: '386'
     binary: artifactory-secrets-plugin
 snapshot:
-  name_template: '{{ .Version }}'
+  version_template: '{{ .Version }}'
 archives:
   - format: binary
 checksum:

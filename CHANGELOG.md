@@ -1,3 +1,9 @@
+## 1.8.1 (November 8, 2024). Tested on Artifactory 7.98.8 with Vault v1.18.1 and OpenBao v2.0.0
+
+BUG FIXES:
+
+* Fix error when reading `config/user_token` with expired access token and failed to refresh. Issue: [#217](https://github.com/jfrog/artifactory-secrets-plugin/issues/217) PR: [#223](https://github.com/jfrog/artifactory-secrets-plugin/pull/223)
+
 ## 1.8.0 (June 7, 2024)
 
 IMPROVEMENTS:

@@ -25,15 +25,18 @@ func TestAcceptanceBackend_PathConfigUserToken(t *testing.T) {
 }
 
 func (e *accTestEnv) PathConfigAccessTokenUpdate(t *testing.T) {
+	_, accessToken1 := e.createNewTestToken(t)
+
 	e.UpdateConfigUserToken(t, "", testData{
-		"access_token": "test123",
+		"access_token": accessToken1,
 	})
 	data := e.ReadConfigUserToken(t, "")
 	accessTokenHash := data["access_token_sha256"]
 	assert.NotEmpty(t, "access_token_sha256")
 
+	_, accessToken2 := e.createNewTestToken(t)
 	e.UpdateConfigUserToken(t, "", testData{
-		"access_token": "test456",
+		"access_token": accessToken2,
 	})
 	data = e.ReadConfigUserToken(t, "")
 	assert.NotEqual(t, data["access_token_sha256"], accessTokenHash)
@@ -138,6 +141,11 @@ func TestAcceptanceBackend_PathConfigUserToken_UseSystemDefault(t *testing.T) {
 		t.SkipNow()
 	}
 	accTestEnv := NewConfiguredAcceptanceTestEnv(t)
+
+	_, accessToken1 := accTestEnv.createNewTestToken(t)
+	accTestEnv.UpdateConfigUserToken(t, "", testData{
+		"access_token": accessToken1,
+	})
 
 	data := accTestEnv.ReadConfigUserToken(t, "")
 	assert.Equal(t, accTestEnv.Backend.System().DefaultLeaseTTL().Seconds(), data["default_ttl"])

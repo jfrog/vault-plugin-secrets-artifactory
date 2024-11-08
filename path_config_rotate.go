@@ -104,7 +104,7 @@ func (b *backend) pathConfigRotateWrite(ctx context.Context, req *logical.Reques
 	}
 
 	// Invalidate Old Token
-	err = b.RevokeToken(config.baseConfiguration, token.TokenID, oldAccessToken)
+	err = b.RevokeToken(config.baseConfiguration, token.TokenID)
 	if err != nil {
 		return logical.ErrorResponse("error revoking existing access token %s", token.TokenID), err
 	}
