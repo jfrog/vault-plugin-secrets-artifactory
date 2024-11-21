@@ -1,3 +1,9 @@
+## 1.8.2 (November 21, 2024). Tested on Artifactory 7.98.8 with Vault v1.18.1 and OpenBao v2.0.0
+
+BUG FIXES:
+
+* Fix concurrency error when refreshing user token. Issue: [#225](https://github.com/jfrog/artifactory-secrets-plugin/issues/225) PR: [#226](https://github.com/jfrog/artifactory-secrets-plugin/pull/226)
+
 ## 1.8.1 (November 8, 2024). Tested on Artifactory 7.98.8 with Vault v1.18.1 and OpenBao v2.0.0
 
 BUG FIXES:

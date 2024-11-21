@@ -216,7 +216,6 @@ func (b *backend) CreateToken(config baseConfiguration, role artifactoryRole) (*
 		return nil, createErr
 	}
 
-	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
