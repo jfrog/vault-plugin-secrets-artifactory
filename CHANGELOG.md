@@ -1,4 +1,10 @@
-## 1.8.2 (November 21, 2024). Tested on Artifactory 7.98.8 with Vault v1.18.1 and OpenBao v2.0.0
+## 1.8.3 (November 22, 2024)
+
+NOTES:
+
+* Update `vault-plugin-secrets-artifactory-public-key.asc` to match the GPG private key used to sign the checksum file (e.g. `artifactory-secrets-plugin_1.8.2.checksums.txt`) in our release GitHub action. This was changed when we transition from manual build/release process to GitHub action post 1.8.0. PR: [#227](https://github.com/jfrog/artifactory-secrets-plugin/pull/227)
+
+## 1.8.2 (November 20, 2024). Tested on Artifactory 7.98.8 with Vault v1.18.1 and OpenBao v2.0.0
 
 BUG FIXES:
 
