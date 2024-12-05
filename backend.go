@@ -100,7 +100,9 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 		if err != nil {
 			return err
 		}
+		b.configMutex.Lock()
 		b.usernameProducer = up
+		b.configMutex.Unlock()
 	}
 
 	return nil

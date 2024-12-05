@@ -94,9 +94,6 @@ type userTokenConfiguration struct {
 }
 
 func (c *userTokenConfiguration) RefreshAccessToken(ctx context.Context, req *logical.Request, username string, b *backend, adminBaseConfig baseConfiguration) error {
-	b.configMutex.Lock()
-	defer b.configMutex.Unlock()
-
 	logger := b.Logger().With("func", "RefreshAccessToken")
 
 	if c.RefreshToken == "" {
@@ -271,8 +268,8 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 }
 
 func (b *backend) pathConfigUserTokenRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.configMutex.RLock()
-	defer b.configMutex.RUnlock()
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
 
 	baseConfig := baseConfiguration{}
 

@@ -128,7 +128,7 @@ func (e *TokenExpiredError) Error() string {
 	return "token has expired"
 }
 
-var expiredTokenRegex = regexp.MustCompile(`.*Invalid token, expired.*`)
+var invalidTokenRegex = regexp.MustCompile(`.*Invalid token, expired.*`)
 
 func (b *backend) CreateToken(config baseConfiguration, role artifactoryRole) (*createTokenResponse, error) {
 	if config.AccessToken == "" {
@@ -226,7 +226,7 @@ func (b *backend) CreateToken(config baseConfiguration, role artifactoryRole) (*
 			return nil, fmt.Errorf("could not create access token. Err: %v", err)
 		}
 
-		if resp.StatusCode == http.StatusUnauthorized && expiredTokenRegex.MatchString(errResp.String()) {
+		if resp.StatusCode == http.StatusUnauthorized && invalidTokenRegex.MatchString(errResp.String()) {
 			return nil, &TokenExpiredError{}
 		}
 
@@ -343,14 +343,14 @@ func (b *backend) useNewAccessAPI(config baseConfiguration) bool {
 }
 
 func (b *backend) refreshExpiredAccessToken(ctx context.Context, req *logical.Request, config *baseConfiguration, userTokenConfig *userTokenConfiguration, username string) error {
-	logger := b.Logger().With("func", "RefreshExpiredAccessToken")
+	logger := b.Logger().With("func", "refreshExpiredAccessToken")
 
 	// check if user access token is expired or not
 	// if so, refresh it with new tokens
-	logger.Debug("use checkVersion to see if access token is expired")
-	_, err := b.checkVersion("7.50.3", *config) // doesn't matter which version to check
+	logger.Debug("check if access token is expired by getting Viewer role")
+	err := b.getRole(*config)
 	if err != nil {
-		logger.Debug("failed checkVersion", "err", err)
+		logger.Debug("failed to get Viewer role", "err", err)
 
 		if _, ok := err.(*TokenExpiredError); ok {
 			logger.Info("access token expired. Attempt to refresh using the refresh token.", "err", err)
@@ -412,6 +412,39 @@ func (b *backend) getVersion(config baseConfiguration) (version string, err erro
 	logger.Debug("found Artifactory version", "version", systemVersion.Version)
 
 	return systemVersion.Version, nil
+}
+
+func (b *backend) getRole(config baseConfiguration) error {
+	logger := b.Logger().With("func", "getRole")
+
+	logger.Debug("fetching Viewer role")
+
+	resp, err := b.performArtifactoryGet(config, "/access/api/v1/roles/Viewer")
+	if err != nil {
+		logger.Error("error making get role request", "response", resp, "err", err)
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Error("got non-200 status code", "statusCode", resp.StatusCode)
+
+		var errResp artifactoryErrorResponse
+		err := json.NewDecoder(resp.Body).Decode(&errResp)
+		if err != nil {
+			logger.Error("could not parse error response", "response", resp, "err", err)
+			return fmt.Errorf("could not get role. Err: %w", err)
+		}
+
+		if resp.StatusCode == http.StatusUnauthorized && invalidTokenRegex.MatchString(errResp.String()) {
+			return &TokenExpiredError{}
+		}
+
+		return fmt.Errorf("could not get the role: HTTP response %v", errResp.String())
+	}
+
+	return nil
 }
 
 // checkVersion will return a boolean and error to check compatibility before making an API call
@@ -581,7 +614,7 @@ func (b *backend) getRootCert(config baseConfiguration) (cert *x509.Certificate,
 			return nil, fmt.Errorf("could not create access token. Err: %v", err)
 		}
 
-		if resp.StatusCode == http.StatusUnauthorized && tokenFailedValidationRegex.MatchString(errResp.String()) {
+		if resp.StatusCode == http.StatusUnauthorized && invalidTokenRegex.MatchString(errResp.String()) {
 			return nil, &TokenExpiredError{}
 		}
 
