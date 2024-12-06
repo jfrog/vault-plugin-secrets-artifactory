@@ -1,3 +1,9 @@
+## 1.8.4 (December 9, 2024)
+
+BUG FIXES:
+
+* Fix error when refreshing expired user token. Issue: [#225](https://github.com/jfrog/artifactory-secrets-plugin/issues/225) PR: [#230](https://github.com/jfrog/artifactory-secrets-plugin/pull/230)
+
 ## 1.8.3 (November 22, 2024)
 
 NOTES:
