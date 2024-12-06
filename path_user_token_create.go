@@ -50,7 +50,7 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 			},
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
-				Description: `Optional. Override the default TTL when issuing this access token. Cappaed at the smallest maximum TTL (system, mount, backend, request).`,
+				Description: `Optional. Override the default TTL when issuing this access token. Capped at the smallest maximum TTL (system, mount, backend, request).`,
 			},
 			"scope": {
 				Type:        framework.TypeString,
@@ -68,8 +68,10 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 }
 
 func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.configMutex.RLock()
-	defer b.configMutex.RUnlock()
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
+
+	logger := b.Logger().With("func", "pathUserTokenCreatePerform")
 
 	baseConfig := baseConfiguration{}
 
@@ -125,8 +127,6 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		Description:           userTokenConfig.DefaultDescription,
 		RefreshToken:          userTokenConfig.RefreshToken,
 	}
-
-	logger := b.Logger().With("func", "pathUserTokenCreatePerform")
 
 	maxLeaseTTL := b.Backend.System().MaxLeaseTTL()
 	logger.Debug("initialize maxLeaseTTL to system value", "maxLeaseTTL", maxLeaseTTL)
