@@ -347,8 +347,8 @@ func (b *backend) refreshExpiredAccessToken(ctx context.Context, req *logical.Re
 
 	// check if user access token is expired or not
 	// if so, refresh it with new tokens
-	logger.Debug("check if access token is expired by getting Viewer role")
-	err := b.getRole(*config)
+	logger.Debug("check if access token is expired by getting token itself")
+	err := b.getTokenByID(*config)
 	if err != nil {
 		logger.Debug("failed to get Viewer role", "err", err)
 
@@ -414,14 +414,16 @@ func (b *backend) getVersion(config baseConfiguration) (version string, err erro
 	return systemVersion.Version, nil
 }
 
-func (b *backend) getRole(config baseConfiguration) error {
-	logger := b.Logger().With("func", "getRole")
+func (b *backend) getTokenByID(config baseConfiguration) error {
+	logger := b.Logger().With("func", "getTokenByID")
 
 	logger.Debug("fetching Viewer role")
 
-	resp, err := b.performArtifactoryGet(config, "/access/api/v1/roles/Viewer")
+	// '/me' is special value to get info about token itself
+	// https://jfrog.com/help/r/jfrog-rest-apis/get-token-by-id
+	resp, err := b.performArtifactoryGet(config, "/access/api/v1/tokens/me")
 	if err != nil {
-		logger.Error("error making get role request", "response", resp, "err", err)
+		logger.Error("error making get token request", "response", resp, "err", err)
 		return err
 	}
 
@@ -434,14 +436,14 @@ func (b *backend) getRole(config baseConfiguration) error {
 		err := json.NewDecoder(resp.Body).Decode(&errResp)
 		if err != nil {
 			logger.Error("could not parse error response", "response", resp, "err", err)
-			return fmt.Errorf("could not get role. Err: %w", err)
+			return fmt.Errorf("could not get token. Err: %w", err)
 		}
 
 		if resp.StatusCode == http.StatusUnauthorized && invalidTokenRegex.MatchString(errResp.String()) {
 			return &TokenExpiredError{}
 		}
 
-		return fmt.Errorf("could not get the role: HTTP response %v", errResp.String())
+		return fmt.Errorf("could not get the token: HTTP response %v", errResp.String())
 	}
 
 	return nil
