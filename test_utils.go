@@ -652,3 +652,10 @@ func mockArtifactoryUsageVersionRequests(version string) {
 		"http://myserver.com:80/artifactory/api/system/version",
 		httpmock.NewStringResponder(200, versionString))
 }
+
+func mockArtifactoryTokenRequest() {
+	httpmock.RegisterResponder(
+		http.MethodGet,
+		"http://myserver.com:80/access/api/v1/tokens/me",
+		httpmock.NewStringResponder(200, ""))
+}
