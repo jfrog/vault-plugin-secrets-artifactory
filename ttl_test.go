@@ -122,7 +122,7 @@ func TestBackend_NoUserTokensMaxTTLUsesSystemMaxTTL(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	mockArtifactoryUsageVersionRequests("")
-	mockArtifactoryRoleRequest()
+	mockArtifactoryTokenRequest()
 
 	httpmock.RegisterResponder(
 		http.MethodPost,
@@ -172,7 +172,7 @@ func TestBackend_UserTokenConfigMaxTTLUseSystem(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	mockArtifactoryUsageVersionRequests("")
-	mockArtifactoryRoleRequest()
+	mockArtifactoryTokenRequest()
 
 	httpmock.RegisterResponder(
 		http.MethodPost,
@@ -207,7 +207,7 @@ func TestBackend_UserTokenConfigMaxTTLUseConfigMaxTTL(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	mockArtifactoryUsageVersionRequests("")
-	mockArtifactoryRoleRequest()
+	mockArtifactoryTokenRequest()
 
 	httpmock.RegisterResponder(
 		http.MethodPost,
@@ -242,7 +242,7 @@ func TestBackend_UserTokenMaxTTLUseRequestTTL(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	mockArtifactoryUsageVersionRequests("")
-	mockArtifactoryRoleRequest()
+	mockArtifactoryTokenRequest()
 
 	httpmock.RegisterResponder(
 		http.MethodPost,
@@ -277,7 +277,7 @@ func TestBackend_UserTokenMaxTTLEnforced(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	mockArtifactoryUsageVersionRequests("")
-	mockArtifactoryRoleRequest()
+	mockArtifactoryTokenRequest()
 
 	httpmock.RegisterResponder(
 		http.MethodPost,
@@ -313,7 +313,7 @@ func TestBackend_UserTokenTTLRequest(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	mockArtifactoryUsageVersionRequests("")
-	mockArtifactoryRoleRequest()
+	mockArtifactoryTokenRequest()
 
 	httpmock.RegisterResponder(
 		http.MethodPost,
@@ -345,7 +345,7 @@ func TestBackend_UserTokenDefaultTTL(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	mockArtifactoryUsageVersionRequests("")
-	mockArtifactoryRoleRequest()
+	mockArtifactoryTokenRequest()
 
 	httpmock.RegisterResponder(
 		http.MethodPost,
