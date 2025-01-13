@@ -1,3 +1,10 @@
+## 1.8.5 (January 14, 2025)
+
+BUG FIXES:
+
+* Fix error when access token is not set for `config/admin` path when using user token. Issue: [#236](https://github.com/jfrog/artifactory-secrets-plugin/issues/236) PR: [#240](https://github.com/jfrog/artifactory-secrets-plugin/pull/240)
+* Fix token lease revoke error when access token is not set for `config/admin` path when using user token. Issue: [#237](https://github.com/jfrog/artifactory-secrets-plugin/issues/237) PR: [#240](https://github.com/jfrog/artifactory-secrets-plugin/pull/240)
+
 ## 1.8.4 (December 9, 2024). Tested on Artifactory 7.98.10 with Vault v1.18.2 and OpenBao v2.0.0
 
 BUG FIXES:
