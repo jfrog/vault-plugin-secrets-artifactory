@@ -214,8 +214,6 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		userTokenConfig.AccessToken = adminConfig.AccessToken
 	}
 
-	go b.sendUsage(userTokenConfig.baseConfiguration, "pathConfigUserTokenUpdate")
-
 	if val, ok := data.GetOk("refresh_token"); ok {
 		userTokenConfig.RefreshToken = val.(string)
 	}
@@ -257,7 +255,11 @@ func (b *backend) pathConfigUserTokenUpdate(ctx context.Context, req *logical.Re
 		userTokenConfig.DefaultDescription = val.(string)
 	}
 
-	userTokenConfig.UseNewAccessAPI = b.useNewAccessAPI(userTokenConfig.baseConfiguration)
+	if userTokenConfig.AccessToken != "" {
+		go b.sendUsage(userTokenConfig.baseConfiguration, "pathConfigUserTokenUpdate")
+
+		userTokenConfig.UseNewAccessAPI = b.useNewAccessAPI(userTokenConfig.baseConfiguration)
+	}
 
 	err = b.storeUserTokenConfiguration(ctx, req, username, userTokenConfig)
 	if err != nil {
