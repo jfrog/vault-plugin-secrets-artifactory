@@ -111,7 +111,7 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	logger := b.Logger().With("func", "pathTokenCreatePerform")
 
 	maxLeaseTTL := b.Backend.System().MaxLeaseTTL()
-	logger.Debug("initialize maxLeaseTTL to system value", "maxLeaseTTL", maxLeaseTTL)
+	logger.Debug("initialize maxLeaseTTL to system value", "maxLeaseTTL", maxLeaseTTL.Seconds())
 
 	if value, ok := data.GetOk("max_ttl"); ok && value.(int) > 0 {
 		logger.Debug("max_ttl is set", "max_ttl", value)
@@ -122,26 +122,26 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 			maxLeaseTTL = maxTTL
 		}
 	} else if role.MaxTTL > 0 && role.MaxTTL < maxLeaseTTL {
-		logger.Debug("using role MaxTTL", "role.MaxTTL", role.MaxTTL)
+		logger.Debug("using role MaxTTL", "role.MaxTTL", role.MaxTTL.Seconds())
 		maxLeaseTTL = role.MaxTTL
 	}
-	logger.Debug("Max lease TTL (sec)", "maxLeaseTTL", maxLeaseTTL)
+	logger.Debug("Max lease TTL (sec)", "maxLeaseTTL", maxLeaseTTL.Seconds())
 
 	ttl := b.Backend.System().DefaultLeaseTTL()
 	if value, ok := data.GetOk("ttl"); ok && value.(int) > 0 {
 		logger.Debug("ttl is set", "ttl", value)
 		ttl = time.Second * time.Duration(value.(int))
 	} else if role.DefaultTTL != 0 {
-		logger.Debug("using role DefaultTTL", "role.DefaultTTL", role.DefaultTTL)
+		logger.Debug("using role DefaultTTL", "role.DefaultTTL", role.DefaultTTL.Seconds())
 		ttl = role.DefaultTTL
 	}
 
 	// cap ttl to maxLeaseTTL
 	if ttl > maxLeaseTTL {
-		logger.Debug("ttl is longer than maxLeaseTTL", "ttl", ttl, "maxLeaseTTL", maxLeaseTTL)
+		logger.Debug("ttl is longer than maxLeaseTTL", "ttl", ttl, "maxLeaseTTL", maxLeaseTTL.Seconds())
 		ttl = maxLeaseTTL
 	}
-	logger.Debug("TTL (sec)", "ttl", ttl)
+	logger.Debug("TTL (sec)", "ttl", ttl.Seconds())
 
 	// Set the role.ExpiresIn based on maxLeaseTTL if use_expiring_tokens is set to tru in config
 	// - This value will be passed to createToken and used as expires_in for versions of Artifactory 7.50.3 or higher

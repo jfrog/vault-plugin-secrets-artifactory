@@ -350,7 +350,7 @@ func (b *backend) refreshExpiredAccessToken(ctx context.Context, req *logical.Re
 	logger.Debug("check if access token is expired by getting token itself")
 	err := b.getTokenByID(*config)
 	if err != nil {
-		logger.Debug("failed to get Viewer role", "err", err)
+		logger.Debug("failed to get token by ID", "err", err)
 
 		if _, ok := err.(*TokenExpiredError); ok {
 			logger.Info("access token expired. Attempt to refresh using the refresh token.", "err", err)
@@ -417,7 +417,7 @@ func (b *backend) getVersion(config baseConfiguration) (version string, err erro
 func (b *backend) getTokenByID(config baseConfiguration) error {
 	logger := b.Logger().With("func", "getTokenByID")
 
-	logger.Debug("fetching Viewer role")
+	logger.Debug("fetching token by ID")
 
 	// '/me' is special value to get info about token itself
 	// https://jfrog.com/help/r/jfrog-rest-apis/get-token-by-id
