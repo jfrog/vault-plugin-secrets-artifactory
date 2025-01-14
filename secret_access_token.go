@@ -96,15 +96,16 @@ func (b *backend) secretAccessTokenRevoke(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	// logger.Debug("request", "Path", req.Path, "Secret.InternalData", req.Secret.InternalData)
+	// logger.Debug("req", "Path", req.Path, "Secret.InternalData", req.Secret.InternalData)
 
 	if config.AccessToken == "" {
-		if strings.Contains(req.Path, "token/") {
+		// check if this is admin token
+		if strings.HasPrefix(req.Path, "token/") {
 			return logical.ErrorResponse("admin access_token is not configured"), nil
 		}
 
 		// try to use user token
-		if strings.Contains(req.Path, "user_token/") {
+		if strings.HasPrefix(req.Path, "user_token/") {
 			logger.Debug("admin access token is empty and request path is user_token")
 			username := req.Secret.InternalData["username"].(string)
 			userTokenConfig, err := b.fetchUserTokenConfiguration(ctx, req.Storage, username)
