@@ -93,8 +93,8 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	if userTokenConfig.baseConfiguration.AccessToken != "" {
-		baseConfig.AccessToken = userTokenConfig.baseConfiguration.AccessToken
+	if userTokenConfig.AccessToken != "" {
+		baseConfig.AccessToken = userTokenConfig.AccessToken
 	}
 
 	if baseConfig.AccessToken == "" {
@@ -129,7 +129,7 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 	}
 
 	maxLeaseTTL := b.Backend.System().MaxLeaseTTL()
-	logger.Debug("initialize maxLeaseTTL to system value", "maxLeaseTTL", maxLeaseTTL)
+	logger.Debug("initialize maxLeaseTTL to system value", "maxLeaseTTL", maxLeaseTTL.Seconds())
 
 	if value, ok := data.GetOk("max_ttl"); ok && value.(int) > 0 {
 		logger.Debug("max_ttl is set", "max_ttl", value)
@@ -140,27 +140,27 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 			maxLeaseTTL = maxTTL
 		}
 	} else if userTokenConfig.MaxTTL > 0 && userTokenConfig.MaxTTL < maxLeaseTTL {
-		logger.Debug("using user token config MaxTTL", "userTokenConfig.MaxTTL", userTokenConfig.MaxTTL)
+		logger.Debug("using user token config MaxTTL", "userTokenConfig.MaxTTL", userTokenConfig.MaxTTL.Seconds())
 		// use max TTL from user config if set and is less than system max lease TTL
 		maxLeaseTTL = userTokenConfig.MaxTTL
 	}
-	logger.Debug("Max lease TTL (sec)", "maxLeaseTTL", maxLeaseTTL)
+	logger.Debug("Max lease TTL (sec)", "maxLeaseTTL", maxLeaseTTL.Seconds())
 
 	ttl := b.Backend.System().DefaultLeaseTTL()
 	if value, ok := data.GetOk("ttl"); ok && value.(int) > 0 {
 		logger.Debug("ttl is set", "ttl", value)
 		ttl = time.Second * time.Duration(value.(int))
 	} else if userTokenConfig.DefaultTTL != 0 {
-		logger.Debug("using user config DefaultTTL", "userTokenConfig.DefaultTTL", userTokenConfig.DefaultTTL)
+		logger.Debug("using user config DefaultTTL", "userTokenConfig.DefaultTTL", userTokenConfig.DefaultTTL.Seconds())
 		ttl = userTokenConfig.DefaultTTL
 	}
 
 	// cap ttl to maxLeaseTTL
 	if maxLeaseTTL > 0 && ttl > maxLeaseTTL {
-		logger.Debug("ttl is longer than maxLeaseTTL", "ttl", ttl, "maxLeaseTTL", maxLeaseTTL)
+		logger.Debug("ttl is longer than maxLeaseTTL", "ttl", ttl, "maxLeaseTTL", maxLeaseTTL.Seconds())
 		ttl = maxLeaseTTL
 	}
-	logger.Debug("TTL (sec)", "ttl", ttl)
+	logger.Debug("TTL (sec)", "ttl", ttl.Seconds())
 
 	// now ttl is determined, we set role.ExpiresIn so this value so expirable token has the correct expiration
 	if baseConfig.UseExpiringTokens {

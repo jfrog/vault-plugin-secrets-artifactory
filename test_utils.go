@@ -608,7 +608,7 @@ func makeBackend(t *testing.T) (*backend, *logical.BackendConfig) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b, err := Backend(config)
+	b, err := Backend()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -623,7 +623,6 @@ func makeBackend(t *testing.T) (*backend, *logical.BackendConfig) {
 func configuredBackend(t *testing.T, adminConfig map[string]interface{}) (*backend, *logical.BackendConfig) {
 
 	b, config := makeBackend(t)
-	t.Logf("b.System().MaxLeaseTTL(): %v\n", b.System().MaxLeaseTTL())
 	b.InitializeHttpClient(&adminConfiguration{})
 
 	_, err := b.HandleRequest(context.Background(), &logical.Request{

@@ -225,6 +225,7 @@ func TestBackend_AccessTokenAsSHA256(t *testing.T) {
 	assert.NotNil(t, resp)
 	assert.EqualValues(t, correctSHA256, resp.Data["access_token_sha256"])
 }
+
 func TestBackend_RevokeOnDelete(t *testing.T) {
 
 	httpmock.Activate()

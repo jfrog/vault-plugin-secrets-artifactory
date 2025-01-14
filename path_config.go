@@ -187,9 +187,11 @@ func (b *backend) pathConfigUpdate(ctx context.Context, req *logical.Request, da
 
 	b.InitializeHttpClient(config)
 
-	go b.sendUsage(config.baseConfiguration, "pathConfigRotateUpdate")
+	if config.AccessToken != "" {
+		go b.sendUsage(config.baseConfiguration, "pathConfigRotateUpdate")
 
-	config.UseNewAccessAPI = b.useNewAccessAPI(config.baseConfiguration)
+		config.UseNewAccessAPI = b.useNewAccessAPI(config.baseConfiguration)
+	}
 
 	entry, err := logical.StorageEntryJSON(configAdminPath, config)
 	if err != nil {
@@ -217,11 +219,15 @@ func (b *backend) pathConfigDelete(ctx context.Context, req *logical.Request, _ 
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
-	go b.sendUsage(config.baseConfiguration, "pathConfigDelete")
-
 	if err := req.Storage.Delete(ctx, configAdminPath); err != nil {
 		return nil, err
 	}
+
+	if config.AccessToken == "" {
+		return nil, nil
+	}
+
+	go b.sendUsage(config.baseConfiguration, "pathConfigDelete")
 
 	if config.RevokeOnDelete {
 		b.Logger().Info("config.RevokeOnDelete is 'true'. Attempt to revoke access token.")
@@ -257,6 +263,26 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		return logical.ErrorResponse("backend not configured"), nil
 	}
 
+	configMap := map[string]interface{}{
+		"url":                                 config.ArtifactoryURL,
+		"use_expiring_tokens":                 config.UseExpiringTokens,
+		"force_revocable":                     config.ForceRevocable,
+		"bypass_artifactory_tls_verification": config.BypassArtifactoryTLSVerification,
+		"allow_scope_override":                config.AllowScopeOverride,
+		"revoke_on_delete":                    config.RevokeOnDelete,
+	}
+
+	if config.AccessToken == "" {
+		return &logical.Response{
+			Warnings: []string{"access_token is not set"},
+			Data:     configMap,
+		}, nil
+	}
+
+	// I'm not sure if I should be returning the access token, so I'll hash it.
+	accessTokenHash := sha256.Sum256([]byte(config.AccessToken))
+	configMap["access_token_sha256"] = fmt.Sprintf("%x", accessTokenHash[:])
+
 	go b.sendUsage(config.baseConfiguration, "pathConfigRead")
 
 	version, err := b.getVersion(config.baseConfiguration)
@@ -264,20 +290,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, _ *f
 		logger.Error("failed to get system version", "err", err)
 		return nil, err
 	}
-
-	// I'm not sure if I should be returning the access token, so I'll hash it.
-	accessTokenHash := sha256.Sum256([]byte(config.AccessToken))
-
-	configMap := map[string]interface{}{
-		"access_token_sha256":                 fmt.Sprintf("%x", accessTokenHash[:]),
-		"url":                                 config.ArtifactoryURL,
-		"version":                             version,
-		"use_expiring_tokens":                 config.UseExpiringTokens,
-		"force_revocable":                     config.ForceRevocable,
-		"bypass_artifactory_tls_verification": config.BypassArtifactoryTLSVerification,
-		"allow_scope_override":                config.AllowScopeOverride,
-		"revoke_on_delete":                    config.RevokeOnDelete,
-	}
+	configMap["version"] = version
 
 	// Optionally include username_template
 	if len(config.UsernameTemplate) > 0 {

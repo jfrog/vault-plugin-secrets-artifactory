@@ -36,7 +36,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 		return nil, fmt.Errorf("configuration passed into backend is nil")
 	}
 
-	b, err := Backend(conf)
+	b, err := Backend()
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	return b, nil
 }
 
-func Backend(_ *logical.BackendConfig) (*backend, error) {
+func Backend() (*backend, error) {
 	b := &backend{}
 
 	up, err := testUsernameTemplate(defaultUserNameTemplate)
