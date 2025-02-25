@@ -3,9 +3,7 @@ name: Feature request
 about: Suggest an idea for this project
 title: ''
 labels: enhancement
-assignees:
-  - oumkale
-  - RobinDuhan
+assignees: '0x01F4'
 
 ---
 
