@@ -648,7 +648,8 @@ vault read artifactory/user_token/test_user \
 
 * Vault
   * <https://developer.hashicorp.com/vault/docs/install>
-  * `brew install vault`
+  * `brew tap hashicorp/tap`
+    `brew install hashicorp/tap/vault`
 * Golang
   * <https://go.dev/doc/install>
   * `brew install golang`
