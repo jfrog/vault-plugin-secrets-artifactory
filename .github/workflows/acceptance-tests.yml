@@ -190,7 +190,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "Vault Artifactory Secrets Plugin. A new PR was submitted by ${{ github.event.pull_request.user.login }} - ${{ github.event.pull_request.html_url }}, branch ${{ github.event.pull_request.base.ref }}. Changes tested successfully. <@U01H1SLSPA8> or <@UNDRUL1EU> please, review and merge.",
+              "text": "Vault Artifactory Secrets Plugin. A new PR was submitted by ${{ github.event.pull_request.user.login }} - ${{ github.event.pull_request.html_url }}, branch ${{ github.event.pull_request.base.ref }}. Changes tested successfully. <@D0351UFP7HU> or <@D03UXM0LCSJ> or <@D035ETVCTMX> please, review and merge.",
               "blocks": [
                 {
                   "type": "section",

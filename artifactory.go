@@ -799,7 +799,6 @@ func (b *backend) performArtifactoryDelete(config baseConfiguration, path string
 
 	req.Header.Set("User-Agent", productId)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	return b.httpClient.Do(req)
 }

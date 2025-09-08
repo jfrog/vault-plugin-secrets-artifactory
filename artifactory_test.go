@@ -297,24 +297,20 @@ func TestBackend_RotateAdminToken(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		http.MethodDelete,
-		"http://myserver.com:80/access/api/v1/tokens/84c0626b-7973-40c9-9d37-701aaf73cfb4",
+		"http://myserver.com:80/access/api/v1/tokens/1079485d-5a29-41cd-968e-e42fe924a521",
 		httpmock.NewStringResponder(200, ""))
 
 	// Valid jwt Access Token
-	// TokenID: 84c0626b-7973-40c9-9d37-701aaf73cfb4
+	// TokenID: 1079485d-5a29-41cd-968e-e42fe924a521
 	b, config := configuredBackend(t, map[string]interface{}{
-		"access_token": `eyJ2ZXIiOiIyIiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYiLCJraW` +
-			`QiOiJkMUxJUFRHbmY0RHZzQ2k0MzhodU9KdWN3bi1lSTBHc0lVR2g0bGhhdE53In0.eyJ` +
-			`zdWIiOiJqZmFjQDAxaDQyNGh2d3B5dHprMWF6eGg2azgwN2U1L3VzZXJzL2FkbWluIiwi` +
-			`c2NwIjoiYXBwbGllZC1wZXJtaXNzaW9ucy9hZG1pbiIsImF1ZCI6IipAKiIsImlzcyI6I` +
-			`mpmZmVAMDFoNDI0aHZ3cHl0emsxYXp4aDZrODA3ZTUiLCJleHAiOjE3NTMyOTM5OTMsIm` +
-			`lhdCI6MTY5MDIyMTk5MywianRpIjoiODRjMDYyNmItNzk3My00MGM5LTlkMzctNzAxYWF` +
-			`mNzNjZmI0In0.VXoZR--oQLRTqTLx3Ogz1UUrzT9hlihWQ8m_JgOucZEYwIjGa2P58wUW` +
-			`vUAxonkiqyvmFfEk8H1vyiaBQ0F9vQ7v16d3D3nfEDW71g09M3NnsKu065-pbjPRGUmSi` +
-			`SvV0WC3Gla5Ui31IA_vVhyc-kPDzoWpHwBWgOMWkJwP0ZrvQ5bwzKrwNQi6YB0SIX2eSH` +
-			`RpReef19W_4BpOUrqMrcDamB3mskwxcYFUMA45FRoV_JVxZsIMOyNNfDlNy01r5bA6ZcY` +
-			`EaseaQpU7skMCW07rUiWq4Z6U0xZEduKPlowJm9xbrBM13FEQTG4b4mW7yyOD4gqQ49wD` +
-			`GGXvhLVFoQ`,
+		"access_token": "eyJ2ZXIiOiIyIiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYiLCJraWQiOiJRbVVvVnRxVXhfMVRIS1hCVllQWlZnaUI5bj" +
+			"B2b3JkVWl4bkZ0MWVJcFFVIn0.eyJpc3MiOiJqZnN1cHBvcnRAMDFrNGt4MDd6M3FhNWZlaGRyODZuMmNrdzkiLCJzdWIiOiJqZmFjQDAx" +
+			"aDQyNGh2d3B5dHprMWF6eGg2azgwN2U1L3VzZXJzL2FkbWluIiwic2NwIjoiYXBwbGllZC1wZXJtaXNzaW9ucy9hZG1pbiIsImF1ZCI6Ii" +
+			"pAKiIsImlhdCI6MTc1NzMxMTk5OSwianRpIjoiMTA3OTQ4NWQtNWEyOS00MWNkLTk2OGUtZTQyZmU5MjRhNTIxIn0.QxdKshgKzvjZo-ZE" +
+			"2Qekj6brp8us5_uUpKxniXwssnXpE8N5VLOsyk3zEXVGdsI7jDne4W8a0pj0f_0AgstWSRQoNGsG3njh-kKj3G89Aq4OkPKG6gaMOUJnlO" +
+			"dJiuMpDu6kCAvtY_rvJ6nUHn9RgEhO1OeiGknrJ5L9iJiY_X7Gplyr8ivFzxsaWhIRTlvGdALWTca1l-Eczp3AuSxW65Q6uA357pLUzA2a" +
+			"DL01R9CQ9dLZ_TxCVE7QP3mqbayc_uIj288OeR7RdEGvHsNLoF-HA8JlQhE-ZE3o9xN2Q4wxJc7GGSybXYdbP2jPvnP2nVwMGvXKZMbSyM" +
+			"2gBVIODw",
 		"url": "http://myserver.com:80/artifactory",
 	})
 
