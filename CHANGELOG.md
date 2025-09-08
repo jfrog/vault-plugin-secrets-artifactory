@@ -1,4 +1,4 @@
-## 1.8.5 (January 14, 2025). Tested on Artifactory 7.98.13 with Vault v1.18.3 and OpenBao v2.0.0
+## 1.8.5 (January 14, 2025). Tested on Artifactory 7.117.15 with Vault v1.20.3 and OpenBao v2.0.0
 
 BUG FIXES:
 
