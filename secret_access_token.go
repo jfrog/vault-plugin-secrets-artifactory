@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -56,16 +57,34 @@ func (b *backend) secretAccessTokenRenew(ctx context.Context, req *logical.Reque
 		return nil, fmt.Errorf("lease cannot be renewed")
 	}
 
-	role, err := b.Role(ctx, req.Storage, req.Secret.InternalData["role"].(string))
-	if err != nil {
-		return nil, fmt.Errorf("error during renew: could not get role: %q", req.Secret.InternalData["role"])
-	}
-	if role == nil {
-		return nil, fmt.Errorf("error during renew: could not find role with name: %q", req.Secret.InternalData["role"])
+	var defaultTTL time.Duration
+	var maxTTL time.Duration
+
+	if rawRole, ok := req.Secret.InternalData["role"]; ok {
+		// Role backed token
+		role, err := b.Role(ctx, req.Storage, rawRole.(string))
+		if err != nil {
+			return nil, fmt.Errorf("error during renew: could not get role: %q", rawRole)
+		}
+		if role == nil {
+			return nil, fmt.Errorf("error during renew: could not find role with name: %q", rawRole)
+		}
+		defaultTTL = role.DefaultTTL
+		maxTTL = role.MaxTTL
+	} else if rawUsername, ok := req.Secret.InternalData["username"]; ok {
+		// User backed token
+		userTokenConfig, err := b.fetchUserTokenConfiguration(ctx, req.Storage, rawUsername.(string))
+		if err != nil {
+			return nil, err
+		}
+		defaultTTL = userTokenConfig.DefaultTTL
+		maxTTL = userTokenConfig.MaxTTL
+	} else {
+		return nil, fmt.Errorf("error during renew: token has got no role nor username")
 	}
 
 	ttl, warnings, err :=
-		framework.CalculateTTL(b.System(), req.Secret.Increment, role.DefaultTTL, 0, role.MaxTTL, req.Secret.MaxTTL, req.Secret.IssueTime)
+		framework.CalculateTTL(b.System(), req.Secret.Increment, defaultTTL, 0, maxTTL, req.Secret.MaxTTL, req.Secret.IssueTime)
 	if err != nil {
 		return nil, err
 	}
