@@ -189,7 +189,7 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		if !match {
 			return logical.ErrorResponse("provided scope is invalid"), errors.New("provided scope is invalid")
 		}
-		//use the overridden scope rather than role default
+		//use the overridden scope rather than role default check
 		role.Scope = scope
 	}
 
