@@ -6,6 +6,10 @@ ifeq ($(GO_ARCH), amd64)
 GORELEASER_ARCH := $(TARGET_ARCH)_$(shell go env GOAMD64)
 endif
 
+ifeq ($(GO_ARCH), arm64)
+GORELEASER_ARCH := $(TARGET_ARCH)_$(shell go env GOARM64)
+endif
+
 GIT_SHORT_HASH := $(shell git rev-parse --short HEAD)
 CURRENT_VERSION := $(shell git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
 NEXT_VERSION := $(shell echo $(CURRENT_VERSION) | awk -F '.' '{print $$1 "." $$2 "." $$3 +1}')-dev+$(GIT_SHORT_HASH)
