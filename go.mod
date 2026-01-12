@@ -7,7 +7,7 @@ require (
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-version v1.8.0
 	github.com/hashicorp/vault/api v1.22.0
-	github.com/hashicorp/vault/sdk v0.20.0
+	github.com/hashicorp/vault/sdk v0.21.0
 	github.com/jarcoal/httpmock v1.4.1
 	github.com/samber/lo v1.52.0
 	github.com/stretchr/testify v1.11.1
