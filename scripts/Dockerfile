@@ -1,2 +1,2 @@
 # Dockerfile used to track latest version of image
-FROM releases-docker.jfrog.io/jfrog/artifactory-jcr:7.125.10
+FROM releases-docker.jfrog.io/jfrog/artifactory-jcr:7.125.11
