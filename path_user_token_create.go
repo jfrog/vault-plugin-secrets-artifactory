@@ -198,15 +198,21 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		return logical.ErrorResponse("failed to create new token"), err
 	}
 
+	authConfig, err := newDockerConfig(role.Username, resp.AccessToken, baseConfig.ArtifactoryURL)
+	if err != nil {
+		return logical.ErrorResponse("failed to marshal auth config"), err
+	}
+
 	response := b.Secret(SecretArtifactoryAccessTokenType).Response(map[string]interface{}{
-		"access_token":    resp.AccessToken,
-		"refresh_token":   resp.RefreshToken,
-		"expires_in":      resp.ExpiresIn,
-		"scope":           resp.Scope,
-		"token_id":        resp.TokenId,
-		"username":        role.Username,
-		"description":     role.Description,
-		"reference_token": resp.ReferenceToken,
+		"access_token":       resp.AccessToken,
+		"refresh_token":      resp.RefreshToken,
+		"expires_in":         resp.ExpiresIn,
+		"scope":              resp.Scope,
+		"token_id":           resp.TokenId,
+		"username":           role.Username,
+		"description":        role.Description,
+		"reference_token":    resp.ReferenceToken,
+		"docker_auth_config": string(authConfig),
 	}, map[string]interface{}{
 		"access_token":    resp.AccessToken,
 		"refresh_token":   resp.RefreshToken,
