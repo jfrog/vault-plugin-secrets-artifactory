@@ -164,7 +164,7 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 
 	// now ttl is determined, we set role.ExpiresIn so this value so expirable token has the correct expiration
 	if baseConfig.UseExpiringTokens {
-		role.ExpiresIn = ttl
+		role.ExpiresIn = maxLeaseTTL
 	}
 
 	if value, ok := data.GetOk("refreshable"); ok {
