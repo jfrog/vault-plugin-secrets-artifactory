@@ -582,7 +582,7 @@ vault delete artifactory/roles/test
 | ------- | ---- |
 | read    | artifactory/token/:rolename |
 
-Create an Artifactory access token using paramters from the specified role.
+Create an Artifactory access token using parameters from the specified role.
 
 #### Parameters
 
