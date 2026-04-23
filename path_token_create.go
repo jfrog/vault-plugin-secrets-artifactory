@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var GroupPermissionScopeRegex = regexp.MustCompile(`^applied-permissions\/groups:.+$`)
+var PermissionScopeRegex = regexp.MustCompile(`^applied-permissions\/(groups|roles):.+$`)
 
 func (b *backend) pathTokenCreate() *framework.Path {
 	return &framework.Path{
@@ -29,8 +29,11 @@ func (b *backend) pathTokenCreate() *framework.Path {
 				Description: `Override the maximum TTL for this access token. Cannot exceed smallest (system, backend) maximum TTL.`,
 			},
 			"scope": {
-				Type:        framework.TypeString,
-				Description: `Override the scope for this access token. Limited to group scope only: 'applied-permissions/groups:<group-name>[,<group-name>...]'. Only applicable when config field 'allow_scope_override' is set to 'true'.`,
+				Type: framework.TypeString,
+				Description: `Override the scope for this access token. Limited to group or role scope only: ` +
+					`'applied-permissions/groups:<group-name>[,<group-name>...]' or ` +
+					`'applied-permissions/roles:<role-name>[,<role-name>...]'. ` +
+					`Only applicable when config field 'allow_scope_override' is set to 'true'.`,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -152,7 +155,7 @@ func (b *backend) pathTokenCreatePerform(ctx context.Context, req *logical.Reque
 	if config.AllowScopeOverride {
 		scope := data.Get("scope").(string)
 		if len(scope) != 0 {
-			match := GroupPermissionScopeRegex.MatchString(scope)
+			match := PermissionScopeRegex.MatchString(scope)
 			if !match {
 				return logical.ErrorResponse("provided scope is invalid"), errors.New("provided scope is invalid")
 			}
