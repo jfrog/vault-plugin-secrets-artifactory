@@ -1,3 +1,9 @@
+## 1.8.10 (Unreleased)
+
+BUG FIXES:
+
+* Fix nil pointer dereference (SIGSEGV) in `performArtifactoryGet`, `performArtifactoryPost`, `performArtifactoryPostWithJSON`, and `performArtifactoryDelete` when the backend HTTP client is `nil` after a `config` invalidation on standby / performance-standby / replica nodes. A subsequent `config/*` read runs `go b.sendUsage(...)`, whose unrecovered goroutine dereferenced the nil client and crashed the entire plugin process (the go-plugin gRPC server), leaving a dead socket and `no such file` transport errors. The `performArtifactory*` helpers now guard against a nil client and return an error instead of panicking. Additionally, `sendUsage` (a detached, non-critical telemetry goroutine) now recovers from panics so usage reporting can never crash the plugin process. PR: [#348](https://github.com/jfrog/vault-plugin-secrets-artifactory/pull/348)
+
 ## 1.8.5 (January 14, 2025). Tested on Artifactory 7.125.7 with Vault v1.21.1 and OpenBao v2.0.0
 
 BUG FIXES:
