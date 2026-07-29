@@ -658,6 +658,16 @@ type Usage struct {
 func (b *backend) sendUsage(config baseConfiguration, featureId string) {
 	logger := b.Logger().With("func", "sendUsage")
 
+	// sendUsage is always launched as a detached goroutine (go b.sendUsage(...))
+	// for non-critical "call home" telemetry. In Go an unrecovered panic in any
+	// goroutine crashes the whole process, so contain it here: usage reporting
+	// must never be able to take down the plugin.
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Error("recovered from panic in usage reporting", "panic", r)
+		}
+	}()
+
 	if config.AccessToken == "" {
 		logger.Info("access token is empty in config")
 		return
@@ -698,6 +708,12 @@ func (b *backend) performArtifactoryGet(config baseConfiguration, path string) (
 		return nil, fmt.Errorf("empty access token not allowed")
 	}
 
+	client := b.httpClient.Load()
+	if client == nil {
+		logger.Error("http client is not initialized")
+		return nil, fmt.Errorf("http client not initialized (config may have been invalidated and not reloaded)")
+	}
+
 	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
 	if err != nil {
 		return nil, err
@@ -714,13 +730,18 @@ func (b *backend) performArtifactoryGet(config baseConfiguration, path string) (
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	return b.httpClient.Do(req)
+	return client.Do(req)
 }
 
 // performArtifactoryPost will HTTP POST values to the Artifactory API.
 func (b *backend) performArtifactoryPost(config baseConfiguration, path string, values url.Values) (*http.Response, error) {
 	if config.AccessToken == "" {
 		return nil, fmt.Errorf("empty access token not allowed")
+	}
+
+	client := b.httpClient.Load()
+	if client == nil {
+		return nil, fmt.Errorf("http client not initialized (config may have been invalidated and not reloaded)")
 	}
 
 	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
@@ -740,7 +761,7 @@ func (b *backend) performArtifactoryPost(config baseConfiguration, path string, 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	return b.httpClient.Do(req)
+	return client.Do(req)
 }
 
 // performArtifactoryPost will HTTP POST data to the Artifactory API.
@@ -750,6 +771,12 @@ func (b *backend) performArtifactoryPostWithJSON(config baseConfiguration, path 
 	if config.AccessToken == "" {
 		logger.Error("config.AccessToken is empty")
 		return nil, fmt.Errorf("empty access token not allowed")
+	}
+
+	client := b.httpClient.Load()
+	if client == nil {
+		logger.Error("http client is not initialized")
+		return nil, fmt.Errorf("http client not initialized (config may have been invalidated and not reloaded)")
 	}
 
 	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
@@ -770,7 +797,7 @@ func (b *backend) performArtifactoryPostWithJSON(config baseConfiguration, path 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 	req.Header.Add("Content-Type", "application/json")
 
-	return b.httpClient.Do(req)
+	return client.Do(req)
 }
 
 // performArtifactoryDelete will HTTP DELETE to the Artifactory API.
@@ -781,6 +808,12 @@ func (b *backend) performArtifactoryDelete(config baseConfiguration, path string
 	if config.AccessToken == "" {
 		logger.Error("config.AccessToken is empty")
 		return nil, fmt.Errorf("empty access token not allowed")
+	}
+
+	client := b.httpClient.Load()
+	if client == nil {
+		logger.Error("http client is not initialized")
+		return nil, fmt.Errorf("http client not initialized (config may have been invalidated and not reloaded)")
 	}
 
 	u, err := parseURLWithDefaultPort(config.ArtifactoryURL)
@@ -800,7 +833,7 @@ func (b *backend) performArtifactoryDelete(config baseConfiguration, path string
 	req.Header.Set("User-Agent", productId)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.AccessToken))
 
-	return b.httpClient.Do(req)
+	return client.Do(req)
 }
 
 func parseURLWithDefaultPort(rawUrl string) (*url.URL, error) {

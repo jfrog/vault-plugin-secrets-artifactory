@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/template"
@@ -20,7 +21,7 @@ type backend struct {
 	*framework.Backend
 	configMutex      sync.RWMutex
 	rolesMutex       sync.RWMutex
-	httpClient       *http.Client
+	httpClient       atomic.Pointer[http.Client]
 	usernameProducer template.StringTemplate
 }
 
@@ -116,9 +117,9 @@ func (b *backend) InitializeHttpClient(config *adminConfiguration) {
 			},
 		}
 
-		b.httpClient = &http.Client{Transport: tr}
+		b.httpClient.Store(&http.Client{Transport: tr})
 	} else {
-		b.httpClient = http.DefaultClient
+		b.httpClient.Store(http.DefaultClient)
 	}
 }
 
@@ -133,9 +134,7 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 // reset clears any client configuration for a new
 // backend to be configured
 func (b *backend) reset() {
-	b.configMutex.Lock()
-	defer b.configMutex.Unlock()
-	b.httpClient = nil
+	b.httpClient.Store(nil)
 }
 
 const artifactoryHelp = `
