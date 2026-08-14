@@ -1,3 +1,9 @@
+## 1.8.10 (August 14, 2026)
+
+NOTES:
+
+* Update Go minimum version to 1.26.6.
+
 ## 1.8.5 (January 14, 2025). Tested on Artifactory 7.125.7 with Vault v1.21.1 and OpenBao v2.0.0
 
 BUG FIXES:
