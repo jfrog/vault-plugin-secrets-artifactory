@@ -3,6 +3,7 @@
 NOTES:
 
 * Update Go minimum version to 1.26.6 and Artifactory version to 7.161.16.
+* Update Go module dependencies to latest available versions (including `httpmock`, Vault plugin stack indirects, `golang.org/x/*`, gRPC, and OpenTelemetry).
 
 ## 1.8.5 (January 14, 2025). Tested on Artifactory 7.125.7 with Vault v1.21.1 and OpenBao v2.0.0
 
