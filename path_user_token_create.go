@@ -53,8 +53,11 @@ func (b *backend) pathUserTokenCreate() *framework.Path {
 				Description: `Optional. Override the default TTL when issuing this access token. Capped at the smallest maximum TTL (system, mount, backend, request).`,
 			},
 			"scope": {
-				Type:        framework.TypeString,
-				Description: `Override the scope (default: 'applied-permissions/user') for this access token. Limited to group scope only: 'applied-permissions/groups:<group-name>[,<group-name>...]'.`,
+				Type: framework.TypeString,
+				Description: `Override the scope (default: 'applied-permissions/user') for this access token. ` +
+					`Limited to group or role scope only: ` +
+					`'applied-permissions/groups:<group-name>[,<group-name>...]' or ` +
+					`'applied-permissions/roles:<role-name>[,<role-name>...]'.`,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -185,7 +188,7 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 
 	scope := data.Get("scope").(string)
 	if len(scope) != 0 {
-		match := GroupPermissionScopeRegex.MatchString(scope)
+		match := PermissionScopeRegex.MatchString(scope)
 		if !match {
 			return logical.ErrorResponse("provided scope is invalid"), errors.New("provided scope is invalid")
 		}
