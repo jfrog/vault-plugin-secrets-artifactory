@@ -183,14 +183,16 @@ func (b *backend) pathUserTokenCreatePerform(ctx context.Context, req *logical.R
 		role.Description = value.(string)
 	}
 
-	scope := data.Get("scope").(string)
-	if len(scope) != 0 {
-		match := GroupPermissionScopeRegex.MatchString(scope)
-		if !match {
-			return logical.ErrorResponse("provided scope is invalid"), errors.New("provided scope is invalid")
+	if adminConfig.AllowScopeOverride {
+		scope := data.Get("scope").(string)
+		if len(scope) != 0 {
+			match := GroupPermissionScopeRegex.MatchString(scope)
+			if !match {
+				return logical.ErrorResponse("provided scope is invalid"), errors.New("provided scope is invalid")
+			}
+			//use the overridden scope rather than role default
+			role.Scope = scope
 		}
-		//use the overridden scope rather than role default
-		role.Scope = scope
 	}
 
 	resp, err := b.CreateToken(baseConfig, role)
