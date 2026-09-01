@@ -1,3 +1,10 @@
+## 1.8.11 (September 1, 2026)
+
+NOTES:
+
+* Update Go minimum version to 1.27.0.
+* Update Go module dependencies to latest available versions.
+
 ## 1.8.10 (August 14, 2026)
 
 NOTES:
